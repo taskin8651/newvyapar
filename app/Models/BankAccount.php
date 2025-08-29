@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Models;
+
+use App\Traits\Auditable;
+use App\Traits\MultiTenantModelTrait;
+use Carbon\Carbon;
+use DateTimeInterface;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class BankAccount extends Model
+{
+    use SoftDeletes, MultiTenantModelTrait, Auditable, HasFactory;
+
+    public $table = 'bank_accounts';
+
+    protected $dates = [
+        'as_of_date',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
+    protected $fillable = [
+        'account_name',
+        'opening_balance',
+        'as_of_date',
+        'account_number',
+        'ifsc_code',
+        'bank_name',
+        'account_holder_name',
+        'upi',
+        'print_upi_qr',
+        'print_bank_details',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+        'created_by_id',
+    ];
+
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
+    public function getAsOfDateAttribute($value)
+    {
+        return $value ? Carbon::parse($value)->format(config('panel.date_format')) : null;
+    }
+
+    public function setAsOfDateAttribute($value)
+    {
+        $this->attributes['as_of_date'] = $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
+    }
+
+    public function created_by()
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+}
