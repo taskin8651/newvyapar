@@ -1,318 +1,190 @@
 @extends('layouts.admin')
-@section('content')
-<div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.create') }} {{ trans('cruds.saleInvoice.title_singular') }}
+@section('content')
+<div class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-blue-600 text-white p-6">
+            <h1 class="text-3xl font-bold">SALE INVOICE</h1>
+            <div class="flex mt-4 space-x-6">
+                <label class="flex items-center">
+                    <input type="radio" name="payment_type" value="credit" class="h-4 w-4 text-blue-600" checked>
+                    <span class="ml-2">Credit</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" name="payment_type" value="cash" class="h-4 w-4 text-blue-600">
+                    <span class="ml-2">Cash</span>
+                </label>
+            </div>
+        </div>
+
+        <form action="{{ route('admin.sale-invoices.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <!-- Customer & Invoice Info -->
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Customer Name</label>
+                        <input type="text" name="billing_name" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="text" name="phone_number" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Billing Address</label>
+                        <textarea name="billing_address" rows="3" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror"></textarea>
+                    </div>
                 </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.sale-invoices.store") }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group {{ $errors->has('select_customer') ? 'has-error' : '' }}">
-                            <label class="required" for="select_customer_id">{{ trans('cruds.saleInvoice.fields.select_customer') }}</label>
-                            <select class="form-control select2" name="select_customer_id" id="select_customer_id" required>
-                                @foreach($select_customers as $id => $entry)
-                                    <option value="{{ $id }}" {{ old('select_customer_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_customer'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_customer') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.select_customer_helper') }}</span>
+
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Invoice Number (PO No.)</label>
+                        <input type="text" name="po_no" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Invoice Date</label>
+                            <input type="date" name="po_date" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
                         </div>
-                        <div class="form-group {{ $errors->has('billing_name') ? 'has-error' : '' }}">
-                            <label for="billing_name">{{ trans('cruds.saleInvoice.fields.billing_name') }}</label>
-                            <input class="form-control" type="text" name="billing_name" id="billing_name" value="{{ old('billing_name', '') }}">
-                            @if($errors->has('billing_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('billing_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.billing_name_helper') }}</span>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Due Date</label>
+                            <input type="date" name="due_date" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
                         </div>
-                        <div class="form-group {{ $errors->has('phone_number') ? 'has-error' : '' }}">
-                            <label for="phone_number">{{ trans('cruds.saleInvoice.fields.phone_number') }}</label>
-                            <input class="form-control" type="text" name="phone_number" id="phone_number" value="{{ old('phone_number', '') }}">
-                            @if($errors->has('phone_number'))
-                                <span class="help-block" role="alert">{{ $errors->first('phone_number') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.phone_number_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('e_way_bill_no') ? 'has-error' : '' }}">
-                            <label for="e_way_bill_no">{{ trans('cruds.saleInvoice.fields.e_way_bill_no') }}</label>
-                            <input class="form-control" type="text" name="e_way_bill_no" id="e_way_bill_no" value="{{ old('e_way_bill_no', '') }}">
-                            @if($errors->has('e_way_bill_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('e_way_bill_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.e_way_bill_no_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('billing_address') ? 'has-error' : '' }}">
-                            <label for="billing_address">{{ trans('cruds.saleInvoice.fields.billing_address') }}</label>
-                            <textarea class="form-control ckeditor" name="billing_address" id="billing_address">{!! old('billing_address') !!}</textarea>
-                            @if($errors->has('billing_address'))
-                                <span class="help-block" role="alert">{{ $errors->first('billing_address') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.billing_address_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('shipping_address') ? 'has-error' : '' }}">
-                            <label for="shipping_address">{{ trans('cruds.saleInvoice.fields.shipping_address') }}</label>
-                            <textarea class="form-control ckeditor" name="shipping_address" id="shipping_address">{!! old('shipping_address') !!}</textarea>
-                            @if($errors->has('shipping_address'))
-                                <span class="help-block" role="alert">{{ $errors->first('shipping_address') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.shipping_address_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('po_no') ? 'has-error' : '' }}">
-                            <label for="po_no">{{ trans('cruds.saleInvoice.fields.po_no') }}</label>
-                            <input class="form-control" type="text" name="po_no" id="po_no" value="{{ old('po_no', '') }}">
-                            @if($errors->has('po_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('po_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.po_no_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('po_date') ? 'has-error' : '' }}">
-                            <label for="po_date">{{ trans('cruds.saleInvoice.fields.po_date') }}</label>
-                            <input class="form-control date" type="text" name="po_date" id="po_date" value="{{ old('po_date') }}">
-                            @if($errors->has('po_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('po_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.po_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('items') ? 'has-error' : '' }}">
-                            <label for="items">{{ trans('cruds.saleInvoice.fields.item') }}</label>
-                            <div style="padding-bottom: 4px">
-                                <span class="btn btn-info btn-xs select-all" style="border-radius: 0">{{ trans('global.select_all') }}</span>
-                                <span class="btn btn-info btn-xs deselect-all" style="border-radius: 0">{{ trans('global.deselect_all') }}</span>
-                            </div>
-                            <select class="form-control select2" name="items[]" id="items" multiple>
-                                @foreach($items as $id => $item)
-                                    <option value="{{ $id }}" {{ in_array($id, old('items', [])) ? 'selected' : '' }}>{{ $item }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('items'))
-                                <span class="help-block" role="alert">{{ $errors->first('items') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.item_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('qty') ? 'has-error' : '' }}">
-                            <label class="required" for="qty">{{ trans('cruds.saleInvoice.fields.qty') }}</label>
-                            <input class="form-control" type="number" name="qty" id="qty" value="{{ old('qty', '') }}" step="1" required>
-                            @if($errors->has('qty'))
-                                <span class="help-block" role="alert">{{ $errors->first('qty') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.qty_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.saleInvoice.fields.description') }}</label>
-                            <textarea class="form-control ckeditor" name="description" id="description">{!! old('description') !!}</textarea>
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('image') ? 'has-error' : '' }}">
-                            <label for="image">{{ trans('cruds.saleInvoice.fields.image') }}</label>
-                            <div class="needsclick dropzone" id="image-dropzone">
-                            </div>
-                            @if($errors->has('image'))
-                                <span class="help-block" role="alert">{{ $errors->first('image') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.image_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('document') ? 'has-error' : '' }}">
-                            <label for="document">{{ trans('cruds.saleInvoice.fields.document') }}</label>
-                            <div class="needsclick dropzone" id="document-dropzone">
-                            </div>
-                            @if($errors->has('document'))
-                                <span class="help-block" role="alert">{{ $errors->first('document') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.saleInvoice.fields.document_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">E-Way Bill No.</label>
+                        <input type="text" name="e_way_bill_no" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                    </div>
                 </div>
             </div>
 
+            <!-- Items Table -->
+            <div class="px-6 pb-6">
+                <hr class="border-dashed border-gray-300 mb-4">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">ITEMS</h2>
 
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">QTY</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price/Unit</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tax %</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="px-4 py-2">
+                                    <input type="text" name="items[0][name]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="text" name="items[0][description]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="number" name="items[0][qty]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror" value="1">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <select name="items[0][unit]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                        <option>Unit</option>
+                                        <option>Piece</option>
+                                        <option>Kg</option>
+                                        <option>Box</option>
+                                    </select>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="number" name="items[0][price]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror" value="0">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <select name="items[0][tax]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                        <option value="0">0%</option>
+                                        <option value="5">5%</option>
+                                        <option value="12">12%</option>
+                                        <option value="18">18%</option>
+                                    </select>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="number" name="items[0][discount]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror" value="0">
+                                </td>
+                                <td class="px-4 py-2 font-semibold">
+                                    <input type="text" name="items[0][amount]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror" readonly>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-        </div>
+                <button type="button" id="addRow" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                    <i class="fas fa-plus mr-2"></i> ADD ROW
+                </button>
+            </div>
+
+            <!-- Notes & Totals -->
+            <div class="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Notes</h2>
+                    <textarea name="notes" rows="3" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror"></textarea>
+
+                    <h2 class="text-xl font-semibold text-gray-700">Terms & Conditions</h2>
+                    <textarea name="terms" rows="3" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror"></textarea>
+                </div>
+                <div>
+                    <div class="bg-gray-50 p-4 rounded-lg space-y-2">
+                        <div class="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span id="subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Tax:</span>
+                            <span id="tax">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Discount:</span>
+                            <span id="discount">$0.00</span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2 font-bold">
+                            <span>Total:</span>
+                            <span id="total">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-3">
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md flex items-center justify-center">
+                            <i class="fas fa-save mr-2"></i> SAVE INVOICE
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
-@endsection
 
-@section('scripts')
+<!-- JS for Dynamic Row -->
 <script>
-    $(document).ready(function () {
-  function SimpleUploadAdapter(editor) {
-    editor.plugins.get('FileRepository').createUploadAdapter = function(loader) {
-      return {
-        upload: function() {
-          return loader.file
-            .then(function (file) {
-              return new Promise(function(resolve, reject) {
-                // Init request
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '{{ route('admin.sale-invoices.storeCKEditorImages') }}', true);
-                xhr.setRequestHeader('x-csrf-token', window._token);
-                xhr.setRequestHeader('Accept', 'application/json');
-                xhr.responseType = 'json';
+document.getElementById('addRow').addEventListener('click', function () {
+    let table = document.querySelector('#itemsTable tbody');
+    let rowCount = table.rows.length;
+    let newRow = table.rows[0].cloneNode(true);
 
-                // Init listeners
-                var genericErrorText = `Couldn't upload file: ${ file.name }.`;
-                xhr.addEventListener('error', function() { reject(genericErrorText) });
-                xhr.addEventListener('abort', function() { reject() });
-                xhr.addEventListener('load', function() {
-                  var response = xhr.response;
-
-                  if (!response || xhr.status !== 201) {
-                    return reject(response && response.message ? `${genericErrorText}\n${xhr.status} ${response.message}` : `${genericErrorText}\n ${xhr.status} ${xhr.statusText}`);
-                  }
-
-                  $('form').append('<input type="hidden" name="ck-media[]" value="' + response.id + '">');
-
-                  resolve({ default: response.url });
-                });
-
-                if (xhr.upload) {
-                  xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                      loader.uploadTotal = e.total;
-                      loader.uploaded = e.loaded;
-                    }
-                  });
-                }
-
-                // Send request
-                var data = new FormData();
-                data.append('upload', file);
-                data.append('crud_id', '{{ $saleInvoice->id ?? 0 }}');
-                xhr.send(data);
-              });
-            })
+    newRow.querySelectorAll('input, select').forEach(el => {
+        let name = el.getAttribute('name');
+        if (name) {
+            let newName = name.replace(/\d+/, rowCount);
+            el.setAttribute('name', newName);
+            if (el.tagName === 'INPUT') el.value = '';
         }
-      };
-    }
-  }
+    });
 
-  var allEditors = document.querySelectorAll('.ckeditor');
-  for (var i = 0; i < allEditors.length; ++i) {
-    ClassicEditor.create(
-      allEditors[i], {
-        extraPlugins: [SimpleUploadAdapter]
-      }
-    );
-  }
+    table.appendChild(newRow);
 });
-</script>
-
-<script>
-    Dropzone.options.imageDropzone = {
-    url: '{{ route('admin.sale-invoices.storeMedia') }}',
-    maxFilesize: 20, // MB
-    acceptedFiles: '.jpeg,.jpg,.png,.gif',
-    maxFiles: 1,
-    addRemoveLinks: true,
-    headers: {
-      'X-CSRF-TOKEN': "{{ csrf_token() }}"
-    },
-    params: {
-      size: 20,
-      width: 4096,
-      height: 4096
-    },
-    success: function (file, response) {
-      $('form').find('input[name="image"]').remove()
-      $('form').append('<input type="hidden" name="image" value="' + response.name + '">')
-    },
-    removedfile: function (file) {
-      file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="image"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
-      }
-    },
-    init: function () {
-@if(isset($saleInvoice) && $saleInvoice->image)
-      var file = {!! json_encode($saleInvoice->image) !!}
-          this.options.addedfile.call(this, file)
-      this.options.thumbnail.call(this, file, file.preview ?? file.preview_url)
-      file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="image" value="' + file.file_name + '">')
-      this.options.maxFiles = this.options.maxFiles - 1
-@endif
-    },
-    error: function (file, response) {
-        if ($.type(response) === 'string') {
-            var message = response //dropzone sends it's own error messages in string
-        } else {
-            var message = response.errors.file
-        }
-        file.previewElement.classList.add('dz-error')
-        _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
-        _results = []
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            node = _ref[_i]
-            _results.push(node.textContent = message)
-        }
-
-        return _results
-    }
-}
-
-</script>
-<script>
-    Dropzone.options.documentDropzone = {
-    url: '{{ route('admin.sale-invoices.storeMedia') }}',
-    maxFilesize: 20, // MB
-    maxFiles: 1,
-    addRemoveLinks: true,
-    headers: {
-      'X-CSRF-TOKEN': "{{ csrf_token() }}"
-    },
-    params: {
-      size: 20
-    },
-    success: function (file, response) {
-      $('form').find('input[name="document"]').remove()
-      $('form').append('<input type="hidden" name="document" value="' + response.name + '">')
-    },
-    removedfile: function (file) {
-      file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="document"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
-      }
-    },
-    init: function () {
-@if(isset($saleInvoice) && $saleInvoice->document)
-      var file = {!! json_encode($saleInvoice->document) !!}
-          this.options.addedfile.call(this, file)
-      file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="document" value="' + file.file_name + '">')
-      this.options.maxFiles = this.options.maxFiles - 1
-@endif
-    },
-     error: function (file, response) {
-         if ($.type(response) === 'string') {
-             var message = response //dropzone sends it's own error messages in string
-         } else {
-             var message = response.errors.file
-         }
-         file.previewElement.classList.add('dz-error')
-         _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
-         _results = []
-         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-             node = _ref[_i]
-             _results.push(node.textContent = message)
-         }
-
-         return _results
-     }
-}
 </script>
 @endsection
