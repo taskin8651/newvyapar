@@ -8,6 +8,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>{{ trans('panel.site_title') }}</title>
+                <!-- jQuery (pehle load hoga) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+        $('.select2').select2();
+    });
+</script>
 
     <!-- Fontawesome 6 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -32,6 +46,14 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
+                                 <!-- jQuery (pehle load hoga) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <!-- Tailwind + AlpineJS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -75,6 +97,35 @@
             background: linear-gradient(to bottom, #8b5cf6, #6d28d9);
             border-radius: 0 4px 4px 0;
         }
+
+        
+    /* Select2 ko Tailwind look dena */
+    .select2-container .select2-selection--single {
+        height: 42px !important;
+        border: 1px solid #d1d5db !important; /* border-gray-300 */
+        border-radius: 0.375rem !important; /* rounded-md */
+        padding: 6px 12px !important;
+        font-size: 0.875rem; /* text-sm */
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 28px !important;
+        color: #374151 !important; /* text-gray-700 */
+    }
+
+    .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 38px !important;
+        right: 10px !important;
+    }
+
+    /* Hover aur focus ke liye */
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default .select2-selection--single:hover {
+        border-color: #6366f1 !important; /* indigo-500 */
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
     </style>
     @yield('styles')
 </head>
@@ -193,5 +244,16 @@
     </div>
 
     @yield('scripts')
+
+    
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "🔍 Select Item",
+            allowClear: true,
+            width: '100%' // Tailwind ke saath full width
+        });
+    });
+</script>
 </body>
 </html>

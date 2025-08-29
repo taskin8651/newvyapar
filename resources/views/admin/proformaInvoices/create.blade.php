@@ -1,318 +1,350 @@
 @extends('layouts.admin')
-@section('content')
-<div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.create') }} {{ trans('cruds.proformaInvoice.title_singular') }}
+@section('content')
+<div class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-indigo-600 text-white p-6">
+            <h1 class="text-3xl font-bold">PROFORMA INVOICE</h1>
+        </div>
+
+        <form action="{{ route('admin.proforma-invoices.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <!-- Customer & Invoice Info -->
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Customer</label>
+                        <select name="select_customer_id" 
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            @foreach($select_customers as $id => $name)
+                                <option value="{{ $id }}" {{ old('select_customer_id') == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Billing Name</label>
+                        <input type="text" name="billing_name" value="{{ old('billing_name') }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="text" name="phone_number" value="{{ old('phone_number') }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Billing Address</label>
+                        <textarea name="billing_address" rows="3"
+                                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('billing_address') }}</textarea>
+                    </div>
                 </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.proforma-invoices.store") }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group {{ $errors->has('select_customer') ? 'has-error' : '' }}">
-                            <label class="required" for="select_customer_id">{{ trans('cruds.proformaInvoice.fields.select_customer') }}</label>
-                            <select class="form-control select2" name="select_customer_id" id="select_customer_id" required>
-                                @foreach($select_customers as $id => $entry)
-                                    <option value="{{ $id }}" {{ old('select_customer_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_customer'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_customer') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.select_customer_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('billing_name') ? 'has-error' : '' }}">
-                            <label for="billing_name">{{ trans('cruds.proformaInvoice.fields.billing_name') }}</label>
-                            <input class="form-control" type="text" name="billing_name" id="billing_name" value="{{ old('billing_name', '') }}">
-                            @if($errors->has('billing_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('billing_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.billing_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('phone_number') ? 'has-error' : '' }}">
-                            <label for="phone_number">{{ trans('cruds.proformaInvoice.fields.phone_number') }}</label>
-                            <input class="form-control" type="text" name="phone_number" id="phone_number" value="{{ old('phone_number', '') }}">
-                            @if($errors->has('phone_number'))
-                                <span class="help-block" role="alert">{{ $errors->first('phone_number') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.phone_number_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('e_way_bill_no') ? 'has-error' : '' }}">
-                            <label for="e_way_bill_no">{{ trans('cruds.proformaInvoice.fields.e_way_bill_no') }}</label>
-                            <input class="form-control" type="text" name="e_way_bill_no" id="e_way_bill_no" value="{{ old('e_way_bill_no', '') }}">
-                            @if($errors->has('e_way_bill_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('e_way_bill_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.e_way_bill_no_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('billing_address') ? 'has-error' : '' }}">
-                            <label for="billing_address">{{ trans('cruds.proformaInvoice.fields.billing_address') }}</label>
-                            <textarea class="form-control ckeditor" name="billing_address" id="billing_address">{!! old('billing_address') !!}</textarea>
-                            @if($errors->has('billing_address'))
-                                <span class="help-block" role="alert">{{ $errors->first('billing_address') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.billing_address_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('shipping_address') ? 'has-error' : '' }}">
-                            <label for="shipping_address">{{ trans('cruds.proformaInvoice.fields.shipping_address') }}</label>
-                            <textarea class="form-control ckeditor" name="shipping_address" id="shipping_address">{!! old('shipping_address') !!}</textarea>
-                            @if($errors->has('shipping_address'))
-                                <span class="help-block" role="alert">{{ $errors->first('shipping_address') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.shipping_address_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('po_no') ? 'has-error' : '' }}">
-                            <label for="po_no">{{ trans('cruds.proformaInvoice.fields.po_no') }}</label>
-                            <input class="form-control" type="text" name="po_no" id="po_no" value="{{ old('po_no', '') }}">
-                            @if($errors->has('po_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('po_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.po_no_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('po_date') ? 'has-error' : '' }}">
-                            <label for="po_date">{{ trans('cruds.proformaInvoice.fields.po_date') }}</label>
-                            <input class="form-control date" type="text" name="po_date" id="po_date" value="{{ old('po_date') }}">
-                            @if($errors->has('po_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('po_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.po_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('items') ? 'has-error' : '' }}">
-                            <label for="items">{{ trans('cruds.proformaInvoice.fields.item') }}</label>
-                            <div style="padding-bottom: 4px">
-                                <span class="btn btn-info btn-xs select-all" style="border-radius: 0">{{ trans('global.select_all') }}</span>
-                                <span class="btn btn-info btn-xs deselect-all" style="border-radius: 0">{{ trans('global.deselect_all') }}</span>
-                            </div>
-                            <select class="form-control select2" name="items[]" id="items" multiple>
-                                @foreach($items as $id => $item)
-                                    <option value="{{ $id }}" {{ in_array($id, old('items', [])) ? 'selected' : '' }}>{{ $item }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('items'))
-                                <span class="help-block" role="alert">{{ $errors->first('items') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.item_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('qty') ? 'has-error' : '' }}">
-                            <label class="required" for="qty">{{ trans('cruds.proformaInvoice.fields.qty') }}</label>
-                            <input class="form-control" type="number" name="qty" id="qty" value="{{ old('qty', '') }}" step="1" required>
-                            @if($errors->has('qty'))
-                                <span class="help-block" role="alert">{{ $errors->first('qty') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.qty_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.proformaInvoice.fields.description') }}</label>
-                            <textarea class="form-control ckeditor" name="description" id="description">{!! old('description') !!}</textarea>
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('image') ? 'has-error' : '' }}">
-                            <label for="image">{{ trans('cruds.proformaInvoice.fields.image') }}</label>
-                            <div class="needsclick dropzone" id="image-dropzone">
-                            </div>
-                            @if($errors->has('image'))
-                                <span class="help-block" role="alert">{{ $errors->first('image') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.image_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('document') ? 'has-error' : '' }}">
-                            <label for="document">{{ trans('cruds.proformaInvoice.fields.document') }}</label>
-                            <div class="needsclick dropzone" id="document-dropzone">
-                            </div>
-                            @if($errors->has('document'))
-                                <span class="help-block" role="alert">{{ $errors->first('document') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.proformaInvoice.fields.document_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Invoice Number (PO No.)</label>
+                        <input type="text" name="po_no" value="{{ old('po_no') }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Invoice Date</label>
+                        <input type="date" name="po_date" value="{{ old('po_date') }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">E-Way Bill No.</label>
+                        <input type="text" name="e_way_bill_no" value="{{ old('e_way_bill_no') }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
                 </div>
             </div>
 
+            <!-- Items Table -->
+            <div class="px-6 pb-6">
+                <hr class="border-dashed border-gray-300 mb-4">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">ITEMS</h2>
 
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">QTY</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price/Unit</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="px-4 py-2">
+                                    <select name="items[0][id]" class="select2 w-full">
+                                        <option value="">Select Item</option>
+                                        @foreach($items as $id => $name)
+                                            <option value="{{ $id }}">{{ $name }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="text" name="items[0][description]" 
+                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="number" name="items[0][qty]" value="1"
+                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                </td>
+                                <td class="px-4 py-2">
+                                    <select name="items[0][unit]" class="select2 w-full">
+                                        <option>Piece</option>
+                                        <option>Kg</option>
+                                        <option>Box</option>
+                                    </select>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <input type="number" name="items[0][price]" value="0"
+                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                </td>
+                                <td class="px-4 py-2 font-semibold">
+                                    <input type="text" name="items[0][amount]" readonly
+                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
+                <button type="button" id="addRow" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
+                    + ADD ROW
+                </button>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Image Upload Section -->
+    <div>
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Image</h2>
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition">
+            <label for="image" class="cursor-pointer flex flex-col items-center">
+                <i class="fas fa-cloud-upload-alt text-indigo-500 text-4xl mb-2"></i>
+                <span class="text-gray-600">Click to upload or drag & drop</span>
+                <span class="text-sm text-gray-500 mt-1">(JPEG, PNG, GIF up to 20MB)</span>
+                <input type="file" name="image" id="image" accept="image/*" class="hidden">
+            </label>
         </div>
+        <!-- Preview -->
+        <div id="imagePreview" class="mt-3 hidden">
+            <img class="h-20 w-20 object-cover rounded-md mx-auto mb-2" />
+            <p class="text-sm text-gray-600 text-center" id="imageFileName"></p>
+        </div>
+        @error('image')
+            <p class="text-red-600 text-sm mt-2">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <!-- Document Upload Section -->
+    <div>
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Document</h2>
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition">
+            <label for="document" class="cursor-pointer flex flex-col items-center">
+                <i class="fas fa-file-upload text-green-500 text-4xl mb-2"></i>
+                <span class="text-gray-600">Click to upload or drag & drop</span>
+                <span class="text-sm text-gray-500 mt-1">(PDF, DOC, XLS up to 20MB)</span>
+                <input type="file" name="document" id="document" accept=".pdf,.doc,.docx,.xls,.xlsx" class="hidden">
+            </label>
+        </div>
+        <!-- Preview -->
+        <div id="documentPreview" class="mt-3 hidden text-center">
+            <i class="fas fa-file text-gray-500 text-3xl mb-1"></i>
+            <p class="text-sm text-gray-600" id="documentFileName"></p>
+        </div>
+        @error('document')
+            <p class="text-red-600 text-sm mt-2">{{ $message }}</p>
+        @enderror
     </div>
 </div>
-@endsection
 
-@section('scripts')
+<!-- JS for Preview -->
 <script>
-    $(document).ready(function () {
-  function SimpleUploadAdapter(editor) {
-    editor.plugins.get('FileRepository').createUploadAdapter = function(loader) {
-      return {
-        upload: function() {
-          return loader.file
-            .then(function (file) {
-              return new Promise(function(resolve, reject) {
-                // Init request
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '{{ route('admin.proforma-invoices.storeCKEditorImages') }}', true);
-                xhr.setRequestHeader('x-csrf-token', window._token);
-                xhr.setRequestHeader('Accept', 'application/json');
-                xhr.responseType = 'json';
-
-                // Init listeners
-                var genericErrorText = `Couldn't upload file: ${ file.name }.`;
-                xhr.addEventListener('error', function() { reject(genericErrorText) });
-                xhr.addEventListener('abort', function() { reject() });
-                xhr.addEventListener('load', function() {
-                  var response = xhr.response;
-
-                  if (!response || xhr.status !== 201) {
-                    return reject(response && response.message ? `${genericErrorText}\n${xhr.status} ${response.message}` : `${genericErrorText}\n ${xhr.status} ${xhr.statusText}`);
-                  }
-
-                  $('form').append('<input type="hidden" name="ck-media[]" value="' + response.id + '">');
-
-                  resolve({ default: response.url });
-                });
-
-                if (xhr.upload) {
-                  xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                      loader.uploadTotal = e.total;
-                      loader.uploaded = e.loaded;
-                    }
-                  });
-                }
-
-                // Send request
-                var data = new FormData();
-                data.append('upload', file);
-                data.append('crud_id', '{{ $proformaInvoice->id ?? 0 }}');
-                xhr.send(data);
-              });
-            })
+    // Image Preview
+    document.getElementById('image').addEventListener('change', function(e) {
+        const previewDiv = document.getElementById('imagePreview');
+        const img = previewDiv.querySelector('img');
+        const fileName = document.getElementById('imageFileName');
+        
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            img.src = URL.createObjectURL(file);
+            fileName.textContent = file.name;
+            previewDiv.classList.remove('hidden');
+        } else {
+            previewDiv.classList.add('hidden');
         }
-      };
-    }
-  }
+    });
 
-  var allEditors = document.querySelectorAll('.ckeditor');
-  for (var i = 0; i < allEditors.length; ++i) {
-    ClassicEditor.create(
-      allEditors[i], {
-        extraPlugins: [SimpleUploadAdapter]
-      }
-    );
-  }
+    // Document Preview
+    document.getElementById('document').addEventListener('change', function(e) {
+        const previewDiv = document.getElementById('documentPreview');
+        const fileName = document.getElementById('documentFileName');
+        
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            fileName.textContent = file.name;
+            previewDiv.classList.remove('hidden');
+        } else {
+            previewDiv.classList.add('hidden');
+        }
+    });
+</script>
+
+
+            <!-- Notes -->
+            <div class="px-6 pb-6">
+                <h2 class="text-xl font-semibold text-gray-700">Notes</h2>
+                <textarea name="notes" rows="3"
+                          class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('notes') }}</textarea>
+            </div>
+
+            <!-- Save Button -->
+            <div class="px-6 pb-6">
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md flex items-center justify-center">
+                    <i class="fas fa-save mr-2"></i> SAVE PROFORMA INVOICE
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- JS for Dynamic Row -->
+<script>
+document.getElementById('addRow').addEventListener('click', function () {
+    let table = document.querySelector('#itemsTable tbody');
+    let rowCount = table.rows.length;
+    let newRow = table.rows[0].cloneNode(true);
+
+    newRow.querySelectorAll('input, select').forEach(el => {
+        let name = el.getAttribute('name');
+        if (name) {
+            let newName = name.replace(/\d+/, rowCount);
+            el.setAttribute('name', newName);
+            if (el.tagName === 'INPUT') el.value = '';
+        }
+    });
+
+    table.appendChild(newRow);
 });
 </script>
 
+
 <script>
     Dropzone.options.imageDropzone = {
-    url: '{{ route('admin.proforma-invoices.storeMedia') }}',
-    maxFilesize: 20, // MB
-    acceptedFiles: '.jpeg,.jpg,.png,.gif',
-    maxFiles: 1,
-    addRemoveLinks: true,
-    headers: {
-      'X-CSRF-TOKEN': "{{ csrf_token() }}"
-    },
-    params: {
-      size: 20,
-      width: 4096,
-      height: 4096
-    },
-    success: function (file, response) {
-      $('form').find('input[name="image"]').remove()
-      $('form').append('<input type="hidden" name="image" value="' + response.name + '">')
-    },
-    removedfile: function (file) {
-      file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="image"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
-      }
-    },
-    init: function () {
-@if(isset($proformaInvoice) && $proformaInvoice->image)
-      var file = {!! json_encode($proformaInvoice->image) !!}
-          this.options.addedfile.call(this, file)
-      this.options.thumbnail.call(this, file, file.preview ?? file.preview_url)
-      file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="image" value="' + file.file_name + '">')
-      this.options.maxFiles = this.options.maxFiles - 1
-@endif
-    },
-    error: function (file, response) {
-        if ($.type(response) === 'string') {
-            var message = response //dropzone sends it's own error messages in string
-        } else {
-            var message = response.errors.file
-        }
-        file.previewElement.classList.add('dz-error')
-        _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
-        _results = []
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            node = _ref[_i]
-            _results.push(node.textContent = message)
-        }
+        url: '{{ route('admin.proforma-invoices.storeMedia') }}',
+        maxFilesize: 20, // MB
+        acceptedFiles: '.jpeg,.jpg,.png,.gif',
+        maxFiles: 1,
+        addRemoveLinks: true,
+        headers: {
+            'X-CSRF-TOKEN': "{{ csrf_token() }}"
+        },
+        params: {
+            size: 20,
+            width: 4096,
+            height: 4096
+        },
+        success: function (file, response) {
+            $('form').find('input[name="image"]').remove()
+            $('form').append('<input type="hidden" name="image" value="' + response.name + '">')
+        },
+        removedfile: function (file) {
+            file.previewElement.remove()
+            if (file.status !== 'error') {
+                $('form').find('input[name="image"]').remove()
+                this.options.maxFiles = this.options.maxFiles + 1
+            }
+        },
+        init: function () {
+            @if(isset($proformaInvoice) && $proformaInvoice->image)
+                var file = {!! json_encode($proformaInvoice->image) !!};
 
-        return _results
+                // Dropzone methods
+                this.options.addedfile.call(this, file);
+                this.options.thumbnail.call(this, file, file.url ?? file.preview_url);
+
+                file.previewElement.classList.add('dz-complete');
+                $('form').append('<input type="hidden" name="image" value="' + file.file_name + '">');
+                this.options.maxFiles = this.options.maxFiles - 1;
+            @endif
+        },
+        error: function (file, response) {
+            var message = $.type(response) === 'string' ? response : response.errors.file
+            file.previewElement.classList.add('dz-error')
+            var _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
+            var _results = []
+            for (var _i = 0, _len = _ref.length; _i < _len; _i++) {
+                var node = _ref[_i]
+                _results.push(node.textContent = message)
+            }
+            return _results
+        }
     }
-}
-
 </script>
+
 <script>
     Dropzone.options.documentDropzone = {
-    url: '{{ route('admin.proforma-invoices.storeMedia') }}',
-    maxFilesize: 20, // MB
-    maxFiles: 1,
-    addRemoveLinks: true,
-    headers: {
-      'X-CSRF-TOKEN': "{{ csrf_token() }}"
-    },
-    params: {
-      size: 20
-    },
-    success: function (file, response) {
-      $('form').find('input[name="document"]').remove()
-      $('form').append('<input type="hidden" name="document" value="' + response.name + '">')
-    },
-    removedfile: function (file) {
-      file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="document"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
-      }
-    },
-    init: function () {
-@if(isset($proformaInvoice) && $proformaInvoice->document)
-      var file = {!! json_encode($proformaInvoice->document) !!}
-          this.options.addedfile.call(this, file)
-      file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="document" value="' + file.file_name + '">')
-      this.options.maxFiles = this.options.maxFiles - 1
-@endif
-    },
-     error: function (file, response) {
-         if ($.type(response) === 'string') {
-             var message = response //dropzone sends it's own error messages in string
-         } else {
-             var message = response.errors.file
-         }
-         file.previewElement.classList.add('dz-error')
-         _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
-         _results = []
-         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-             node = _ref[_i]
-             _results.push(node.textContent = message)
-         }
+        url: '{{ route('admin.proforma-invoices.storeMedia') }}',
+        maxFilesize: 20, // MB
+        maxFiles: 1,
+        addRemoveLinks: true,
+        headers: {
+            'X-CSRF-TOKEN': "{{ csrf_token() }}"
+        },
+        params: {
+            size: 20
+        },
+        success: function (file, response) {
+            $('form').find('input[name="document"]').remove()
+            $('form').append('<input type="hidden" name="document" value="' + response.name + '">')
+        },
+        removedfile: function (file) {
+            file.previewElement.remove()
+            if (file.status !== 'error') {
+                $('form').find('input[name="document"]').remove()
+                this.options.maxFiles = this.options.maxFiles + 1
+            }
+        },
+        init: function () {
+            @if(isset($proformaInvoice) && $proformaInvoice->document)
+                var file = {!! json_encode($proformaInvoice->document) !!};
 
-         return _results
-     }
-}
+                this.options.addedfile.call(this, file);
+                file.previewElement.classList.add('dz-complete');
+
+                $('form').append('<input type="hidden" name="document" value="' + file.file_name + '">');
+                this.options.maxFiles = this.options.maxFiles - 1;
+            @endif
+        },
+        error: function (file, response) {
+            var message = $.type(response) === 'string' ? response : response.errors.file
+            file.previewElement.classList.add('dz-error')
+            var _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
+            var _results = []
+            for (var _i = 0, _len = _ref.length; _i < _len; _i++) {
+                var node = _ref[_i]
+                _results.push(node.textContent = message)
+            }
+            return _results
+        }
+    }
 </script>
+
 @endsection

@@ -54,12 +54,25 @@
                            class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 
                                   focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 </div>
-                <div class="flex items-end">
-                    <button type="button" class="w-full px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md font-medium">
-                        Select Unit
-                    </button>
-                </div>
-            </div>
+               <div class="flex flex-col space-y-2 w-full">
+    <label for="unit_id" class="text-sm font-medium text-gray-700">
+        Select Unit *
+    </label>
+    <select name="unit_id" id="unit_id" 
+        class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 
+                                  focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+        @foreach($select_units as $id => $unit)
+            <option value="{{ $id }}" {{ old('unit_id') == $id ? 'selected' : '' }}>
+                {{ $unit }}
+            </option>
+        @endforeach
+    </select>
+    @error('unit_id')
+        <span class="text-red-600 text-xs">{{ $message }}</span>
+    @enderror
+</div>
+
+            </div> 
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -77,23 +90,31 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Item Code</label>
-                    <div class="flex space-x-2">
-                        <input type="text" name="item_code" value="{{ old('item_code') }}"
-                               class="flex-1 rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 
-                                      focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                        <button type="button" class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md font-medium">
-                            Assign Code
-                        </button>
-                    </div>
+                   <div class="flex space-x-2">
+    <input type="text" id="item_code" name="item_code" value="{{ old('item_code') }}"
+           class="flex-1 rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 
+                  focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+    <button type="button" id="generateCodeBtn" 
+            class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md font-medium">
+        Assign Code
+    </button>
+</div>
+
+<script>
+    document.getElementById("generateCodeBtn").addEventListener("click", function () {
+        // Random code generate (prefix + random number + timestamp)
+        let randomCode = "ITM-" + Math.floor(1000 + Math.random() * 9000) + "-" + Date.now().toString().slice(-4);
+
+        // Input me set karo
+        document.getElementById("item_code").value = randomCode;
+    });
+</script>
+
                 </div>
-                <div class="flex items-end">
-                    <button type="button" class="w-full px-4 py-2 border border-indigo-500 text-indigo-600 rounded-md hover:bg-indigo-50">
-                        + Add Item Image
-                    </button>
-                </div>
+               
             </div>
 
-          <!-- Tabs -->
+        <!-- Tabs -->
 <div class="border-b mb-6" x-data="{ tab: 'pricing' }">
     <nav class="flex space-x-6" aria-label="Tabs">
         <button type="button"
@@ -101,6 +122,18 @@
                 :class="tab === 'pricing' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
                 class="py-3 px-1 border-b-2 font-medium text-sm">
             Pricing
+        </button>
+        <button type="button"
+                @click="tab = 'wholesale'"
+                :class="tab === 'wholesale' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                class="py-3 px-1 border-b-2 font-medium text-sm">
+            Wholesale
+        </button>
+        <button type="button"
+                @click="tab = 'purchase'"
+                :class="tab === 'purchase' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                class="py-3 px-1 border-b-2 font-medium text-sm">
+            Purchase
         </button>
         <button type="button"
                 @click="tab = 'stock'"
@@ -117,28 +150,72 @@
     </nav>
 
     <!-- Pricing Section -->
-    <div x-show="tab === 'pricing'" class="bg-gray-50 rounded-lg p-4 mb-6">
-        <h3 class="text-md font-semibold text-gray-700 mb-3">Sale Price</h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <input type="text" name="sale_price" placeholder="Sale Price"
-                   class="w-full rounded-md border border-gray-300 px-4 py-2">
-            <select name="select_type"
+    <div x-show="tab === 'pricing'" class="bg-gray-50 rounded-lg p-4 mb-6 space-y-6">
+        {{-- Sale Price --}}
+        <div>
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Sale Price</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="number" step="0.01" name="sale_price" value="{{ old('sale_price') }}" placeholder="Sale Price"
+                       class="w-full rounded-md border border-gray-300 px-4 py-2">
+                <select name="select_type"
+                        class="w-full rounded-md border border-gray-300 px-4 py-2">
+                    @foreach(\App\Models\AddItem::SELECT_TYPE_SELECT as $key => $label)
+                        <option value="{{ $key }}" {{ old('select_type') == $key ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <input type="number" step="0.01" name="disc_on_sale_price" value="{{ old('disc_on_sale_price') }}" placeholder="Discount on Sale Price"
+                       class="w-full rounded-md border border-gray-300 px-4 py-2">
+                <select name="disc_type"
+                        class="w-full rounded-md border border-gray-300 px-4 py-2">
+                    <option value="percentage" {{ old('disc_type') == 'percentage' ? 'selected' : '' }}>Percentage</option>
+                    <option value="flat" {{ old('disc_type') == 'flat' ? 'selected' : '' }}>Flat</option>
+                </select>
+            </div>
+        </div>
+
+        {{-- Tax --}}
+        <div>
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Tax Rate</h3>
+            <select name="select_tax_id" 
                     class="w-full rounded-md border border-gray-300 px-4 py-2">
-                <option value="without_tax">Without Tax</option>
-                <option value="with_tax">With Tax</option>
-            </select>
-            <input type="text" name="disc_on_sale_price" placeholder="Disc. On Sale Price"
-                   class="w-full rounded-md border border-gray-300 px-4 py-2">
-            <select name="disc_type"
-                    class="w-full rounded-md border border-gray-300 px-4 py-2">
-                <option value="percentage">Percentage</option>
-                <option value="flat">Flat</option>
+                @foreach($select_taxes as $id => $label)
+                    <option value="{{ $id }}" {{ old('select_tax_id') == $id ? 'selected' : '' }}>
+                        {{ $label }}
+                    </option>
+                @endforeach
             </select>
         </div>
-        <div class="mt-3">
-            <button type="button" class="text-indigo-600 text-sm font-medium hover:underline">
-                + Add Wholesale Price
-            </button>
+    </div>
+
+    <!-- Wholesale Section -->
+    <div x-show="tab === 'wholesale'" class="bg-gray-50 rounded-lg p-4 mb-6">
+        <h3 class="text-md font-semibold text-gray-700 mb-3">Wholesale Price</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="number" step="0.01" name="wholesale_price" value="{{ old('wholesale_price') }}" placeholder="Wholesale Price"
+                   class="w-full rounded-md border border-gray-300 px-4 py-2">
+            <select name="select_type_wholesale"
+                    class="w-full rounded-md border border-gray-300 px-4 py-2">
+                @foreach(\App\Models\AddItem::SELECT_TYPE_WHOLESALE_SELECT as $key => $label)
+                    <option value="{{ $key }}" {{ old('select_type_wholesale') == $key ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
+            </select>
+            <input type="number" name="minimum_wholesale_qty" value="{{ old('minimum_wholesale_qty') }}" placeholder="Minimum Qty"
+                   class="w-full rounded-md border border-gray-300 px-4 py-2">
+        </div>
+    </div>
+
+    <!-- Purchase Section -->
+    <div x-show="tab === 'purchase'" class="bg-gray-50 rounded-lg p-4 mb-6">
+        <h3 class="text-md font-semibold text-gray-700 mb-3">Purchase Price</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="number" step="0.01" name="purchase_price" value="{{ old('purchase_price') }}" placeholder="Purchase Price"
+                   class="w-full rounded-md border border-gray-300 px-4 py-2">
+            <select name="select_purchase_type"
+                    class="w-full rounded-md border border-gray-300 px-4 py-2">
+                @foreach(\App\Models\AddItem::SELECT_PURCHASE_TYPE_SELECT as $key => $label)
+                    <option value="{{ $key }}" {{ old('select_purchase_type') == $key ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
+            </select>
         </div>
     </div>
 

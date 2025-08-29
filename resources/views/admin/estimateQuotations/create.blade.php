@@ -19,7 +19,7 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Select Customer</label>
-                        <select name="select_customer_id" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                        <select name="select_customer_id" class="select2 w-full @error('title') border-red-500 @enderror">
                             @foreach($select_customers as $id => $entry)
                                 <option value="{{ $id }}" {{ old('select_customer_id') == $id ? 'selected' : '' }}>
                                     {{ $entry }}
@@ -97,9 +97,22 @@
                         </thead>
                         <tbody>
                             <tr>
+
+
+                                <!-- Table Cell -->
                                 <td class="px-4 py-2">
-                                    <input type="text" name="items[0][name]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                    <select name="items[0][id]"
+                                        class="select2 w-full @error('title') border-red-500 @enderror">
+                                        <option value="">Select Item</option>
+                                        @foreach($items as $id => $name)
+                                            <option value="{{ $id }}">{{ $name }}</option>
+                                        @endforeach
+                                    </select>
                                 </td>
+
+        
+
+
                                 <td class="px-4 py-2">
                                     <input type="text" name="items[0][description]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
                                 </td>
@@ -107,7 +120,7 @@
                                     <input type="number" name="items[0][qty]" value="1" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
                                 </td>
                                 <td class="px-4 py-2">
-                                    <select name="items[0][unit]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                    <select name="items[0][unit]" class="select2 w-full @error('title') border-red-500 @enderror">
                                         <option>Unit</option>
                                         <option>Piece</option>
                                         <option>Kg</option>
@@ -118,7 +131,7 @@
                                     <input type="number" name="items[0][price]" value="0" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
                                 </td>
                                 <td class="px-4 py-2">
-                                    <select name="items[0][tax]" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm @error('title') border-red-500 @enderror">
+                                    <select name="items[0][tax]" class="select2 w-full @error('title') border-red-500 @enderror">
                                         <option value="0">0%</option>
                                         <option value="5">5%</option>
                                         <option value="12">12%</option>
@@ -263,7 +276,6 @@
 </script>
 @endpush
 
-            </div>
         </form>
     </div>
 </div>
