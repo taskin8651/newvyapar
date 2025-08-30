@@ -223,7 +223,7 @@
 </header>
 
         <!-- Page Content -->
-        <main class="flex-1 p-6">
+        <main class="flex-1 ">
             @if(session('message'))
                 <div class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
                     {{ session('message') }}
