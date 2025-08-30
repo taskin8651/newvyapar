@@ -9,42 +9,44 @@
                 <i class="fas fa-briefcase text-indigo-600"></i>
                 {{ trans('cruds.addBusiness.title_singular') }} {{ trans('global.list') }}
             </h2>
-            <div class="flex gap-2">
-               <div x-data="{ openCsvModal: false }">
-    <!-- Header Buttons -->
-    <div class="flex gap-2">
-        @can('add_business_create')
-            <a href="{{ route('admin.add-businesses.create') }}" 
-               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
-                <i class="fas fa-plus mr-1"></i> {{ trans('global.add') }} {{ trans('cruds.addBusiness.title_singular') }}
-            </a>
+            <div class="flex gap-2 items-center">
+                <div x-data="{ openCsvModal: false }" class="flex gap-2">
+                    @can('add_business_create')
+                        <!-- Add New -->
+                        <a href="{{ route('admin.add-businesses.create') }}" 
+                           class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
+                            <i class="fas fa-plus mr-1"></i> {{ trans('global.add') }} {{ trans('cruds.addBusiness.title_singular') }}
+                        </a>
 
-            <!-- CSV Import Button -->
-            <button 
-                @click="openCsvModal = true"
-                class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow">
-                <i class="fas fa-file-csv mr-1"></i> {{ trans('global.app_csvImport') }}
-            </button>
+                        <!-- CSV Import -->
+                        <button 
+                            @click="openCsvModal = true"
+                            class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow">
+                            <i class="fas fa-file-csv mr-1"></i> {{ trans('global.app_csvImport') }}
+                        </button>
 
-            <!-- Modal Include -->
-            @include('csvImport.modal', [
-                'model' => 'AddBusiness', 
-                'route' => 'admin.add-businesses.parseCsvImport'
-            ])
-        @endcan
-    </div>
-</div>
+                        <!-- Modal Include -->
+                        @include('csvImport.modal', [
+                            'model' => 'AddBusiness', 
+                            'route' => 'admin.add-businesses.parseCsvImport'
+                        ])
+                    @endcan
+                </div>
 
-                
+                <!-- Custom Search -->
+                <div>
+                    <input type="text" id="addBusinessSearch" placeholder="Search businesses..."
+                        class="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 focus:border-blue-500 text-sm w-64">
+                </div>
             </div>
         </div>
 
         <!-- Table -->
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 datatable datatable-AddBusiness">
+            <table class="min-w-full divide-y divide-gray-200 datatable-AddBusiness">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                        <th class="px-4 py-3 w-10"></th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('cruds.addBusiness.fields.id') }}
                         </th>
@@ -69,17 +71,17 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($addBusinesses as $key => $addBusiness)
+                    @foreach($addBusinesses as $addBusiness)
                         <tr data-entry-id="{{ $addBusiness->id }}" class="hover:bg-gray-50">
                             <td class="px-4 py-3"></td>
                             <td class="px-4 py-3 text-sm text-gray-700">
-                                {{ $addBusiness->id ?? '' }}
+                                {{ $addBusiness->id }}
                             </td>
                             <td class="px-4 py-3 text-sm font-medium text-gray-900">
-                                {{ $addBusiness->company_name ?? '' }}
+                                {{ $addBusiness->company_name }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">
-                                {{ $addBusiness->legal_name ?? '' }}
+                                {{ $addBusiness->legal_name }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 {{ App\Models\AddBusiness::BUSINESS_TYPE_SELECT[$addBusiness->business_type] ?? '' }}
@@ -88,7 +90,7 @@
                                 {{ App\Models\AddBusiness::INDUSTRY_TYPE_SELECT[$addBusiness->industry_type] ?? '' }}
                             </td>
                             <td class="px-4 py-3">
-                                @foreach($addBusiness->logo_upload as $key => $media)
+                                @foreach($addBusiness->logo_upload as $media)
                                     <a href="{{ $media->getUrl() }}" target="_blank" class="inline-block">
                                         <img src="{{ $media->getUrl('thumb') }}" class="h-10 w-10 rounded border">
                                     </a>
@@ -134,6 +136,7 @@
 <script>
     $(function () {
         let dtButtons = $.extend(true, [], $.fn.dataTable.defaults.buttons)
+
         @can('add_business_delete')
         let deleteButtonTrans = '{{ trans('global.datatables.delete') }}'
         let deleteButton = {
@@ -163,12 +166,19 @@
         dtButtons.push(deleteButton)
         @endcan
 
-        $.extend(true, $.fn.dataTable.defaults, {
+        // Init DataTable
+        let table = $('.datatable-AddBusiness').DataTable({
+            buttons: dtButtons,
             orderCellsTop: true,
             order: [[1, 'desc']],
             pageLength: 25,
         });
-        let table = $('.datatable-AddBusiness:not(.ajaxTable)').DataTable({ buttons: dtButtons })
+
+        // Bind search input
+        $('#addBusinessSearch').on('keyup', function () {
+            table.search(this.value).draw();
+        });
+
         $('a[data-toggle="tab"]').on('shown.bs.tab click', function(e){
             $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
         });
