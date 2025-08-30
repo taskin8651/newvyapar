@@ -1,85 +1,110 @@
 @extends('layouts.admin')
 @section('content')
 <div class="content">
-
     <div class="row">
         <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+            <div x-data="formProgress()" class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-6">
                     {{ trans('global.create') }} {{ trans('cruds.adjustBankBalance.title_singular') }}
+                </h2>
+
+                {{-- Progress Bar --}}
+                <div class="px-2 pb-6">
+                    <div class="flex justify-between items-center text-sm text-gray-500 mb-2">
+                        <span>Account Setup Progress</span>
+                        <span x-text="progress + '%'"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mb-4">
+                        <div class="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"
+                             :style="'width:' + progress + '%'"></div>
+                    </div>
                 </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.adjust-bank-balances.store") }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group {{ $errors->has('from') ? 'has-error' : '' }}">
-                            <label for="from_id">{{ trans('cruds.adjustBankBalance.fields.from') }}</label>
-                            <select class="form-control select2" name="from_id" id="from_id">
+
+                {{-- Form --}}
+                <form method="POST" action="{{ route('admin.adjust-bank-balances.store') }}" enctype="multipart/form-data" class="space-y-6" @input="calculateProgress">
+                    @csrf
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {{-- From --}}
+                        <div class="space-y-1">
+                            <label for="from_id" class="block text-sm font-medium text-gray-700">
+                                {{ trans('cruds.adjustBankBalance.fields.from') }}
+                            </label>
+                            <select class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    name="from_id" id="from_id" data-required="1">
                                 @foreach($froms as $id => $entry)
                                     <option value="{{ $id }}" {{ old('from_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
                                 @endforeach
                             </select>
-                            @if($errors->has('from'))
-                                <span class="help-block" role="alert">{{ $errors->first('from') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.from_helper') }}</span>
+                            @error('from_id') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
-                        <div class="form-group {{ $errors->has('type') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.adjustBankBalance.fields.type') }}</label>
-                            <select class="form-control" name="type" id="type">
-                                <option value disabled {{ old('type', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
+
+                        {{-- Type --}}
+                        <div class="space-y-1">
+                            <label for="type" class="block text-sm font-medium text-gray-700">
+                                {{ trans('cruds.adjustBankBalance.fields.type') }}
+                            </label>
+                            <select name="type" id="type" data-required="1"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value disabled {{ old('type', null) === null ? 'selected' : '' }}>
+                                    {{ trans('global.pleaseSelect') }}
+                                </option>
                                 @foreach(App\Models\AdjustBankBalance::TYPE_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('type', '--select type--') === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
+                                    <option value="{{ $key }}" {{ old('type') === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
-                            @if($errors->has('type'))
-                                <span class="help-block" role="alert">{{ $errors->first('type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.type_helper') }}</span>
+                            @error('type') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
-                        <div class="form-group {{ $errors->has('amount') ? 'has-error' : '' }}">
-                            <label class="required" for="amount">{{ trans('cruds.adjustBankBalance.fields.amount') }}</label>
-                            <input class="form-control" type="number" name="amount" id="amount" value="{{ old('amount', '') }}" step="0.01" required>
-                            @if($errors->has('amount'))
-                                <span class="help-block" role="alert">{{ $errors->first('amount') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.amount_helper') }}</span>
+
+                        {{-- Amount --}}
+                        <div class="space-y-1">
+                            <label for="amount" class="block text-sm font-medium text-gray-700">
+                                {{ trans('cruds.adjustBankBalance.fields.amount') }} <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" name="amount" id="amount" value="{{ old('amount', '') }}" step="0.01" required data-required="1"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            @error('amount') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
-                        <div class="form-group {{ $errors->has('adjustment_date') ? 'has-error' : '' }}">
-                            <label for="adjustment_date">{{ trans('cruds.adjustBankBalance.fields.adjustment_date') }}</label>
-                            <input class="form-control date" type="text" name="adjustment_date" id="adjustment_date" value="{{ old('adjustment_date') }}">
-                            @if($errors->has('adjustment_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('adjustment_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.adjustment_date_helper') }}</span>
+
+                        {{-- Adjustment Date --}}
+                        <div class="space-y-1">
+                            <label for="adjustment_date" class="block text-sm font-medium text-gray-700">
+                                {{ trans('cruds.adjustBankBalance.fields.adjustment_date') }}
+                            </label>
+                            <input type="date" name="adjustment_date" id="adjustment_date" value="{{ old('adjustment_date') }}" data-required="1"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            @error('adjustment_date') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.adjustBankBalance.fields.description') }}</label>
-                            <textarea class="form-control ckeditor" name="description" id="description">{!! old('description') !!}</textarea>
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('attechment') ? 'has-error' : '' }}">
-                            <label for="attechment">{{ trans('cruds.adjustBankBalance.fields.attechment') }}</label>
-                            <div class="needsclick dropzone" id="attechment-dropzone">
-                            </div>
-                            @if($errors->has('attechment'))
-                                <span class="help-block" role="alert">{{ $errors->first('attechment') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.attechment_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+
+                    {{-- Description --}}
+                    <div class="space-y-1">
+                        <label for="description" class="block text-sm font-medium text-gray-700">
+                            {{ trans('cruds.adjustBankBalance.fields.description') }}
+                        </label>
+                        <textarea name="description" id="description"
+                                  class="ckeditor w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">{!! old('description') !!}</textarea>
+                        @error('description') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Attachment --}}
+                    <div class="space-y-1">
+                        <label for="attechment" class="block text-sm font-medium text-gray-700">
+                            {{ trans('cruds.adjustBankBalance.fields.attechment') }}
+                        </label>
+                        <div class="needsclick dropzone rounded-lg border-2 border-dashed border-indigo-400 p-4 bg-gray-50" id="attechment-dropzone"></div>
+                        @error('attechment') <p class="text-red-600 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Submit --}}
+                    <div class="flex justify-end pt-4">
+                        <button type="submit"
+                            class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i> {{ trans('global.save') }}
+                        </button>
+                    </div>
+                </form>
             </div>
-
-
-
         </div>
     </div>
 </div>
@@ -87,122 +112,82 @@
 
 @section('scripts')
 <script>
-    $(document).ready(function () {
-  function SimpleUploadAdapter(editor) {
-    editor.plugins.get('FileRepository').createUploadAdapter = function(loader) {
-      return {
-        upload: function() {
-          return loader.file
-            .then(function (file) {
-              return new Promise(function(resolve, reject) {
-                // Init request
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '{{ route('admin.adjust-bank-balances.storeCKEditorImages') }}', true);
-                xhr.setRequestHeader('x-csrf-token', window._token);
-                xhr.setRequestHeader('Accept', 'application/json');
-                xhr.responseType = 'json';
-
-                // Init listeners
-                var genericErrorText = `Couldn't upload file: ${ file.name }.`;
-                xhr.addEventListener('error', function() { reject(genericErrorText) });
-                xhr.addEventListener('abort', function() { reject() });
-                xhr.addEventListener('load', function() {
-                  var response = xhr.response;
-
-                  if (!response || xhr.status !== 201) {
-                    return reject(response && response.message ? `${genericErrorText}\n${xhr.status} ${response.message}` : `${genericErrorText}\n ${xhr.status} ${xhr.statusText}`);
-                  }
-
-                  $('form').append('<input type="hidden" name="ck-media[]" value="' + response.id + '">');
-
-                  resolve({ default: response.url });
-                });
-
-                if (xhr.upload) {
-                  xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                      loader.uploadTotal = e.total;
-                      loader.uploaded = e.loaded;
+    function formProgress() {
+        return {
+            progress: 0,
+            calculateProgress() {
+                let requiredFields = document.querySelectorAll('[data-required="1"]');
+                let filled = 0;
+                requiredFields.forEach(field => {
+                    if (field.value && field.value.trim() !== '') {
+                        filled++;
                     }
-                  });
-                }
-
-                // Send request
-                var data = new FormData();
-                data.append('upload', file);
-                data.append('crud_id', '{{ $adjustBankBalance->id ?? 0 }}');
-                xhr.send(data);
-              });
-            })
+                });
+                this.progress = Math.round((filled / requiredFields.length) * 100);
+            }
         }
-      };
     }
-  }
 
-  var allEditors = document.querySelectorAll('.ckeditor');
-  for (var i = 0; i < allEditors.length; ++i) {
-    ClassicEditor.create(
-      allEditors[i], {
-        extraPlugins: [SimpleUploadAdapter]
-      }
-    );
-  }
-});
-</script>
+    // CKEditor upload
+    $(document).ready(function () {
+        function SimpleUploadAdapter(editor) {
+            editor.plugins.get('FileRepository').createUploadAdapter = function(loader) {
+                return {
+                    upload: () => {
+                        return loader.file.then(file => {
+                            return new Promise((resolve, reject) => {
+                                let xhr = new XMLHttpRequest();
+                                xhr.open('POST', '{{ route('admin.adjust-bank-balances.storeCKEditorImages') }}', true);
+                                xhr.setRequestHeader('x-csrf-token', window._token);
+                                xhr.setRequestHeader('Accept', 'application/json');
+                                xhr.responseType = 'json';
 
-<script>
+                                xhr.addEventListener('error', () => reject(`Upload failed: ${ file.name }`));
+                                xhr.addEventListener('abort', () => reject());
+                                xhr.addEventListener('load', () => {
+                                    let response = xhr.response;
+                                    if (!response || xhr.status !== 201) {
+                                        return reject(response && response.message ? response.message : xhr.statusText);
+                                    }
+                                    $('form').append('<input type="hidden" name="ck-media[]" value="' + response.id + '">');
+                                    resolve({ default: response.url });
+                                });
+
+                                let data = new FormData();
+                                data.append('upload', file);
+                                data.append('crud_id', '{{ $adjustBankBalance->id ?? 0 }}');
+                                xhr.send(data);
+                            })
+                        })
+                    }
+                };
+            }
+        }
+        document.querySelectorAll('.ckeditor').forEach(editor => {
+            ClassicEditor.create(editor, { extraPlugins: [SimpleUploadAdapter] });
+        });
+    });
+
+    // Dropzone
     Dropzone.options.attechmentDropzone = {
-    url: '{{ route('admin.adjust-bank-balances.storeMedia') }}',
-    maxFilesize: 20, // MB
-    acceptedFiles: '.jpeg,.jpg,.png,.gif',
-    maxFiles: 1,
-    addRemoveLinks: true,
-    headers: {
-      'X-CSRF-TOKEN': "{{ csrf_token() }}"
-    },
-    params: {
-      size: 20,
-      width: 4096,
-      height: 4096
-    },
-    success: function (file, response) {
-      $('form').find('input[name="attechment"]').remove()
-      $('form').append('<input type="hidden" name="attechment" value="' + response.name + '">')
-    },
-    removedfile: function (file) {
-      file.previewElement.remove()
-      if (file.status !== 'error') {
-        $('form').find('input[name="attechment"]').remove()
-        this.options.maxFiles = this.options.maxFiles + 1
-      }
-    },
-    init: function () {
-@if(isset($adjustBankBalance) && $adjustBankBalance->attechment)
-      var file = {!! json_encode($adjustBankBalance->attechment) !!}
-          this.options.addedfile.call(this, file)
-      this.options.thumbnail.call(this, file, file.preview ?? file.preview_url)
-      file.previewElement.classList.add('dz-complete')
-      $('form').append('<input type="hidden" name="attechment" value="' + file.file_name + '">')
-      this.options.maxFiles = this.options.maxFiles - 1
-@endif
-    },
-    error: function (file, response) {
-        if ($.type(response) === 'string') {
-            var message = response //dropzone sends it's own error messages in string
-        } else {
-            var message = response.errors.file
-        }
-        file.previewElement.classList.add('dz-error')
-        _ref = file.previewElement.querySelectorAll('[data-dz-errormessage]')
-        _results = []
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            node = _ref[_i]
-            _results.push(node.textContent = message)
-        }
-
-        return _results
+        url: '{{ route('admin.adjust-bank-balances.storeMedia') }}',
+        maxFilesize: 20,
+        acceptedFiles: '.jpeg,.jpg,.png,.gif',
+        maxFiles: 1,
+        addRemoveLinks: true,
+        headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}" },
+        params: { size: 20, width: 4096, height: 4096 },
+        success: function (file, response) {
+            $('form').find('input[name="attechment"]').remove()
+            $('form').append('<input type="hidden" name="attechment" value="' + response.name + '">')
+        },
+        removedfile: function (file) {
+            file.previewElement.remove()
+            if (file.status !== 'error') {
+                $('form').find('input[name="attechment"]').remove()
+                this.options.maxFiles = this.options.maxFiles + 1
+            }
+        },
     }
-}
-
 </script>
 @endsection
