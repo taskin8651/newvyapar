@@ -148,6 +148,11 @@
             pageLength: 50,
         });
 
+         // ✅ Custom search input binding
+        $('#partySearch').on('keyup change clear', function () {
+            table.search(this.value).draw();
+        });
+
         let table = $('.datatable-PartyDetail:not(.ajaxTable)').DataTable({ buttons: dtButtons })
         $('a[data-toggle="tab"]').on('shown.bs.tab click', function(){
             $($.fn.dataTable.tables(true)).DataTable().columns.adjust();

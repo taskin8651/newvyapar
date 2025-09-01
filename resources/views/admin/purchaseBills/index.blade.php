@@ -128,6 +128,8 @@
 
 @section('scripts')
 @parent
+@section('scripts')
+@parent
 <script>
     $(function () {
         let dtButtons = $.extend(true, [], $.fn.dataTable.defaults.buttons)
@@ -161,23 +163,30 @@
         dtButtons.push(deleteButton)
         @endcan
 
+        // Default config extend
         $.extend(true, $.fn.dataTable.defaults, {
             orderCellsTop: true,
             order: [[1, 'desc']],
             pageLength: 25,
-            dom: 'lrtip' // disable default search box
+            dom: 'Brtip', // 👈 'f' hata diya (default search box disable karne ke liye)
         });
 
-        let table = $('.datatable-PurchaseBill:not(.ajaxTable)').DataTable({ buttons: dtButtons })
+        // Initialize datatable
+        let table = $('.datatable-PurchaseBill:not(.ajaxTable)').DataTable({
+            buttons: dtButtons
+        });
 
-        // Custom search
+        // Custom search bar
         $('#purchaseSearch').on('keyup change clear', function () {
             table.search(this.value).draw();
         });
 
+        // Tab adjust fix
         $('a[data-toggle="tab"]').on('shown.bs.tab click', function(){
             $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
         });
     })
 </script>
+@endsection
+
 @endsection
