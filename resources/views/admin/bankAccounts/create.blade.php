@@ -1,114 +1,199 @@
 @extends('layouts.admin')
+
 @section('content')
-<div class="content">
+<div class="p-6 bg-gray-100 min-h-screen">
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-md border border-gray-200">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.create') }} {{ trans('cruds.bankAccount.title_singular') }}
-                </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.bank-accounts.store") }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group {{ $errors->has('account_name') ? 'has-error' : '' }}">
-                            <label class="required" for="account_name">{{ trans('cruds.bankAccount.fields.account_name') }}</label>
-                            <input class="form-control" type="text" name="account_name" id="account_name" value="{{ old('account_name', '') }}" required>
-                            @if($errors->has('account_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('account_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.account_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('opening_balance') ? 'has-error' : '' }}">
-                            <label class="required" for="opening_balance">{{ trans('cruds.bankAccount.fields.opening_balance') }}</label>
-                            <input class="form-control" type="text" name="opening_balance" id="opening_balance" value="{{ old('opening_balance', '') }}" required>
-                            @if($errors->has('opening_balance'))
-                                <span class="help-block" role="alert">{{ $errors->first('opening_balance') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.opening_balance_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('as_of_date') ? 'has-error' : '' }}">
-                            <label for="as_of_date">{{ trans('cruds.bankAccount.fields.as_of_date') }}</label>
-                            <input class="form-control date" type="text" name="as_of_date" id="as_of_date" value="{{ old('as_of_date') }}">
-                            @if($errors->has('as_of_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('as_of_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.as_of_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('account_number') ? 'has-error' : '' }}">
-                            <label for="account_number">{{ trans('cruds.bankAccount.fields.account_number') }}</label>
-                            <input class="form-control" type="text" name="account_number" id="account_number" value="{{ old('account_number', '') }}">
-                            @if($errors->has('account_number'))
-                                <span class="help-block" role="alert">{{ $errors->first('account_number') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.account_number_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('ifsc_code') ? 'has-error' : '' }}">
-                            <label for="ifsc_code">{{ trans('cruds.bankAccount.fields.ifsc_code') }}</label>
-                            <input class="form-control" type="text" name="ifsc_code" id="ifsc_code" value="{{ old('ifsc_code', '') }}">
-                            @if($errors->has('ifsc_code'))
-                                <span class="help-block" role="alert">{{ $errors->first('ifsc_code') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.ifsc_code_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('bank_name') ? 'has-error' : '' }}">
-                            <label for="bank_name">{{ trans('cruds.bankAccount.fields.bank_name') }}</label>
-                            <input class="form-control" type="text" name="bank_name" id="bank_name" value="{{ old('bank_name', '') }}">
-                            @if($errors->has('bank_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('bank_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.bank_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('account_holder_name') ? 'has-error' : '' }}">
-                            <label for="account_holder_name">{{ trans('cruds.bankAccount.fields.account_holder_name') }}</label>
-                            <input class="form-control" type="text" name="account_holder_name" id="account_holder_name" value="{{ old('account_holder_name', '') }}">
-                            @if($errors->has('account_holder_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('account_holder_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.account_holder_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('upi') ? 'has-error' : '' }}">
-                            <label for="upi">{{ trans('cruds.bankAccount.fields.upi') }}</label>
-                            <input class="form-control" type="text" name="upi" id="upi" value="{{ old('upi', '') }}">
-                            @if($errors->has('upi'))
-                                <span class="help-block" role="alert">{{ $errors->first('upi') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.upi_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('print_upi_qr') ? 'has-error' : '' }}">
-                            <div>
-                                <input type="hidden" name="print_upi_qr" value="0">
-                                <input type="checkbox" name="print_upi_qr" id="print_upi_qr" value="1" {{ old('print_upi_qr', 0) == 1 ? 'checked' : '' }}>
-                                <label for="print_upi_qr" style="font-weight: 400">{{ trans('cruds.bankAccount.fields.print_upi_qr') }}</label>
-                            </div>
-                            @if($errors->has('print_upi_qr'))
-                                <span class="help-block" role="alert">{{ $errors->first('print_upi_qr') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.print_upi_qr_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('print_bank_details') ? 'has-error' : '' }}">
-                            <div>
-                                <input type="hidden" name="print_bank_details" value="0">
-                                <input type="checkbox" name="print_bank_details" id="print_bank_details" value="1" {{ old('print_bank_details', 0) == 1 ? 'checked' : '' }}>
-                                <label for="print_bank_details" style="font-weight: 400">{{ trans('cruds.bankAccount.fields.print_bank_details') }}</label>
-                            </div>
-                            @if($errors->has('print_bank_details'))
-                                <span class="help-block" role="alert">{{ $errors->first('print_bank_details') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankAccount.fields.print_bank_details_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+        {{-- Header --}}
+        <div class="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800 flex items-center space-x-2">
+                <i class="fas fa-university text-indigo-600"></i>
+                <span>{{ trans('global.create') }} {{ trans('cruds.bankAccount.title_singular') }}</span>
+            </h2>
+            <a href="{{ route('admin.bank-accounts.index') }}" 
+               class="text-sm text-gray-500 hover:text-indigo-600 transition flex items-center gap-1">
+                <i class="fas fa-arrow-left"></i> {{ trans('global.back_to_list') }}
+            </a>
+        </div>
+
+        {{-- Progress Bar --}}
+        <div class="px-6 pt-4">
+            <div class="flex justify-between items-center text-sm text-gray-500 mb-2">
+                <span>Account Setup Progress</span>
+                <span id="progress-text">0%</span>
             </div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-4">
+                <div id="progress-bar" class="bg-indigo-600 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
 
+        {{-- Form --}}
+        <div class="px-6 py-6">
+            <form method="POST" action="{{ route('admin.bank-accounts.store') }}" class="space-y-6">
+                @csrf
 
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
+                    {{-- Left Column --}}
+                    <div class="space-y-5">
+                        <h3 class="text-lg font-medium text-gray-800 border-b border-gray-100 pb-2">Account Information</h3>
+
+                        <div>
+                            <label for="account_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.account_name') }} <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="account_name" id="account_name" data-required="1"
+                                   value="{{ old('account_name') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('account_name') border-red-500 @enderror">
+                            @error('account_name')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="opening_balance" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.opening_balance') }} <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <input type="text" name="opening_balance" id="opening_balance" data-required="1"
+                                       value="{{ old('opening_balance') }}"
+                                       class="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('opening_balance') border-red-500 @enderror">
+                            </div>
+                            @error('opening_balance')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="as_of_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.as_of_date') }}
+                            </label>
+                            <input type="date" name="as_of_date" id="as_of_date" data-required="1"
+                                   value="{{ old('as_of_date') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('as_of_date') border-red-500 @enderror">
+                            @error('as_of_date')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="account_number" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.account_number') }}
+                            </label>
+                            <input type="text" name="account_number" id="account_number" data-required="1"
+                                   value="{{ old('account_number') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('account_number') border-red-500 @enderror">
+                            @error('account_number')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Right Column --}}
+                    <div class="space-y-5">
+                        <h3 class="text-lg font-medium text-gray-800 border-b border-gray-100 pb-2">Bank Details</h3>
+
+                        <div>
+                            <label for="ifsc_code" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.ifsc_code') }}
+                            </label>
+                            <input type="text" name="ifsc_code" id="ifsc_code" data-required="1"
+                                   value="{{ old('ifsc_code') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('ifsc_code') border-red-500 @enderror">
+                            @error('ifsc_code')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="bank_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.bank_name') }}
+                            </label>
+                            <input type="text" name="bank_name" id="bank_name" data-required="1"
+                                   value="{{ old('bank_name') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('bank_name') border-red-500 @enderror">
+                            @error('bank_name')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="account_holder_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.account_holder_name') }}
+                            </label>
+                            <input type="text" name="account_holder_name" id="account_holder_name" data-required="1"
+                                   value="{{ old('account_holder_name') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('account_holder_name') border-red-500 @enderror">
+                            @error('account_holder_name')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="upi" class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ trans('cruds.bankAccount.fields.upi') }}
+                            </label>
+                            <input type="text" name="upi" id="upi" data-required="1"
+                                   value="{{ old('upi') }}"
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('upi') border-red-500 @enderror">
+                            @error('upi')
+                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Switches --}}
+                <div class="flex items-center space-x-6 pt-4 border-t border-gray-100">
+                    <label class="flex items-center cursor-pointer text-sm text-gray-700">
+                        <input type="hidden" name="print_upi_qr" value="0">
+                        <input type="checkbox" name="print_upi_qr" value="1" {{ old('print_upi_qr') ? 'checked' : '' }}
+                               class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                        <span class="ml-2">{{ trans('cruds.bankAccount.fields.print_upi_qr') }}</span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer text-sm text-gray-700">
+                        <input type="hidden" name="print_bank_details" value="0">
+                        <input type="checkbox" name="print_bank_details" value="1" {{ old('print_bank_details') ? 'checked' : '' }}
+                               class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                        <span class="ml-2">{{ trans('cruds.bankAccount.fields.print_bank_details') }}</span>
+                    </label>
+                </div>
+
+                {{-- Submit --}}
+                <div class="pt-6 flex justify-end">
+                    <button type="submit" 
+                        class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i> {{ trans('global.save') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+{{-- Progress Bar JS --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const inputs = document.querySelectorAll('input[data-required]');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
+    function updateProgress() {
+        let filled = 0;
+        inputs.forEach(input => {
+            if (input.value.trim() !== '') filled++;
+        });
+        const percent = Math.round((filled / inputs.length) * 100);
+        progressBar.style.width = percent + '%';
+        progressText.textContent = percent + '%';
+    }
+
+    inputs.forEach(input => input.addEventListener('input', updateProgress));
+
+    // Initialize progress on page load
+    updateProgress();
+});
+</script>
 @endsection

@@ -45,9 +45,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<!-- Dropzone CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.css" integrity="sha512-R6F3FvZ12..." crossorigin="anonymous" />
 
-                                 <!-- jQuery (pehle load hoga) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Dropzone JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js" integrity="sha512-..." crossorigin="anonymous"></script>
+
 
 <!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -218,7 +221,7 @@
 </header>
 
         <!-- Page Content -->
-        <main class="flex-1 p-6">
+        <main class="flex-1 ">
             @if(session('message'))
                 <div class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
                     {{ session('message') }}

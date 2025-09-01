@@ -1,84 +1,161 @@
 @extends('layouts.admin')
 @section('content')
-<div class="content">
+<div class="max-w-6xl mx-auto py-8">
+    <div class="bg-white shadow rounded-2xl p-8">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.create') }} {{ trans('cruds.user.title_singular') }}
-                </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.users.store") }}" enctype="multipart/form-data">
-                        @csrf
-                        <div class="form-group {{ $errors->has('name') ? 'has-error' : '' }}">
-                            <label class="required" for="name">{{ trans('cruds.user.fields.name') }}</label>
-                            <input class="form-control" type="text" name="name" id="name" value="{{ old('name', '') }}" required>
-                            @if($errors->has('name'))
-                                <span class="help-block" role="alert">{{ $errors->first('name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.user.fields.name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('email') ? 'has-error' : '' }}">
-                            <label class="required" for="email">{{ trans('cruds.user.fields.email') }}</label>
-                            <input class="form-control" type="email" name="email" id="email" value="{{ old('email') }}" required>
-                            @if($errors->has('email'))
-                                <span class="help-block" role="alert">{{ $errors->first('email') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.user.fields.email_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_companies') ? 'has-error' : '' }}">
-                            <label for="select_companies">{{ trans('cruds.user.fields.select_companies') }}</label>
-                            <div style="padding-bottom: 4px">
-                                <span class="btn btn-info btn-xs select-all" style="border-radius: 0">{{ trans('global.select_all') }}</span>
-                                <span class="btn btn-info btn-xs deselect-all" style="border-radius: 0">{{ trans('global.deselect_all') }}</span>
-                            </div>
-                            <select class="form-control select2" name="select_companies[]" id="select_companies" multiple>
-                                @foreach($select_companies as $id => $select_company)
-                                    <option value="{{ $id }}" {{ in_array($id, old('select_companies', [])) ? 'selected' : '' }}>{{ $select_company }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_companies'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_companies') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.user.fields.select_companies_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('password') ? 'has-error' : '' }}">
-                            <label class="required" for="password">{{ trans('cruds.user.fields.password') }}</label>
-                            <input class="form-control" type="password" name="password" id="password" required>
-                            @if($errors->has('password'))
-                                <span class="help-block" role="alert">{{ $errors->first('password') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.user.fields.password_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('roles') ? 'has-error' : '' }}">
-                            <label class="required" for="roles">{{ trans('cruds.user.fields.roles') }}</label>
-                            <div style="padding-bottom: 4px">
-                                <span class="btn btn-info btn-xs select-all" style="border-radius: 0">{{ trans('global.select_all') }}</span>
-                                <span class="btn btn-info btn-xs deselect-all" style="border-radius: 0">{{ trans('global.deselect_all') }}</span>
-                            </div>
-                            <select class="form-control select2" name="roles[]" id="roles" multiple required>
-                                @foreach($roles as $id => $role)
-                                    <option value="{{ $id }}" {{ in_array($id, old('roles', [])) ? 'selected' : '' }}>{{ $role }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('roles'))
-                                <span class="help-block" role="alert">{{ $errors->first('roles') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.user.fields.roles_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-
-
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b pb-4 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-user-plus text-indigo-600"></i>
+                {{ trans('global.create') }} {{ trans('cruds.user.title_singular') }}
+            </h2>
+            <a href="{{ route('admin.users.index') }}" 
+               class="text-sm text-indigo-600 hover:text-indigo-800">
+                ← {{ trans('global.back_to_list') }}
+            </a>
         </div>
+
+        <!-- Form -->
+        <form method="POST" action="{{ route('admin.users.store') }}" enctype="multipart/form-data">
+            @csrf
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Name -->
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ trans('cruds.user.fields.name') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           name="name" 
+                           id="name" 
+                           value="{{ old('name', '') }}" 
+                           required
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    @error('name')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ trans('cruds.user.fields.email') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" 
+                           name="email" 
+                           id="email" 
+                           value="{{ old('email') }}" 
+                           required
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    @error('email')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+<!-- Select Companies -->
+<div class="md:col-span-2">
+    <label for="select_companies" class="block text-sm font-medium text-gray-700 mb-1">
+        {{ trans('cruds.user.fields.select_companies') }}
+    </label>
+    <div class="flex gap-2 mb-2">
+        <span class="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded cursor-pointer select-all-companies">
+            {{ trans('global.select_all') }}
+        </span>
+        <span class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded cursor-pointer deselect-all-companies">
+            {{ trans('global.deselect_all') }}
+        </span>
+    </div>
+    <select name="select_companies[]" id="select_companies" multiple
+            class="w-full select2 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        @foreach($select_companies as $id => $select_company)
+            <option value="{{ $id }}" {{ in_array($id, old('select_companies', [])) ? 'selected' : '' }}>
+                {{ $select_company }}
+            </option>
+        @endforeach
+    </select>
+    @error('select_companies')
+        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+    @enderror
+</div>
+
+<!-- Roles -->
+<div class="md:col-span-2">
+    <label for="roles" class="block text-sm font-medium text-gray-700 mb-1">
+        {{ trans('cruds.user.fields.roles') }} <span class="text-red-500">*</span>
+    </label>
+    <div class="flex gap-2 mb-2">
+        <span class="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded cursor-pointer select-all-roles">
+            {{ trans('global.select_all') }}
+        </span>
+        <span class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded cursor-pointer deselect-all-roles">
+            {{ trans('global.deselect_all') }}
+        </span>
+    </div>
+    <select name="roles[]" id="roles" multiple required
+            class="w-full select2 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        @foreach($roles as $id => $role)
+            <option value="{{ $id }}" {{ in_array($id, old('roles', [])) ? 'selected' : '' }}>
+                {{ $role }}
+            </option>
+        @endforeach
+    </select>
+    @error('roles')
+        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+    @enderror
+</div>
+</div>
+
+                <!-- Password -->
+                <div class="md:col-span-2 mt-4">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ trans('cruds.user.fields.password') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" 
+                           name="password" 
+                           id="password" 
+                           required
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    @error('password')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                
+
+            <!-- Actions -->
+            <div class="flex justify-end gap-3 pt-6 border-t mt-6">
+                <a href="{{ route('admin.users.index') }}" 
+                   class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-sm hover:bg-gray-200 transition">
+                    {{ trans('global.cancel') }}
+                </a>
+                <button type="submit" 
+                        class="px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 transition">
+                    <i class="fas fa-save mr-1"></i> {{ trans('global.save') }}
+                </button>
+            </div>
+        </form>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        // Companies
+        $('.select-all-companies').click(function() {
+            $('#select_companies option').prop('selected', true).trigger('change');
+        });
+        $('.deselect-all-companies').click(function() {
+            $('#select_companies option').prop('selected', false).trigger('change');
+        });
+
+        // Roles
+        $('.select-all-roles').click(function() {
+            $('#roles option').prop('selected', true).trigger('change');
+        });
+        $('.deselect-all-roles').click(function() {
+            $('#roles option').prop('selected', false).trigger('change');
+        });
+    });
+</script>
 @endsection
