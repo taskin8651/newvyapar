@@ -19,15 +19,30 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Select Customer</label>
-                        <select name="select_customer_id" 
+                        <select name="select_customer_id" id="select_customer_id"
                                 class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Customer --</option>
                             @foreach($select_customers as $id => $name)
-                                <option value="{{ $id }}" {{ old('select_customer_id') == $id ? 'selected' : '' }}>
-                                    {{ $name }}
-                                </option>
+                                <option value="{{ $id }}">{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
+
+                    <!-- Customer Details Preview -->
+                    <div id="customerDetails" class="mt-4 p-4 border rounded-lg bg-gray-50">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Customer Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <p><strong>Full Name:</strong> <span id="party_name"></span></p>
+                            <p><strong>GST No:</strong> <span id="gstin"></span></p>
+                            <p><strong>Phone:</strong> <span id="phone_number"></span></p>
+                            <p><strong>Email:</strong> <span id="email"></span></p>
+                            <p><strong>Billing Address:</strong> <span id="billing_address"></span></p>
+                            <p><strong>Shipping Address:</strong> <span id="shipping_address"></span></p>
+                            <p><strong>State:</strong> <span id="state"></span></p>
+                            <p><strong>City:</strong> <span id="city"></span></p>
+                        </div>
+                    </div>
+
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Billing Name</label>
@@ -88,18 +103,19 @@
                     <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">QTY</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price/Unit</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                <th class="px-4 py-2">Item</th>
+                                <th class="px-4 py-2">Description</th>
+                                <th class="px-4 py-2">QTY</th>
+                                <th class="px-4 py-2">Unit</th>
+                                <th class="px-4 py-2">Price/Unit</th>
+                                <th class="px-4 py-2">Amount</th>
+                                <th class="px-4 py-2">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="px-4 py-2">
-                                    <select name="items[0][id]" class="select2 w-full">
+                                    <select name="items[0][id]" class="selectItem select2 w-full">
                                         <option value="">Select Item</option>
                                         @foreach($items as $id => $name)
                                             <option value="{{ $id }}">{{ $name }}</option>
@@ -107,12 +123,12 @@
                                     </select>
                                 </td>
                                 <td class="px-4 py-2">
-                                    <input type="text" name="items[0][description]" 
-                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                    <input type="text" name="items[0][description]"
+                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                                 </td>
                                 <td class="px-4 py-2">
                                     <input type="number" name="items[0][qty]" value="1"
-                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm qty">
                                 </td>
                                 <td class="px-4 py-2">
                                     <select name="items[0][unit]" class="select2 w-full">
@@ -123,20 +139,26 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <input type="number" name="items[0][price]" value="0"
-                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm price">
                                 </td>
-                                <td class="px-4 py-2 font-semibold">
+                                <td class="px-4 py-2">
                                     <input type="text" name="items[0][amount]" readonly
-                                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm amount">
+                                </td>
+                                <td class="px-4 py-2 text-center">
+                                    <button type="button" class="removeRow bg-red-600 text-white px-3 py-1 rounded-md">X</button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+
+<button type="button" id="addRow" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
+    + ADD ROW
+</button>
+
                 </div>
 
-                <button type="button" id="addRow" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
-                    + ADD ROW
-                </button>
+
 
     <!-- Left Side -->
     <div class="space-y-4 py-6">
@@ -267,24 +289,112 @@
         </form>
     </div>
 </div>
-
+@endsection
 <!-- Dynamic Row -->
 <script>
-document.getElementById('addRow').addEventListener('click', function () {
-    let table = document.querySelector('#itemsTable tbody');
-    let rowCount = table.rows.length;
-    let newRow = table.rows[0].cloneNode(true);
+document.addEventListener('DOMContentLoaded', function () {
+    const tableBody = document.querySelector('#itemsTable tbody');
+    const addRowBtn = document.getElementById('addRow');
 
-    newRow.querySelectorAll('input, select').forEach(el => {
-        let name = el.getAttribute('name');
-        if (name) {
-            let newName = name.replace(/\d+/, rowCount);
-            el.setAttribute('name', newName);
-            if (el.tagName === 'INPUT') el.value = '';
+    // Add new row
+    addRowBtn.addEventListener('click', function () {
+        let rowCount = tableBody.rows.length;
+        let newRow = tableBody.rows[0].cloneNode(true);
+
+        newRow.querySelectorAll('input, select').forEach(el => {
+            let name = el.getAttribute('name');
+            if (name) {
+                el.setAttribute('name', name.replace(/\d+/, rowCount));
+            }
+            if (el.classList.contains('amount')) {
+                el.value = '';
+            } else if (el.tagName === 'INPUT') {
+                el.value = '';
+            } else if (el.tagName === 'SELECT') {
+                el.selectedIndex = 0;
+            }
+        });
+
+        tableBody.appendChild(newRow);
+        updateItemOptions();
+    });
+
+    // Remove row
+    tableBody.addEventListener('click', function (e) {
+        if (e.target.classList.contains('removeRow')) {
+            if (tableBody.rows.length > 1) {
+                e.target.closest('tr').remove();
+                updateItemOptions();
+            } else {
+                alert("At least one item is required!");
+            }
         }
     });
 
-    table.appendChild(newRow);
+    // Calculate amount automatically
+    tableBody.addEventListener('input', function (e) {
+        if (e.target.classList.contains('qty') || e.target.classList.contains('price')) {
+            let row = e.target.closest('tr');
+            let qty = parseFloat(row.querySelector('.qty').value) || 0;
+            let price = parseFloat(row.querySelector('.price').value) || 0;
+            row.querySelector('.amount').value = (qty * price).toFixed(2);
+        }
+    });
+
+    // Prevent duplicate item selection
+    tableBody.addEventListener('change', function () {
+        updateItemOptions();
+    });
+
+    function updateItemOptions() {
+        let selectedItems = [];
+        document.querySelectorAll('.selectItem').forEach(select => {
+            if (select.value) selectedItems.push(select.value);
+        });
+
+        document.querySelectorAll('.selectItem').forEach(select => {
+            select.querySelectorAll('option').forEach(option => {
+                if (option.value && selectedItems.includes(option.value) && option.value !== select.value) {
+                    option.disabled = true;
+                } else {
+                    option.disabled = false;
+                }
+            });
+        });
+    }
+});
+
+
+
+
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let customerSelect = document.getElementById('select_customer_id');
+    if (customerSelect) {
+        customerSelect.addEventListener('change', function () {
+            let customerId = this.value;
+            console.log(customerId);
+
+            if (customerId) {
+                fetch(`/admin/get-customer-details/${customerId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('customerDetails').classList.remove('hidden');
+                        document.getElementById('party_name').textContent = data.party_name || '';
+                        document.getElementById('gstin').textContent = data.gstin || '';
+                        document.getElementById('phone_number').textContent = data.phone_number || '';
+                        document.getElementById('email').textContent = data.email || '';
+                        document.getElementById('billing_address').innerHTML = data.billing_address || '';
+                        document.getElementById('shipping_address').innerHTML = data.shipping_address || '';
+                        document.getElementById('state').textContent = data.state || '';
+                        document.getElementById('city').textContent = data.city || '';
+                    });
+            } else {
+                document.getElementById('customerDetails').classList.add('hidden');
+            }
+        });
+    }
 });
 </script>
 
@@ -327,4 +437,4 @@ Dropzone.options.documentDropzone = {
     }
 }
 </script>
-@endsection
+

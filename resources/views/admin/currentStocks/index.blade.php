@@ -72,13 +72,13 @@
                                             @endforeach
                                         </td>
                                         <td>
-                                            {{ $currentStock->parties->party_name ?? '' }}
+                                            {{ $currentStock->user->name ?? '' }}
                                         </td>
                                         <td>
                                             {{ $currentStock->parties->gstin ?? '' }}
                                         </td>
                                         <td>
-                                            {{ $currentStock->parties->phone_number ?? '' }}
+                                            {{ $currentStock->parties->phone ?? '' }}
                                         </td>
                                         <td>
                                             {{ $currentStock->parties->pan_number ?? '' }}

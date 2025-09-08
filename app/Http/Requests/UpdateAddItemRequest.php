@@ -59,6 +59,10 @@ class UpdateAddItemRequest extends FormRequest
                 'string',
                 'nullable',
             ],
+            'quantity' => [
+                'integer',
+                'nullable',
+            ],
         ];
     }
 }
