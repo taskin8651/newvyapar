@@ -220,25 +220,88 @@
     </div>
 </header>
 
-        <!-- Page Content -->
-        <main class="flex-1 ">
-            @if(session('message'))
-                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
-                    {{ session('message') }}
-                </div>
-            @endif
-            @if($errors->count() > 0)
-                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-                    <ul class="list-disc pl-5">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+       <!-- Page Content -->
+<main class="flex-1 px-3 py-2">
+    {{-- Success Message --}}
+    @if(session('message'))
+        <div class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg">
+            {{ session('message') }}
+        </div>
+    @endif
 
-            @yield('content')
-        </main>
+    {{-- Error Messages --}}
+    @if($errors->count() > 0)
+        <div class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+            <ul class="list-disc pl-5">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+   {{-- Loader Message --}}
+<div id="loadingMessage" class="hidden mb-4 p-3 bg-blue-100 text-blue-800 rounded-lg flex items-center space-x-2">
+    <span>⏳</span>
+    <span>Loading, please wait...</span>
+</div>
+
+{{-- Offline Message --}}
+<div id="offlineMessage" class="hidden mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center space-x-2">
+    <span>📡</span>
+    <span>No Internet Connection. Please check your network.</span>
+</div>
+
+{{-- Slow Internet Message --}}
+<div id="slowMessage" class="hidden mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg flex items-center space-x-2">
+    <span>🐢</span>
+    <span>Your internet seems slow. Page may take longer to load.</span>
+</div>
+
+{{-- Success Message --}}
+<div id="successMessage" class="hidden mb-4 p-3 bg-green-100 text-green-800 rounded-lg flex items-center space-x-2">
+    <span>✅</span>
+    <span>Page loaded successfully!</span>
+</div>
+
+
+    {{-- Page Content --}}
+    <div id="pageContent">
+        @yield('content')
+    </div>
+</main>
+
+{{-- Script for handling loading/offline --}}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let loadingMessage = document.getElementById("loadingMessage");
+        let offlineMessage = document.getElementById("offlineMessage");
+        let pageContent = document.getElementById("pageContent");
+
+        // Show loading message for slow internet
+        setTimeout(() => {
+            if (document.readyState !== "complete") {
+                loadingMessage.classList.remove("hidden");
+            }
+        }, 1000); // 1 second delay
+
+        // Internet offline detection
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                offlineMessage.classList.add("hidden");
+                pageContent.classList.remove("hidden");
+            } else {
+                offlineMessage.classList.remove("hidden");
+                pageContent.classList.add("hidden");
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+    });
+</script>
+
 
         <!-- Footer -->
         <footer class="bg-white border-t text-center py-3 text-gray-500 text-sm">

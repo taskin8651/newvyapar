@@ -50,14 +50,14 @@
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.item_code') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.sale_price') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.select_type') }}</th>
-                        <th class="px-4 py-3">{{ trans('cruds.addItem.fields.disc_on_sale_price') }}</th>
+                        <!-- <th class="px-4 py-3">{{ trans('cruds.addItem.fields.disc_on_sale_price') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.disc_type') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.wholesale_price') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.select_type_wholesale') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.minimum_wholesale_qty') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.purchase_price') }}</th>
                         <th class="px-4 py-3">{{ trans('cruds.addItem.fields.select_purchase_type') }}</th>
-                        <th class="px-4 py-3">{{ trans('cruds.addItem.fields.select_tax') }}</th>
+                        <th class="px-4 py-3">{{ trans('cruds.addItem.fields.select_tax') }}</th> -->
                         <th class="px-4 py-3">{{ trans('cruds.taxRate.fields.parcentage') }}</th>
                         <th class="px-4 py-3 text-center">{{ trans('global.actions') }}</th>
                     </tr>
@@ -79,14 +79,14 @@
                             <td class="px-4 py-3">{{ $addItem->item_code ?? '' }}</td>
                             <td class="px-4 py-3">{{ $addItem->sale_price ?? '' }}</td>
                             <td class="px-4 py-3">{{ App\Models\AddItem::SELECT_TYPE_SELECT[$addItem->select_type] ?? '' }}</td>
-                            <td class="px-4 py-3">{{ $addItem->disc_on_sale_price ?? '' }}</td>
+                            <!-- <td class="px-4 py-3">{{ $addItem->disc_on_sale_price ?? '' }}</td>
                             <td class="px-4 py-3">{{ $addItem->disc_type ?? '' }}</td>
                             <td class="px-4 py-3">{{ $addItem->wholesale_price ?? '' }}</td>
                             <td class="px-4 py-3">{{ App\Models\AddItem::SELECT_TYPE_WHOLESALE_SELECT[$addItem->select_type_wholesale] ?? '' }}</td>
                             <td class="px-4 py-3">{{ $addItem->minimum_wholesale_qty ?? '' }}</td>
                             <td class="px-4 py-3">{{ $addItem->purchase_price ?? '' }}</td>
                             <td class="px-4 py-3">{{ App\Models\AddItem::SELECT_PURCHASE_TYPE_SELECT[$addItem->select_purchase_type] ?? '' }}</td>
-                            <td class="px-4 py-3">{{ $addItem->select_tax->name ?? '' }}</td>
+                            <td class="px-4 py-3">{{ $addItem->select_tax->name ?? '' }}</td> -->
                             <td class="px-4 py-3">{{ $addItem->select_tax->parcentage ?? '' }}</td>
                             <td class="px-4 py-3 flex items-center justify-center gap-2">
 
