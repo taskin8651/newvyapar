@@ -324,3 +324,4 @@ Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 
         Route::post('profile/destroy', 'ChangePasswordController@destroy')->name('password.destroyProfile');
     }
 });
+ Route::get('/admin/get-customer-details/{id}', [PurchaseBillController::class, 'getCustomerDetails'])->name('admin.getCustomerDetails');
