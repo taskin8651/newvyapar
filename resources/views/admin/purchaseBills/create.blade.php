@@ -29,7 +29,7 @@
                     </div>
 
                     <!-- Customer Details Preview -->
-                    <div id="customerDetails" class="mt-4 p-4 border rounded-lg bg-gray-50">
+                   <div id="customerDetails" class="hidden mt-4 p-4 border rounded-lg bg-gray-50">
                         <h3 class="text-lg font-semibold text-gray-800 mb-3">Customer Details</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <p><strong>Full Name:</strong> <span id="party_name"></span></p>
@@ -42,6 +42,42 @@
                             <p><strong>City:</strong> <span id="city"></span></p>
                         </div>
                     </div>
+
+                    <script>
+$(document).ready(function () {
+    $('#select_customer_id').on('change', function () {
+        let customerId = $(this).val();
+
+        if (customerId) {
+            let url = "{{ route('admin.getCustomerDetails', ':id') }}";
+            url = url.replace(':id', customerId);
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Customer Data:", data); // Debug ke liye
+                    $('#customerDetails').removeClass('hidden');
+                    $('#party_name').text(data.party_name || '');
+                    $('#gstin').text(data.gstin || '');
+                    $('#phone_number').text(data.phone_number || '');
+                    $('#email').text(data.email || '');
+                    $('#billing_address').html(data.billing_address || '');
+                    $('#shipping_address').html(data.shipping_address || '');
+                    $('#state').text(data.state || '');
+                    $('#city').text(data.city || '');
+                })
+                .catch(error => {
+                    console.error("Error fetching customer details:", error);
+                    $('#customerDetails').addClass('hidden');
+                });
+        } else {
+            $('#customerDetails').addClass('hidden');
+        }
+    });
+});
+</script>
+
+
 
 
                     <div>
@@ -368,35 +404,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 </script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    let customerSelect = document.getElementById('select_customer_id');
-    if (customerSelect) {
-        customerSelect.addEventListener('change', function () {
-            let customerId = this.value;
-            console.log(customerId);
 
-            if (customerId) {
-                fetch(`/admin/get-customer-details/${customerId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById('customerDetails').classList.remove('hidden');
-                        document.getElementById('party_name').textContent = data.party_name || '';
-                        document.getElementById('gstin').textContent = data.gstin || '';
-                        document.getElementById('phone_number').textContent = data.phone_number || '';
-                        document.getElementById('email').textContent = data.email || '';
-                        document.getElementById('billing_address').innerHTML = data.billing_address || '';
-                        document.getElementById('shipping_address').innerHTML = data.shipping_address || '';
-                        document.getElementById('state').textContent = data.state || '';
-                        document.getElementById('city').textContent = data.city || '';
-                    });
-            } else {
-                document.getElementById('customerDetails').classList.add('hidden');
-            }
-        });
-    }
-});
-</script>
+
 
 <!-- Dropzone Config -->
 <script>
