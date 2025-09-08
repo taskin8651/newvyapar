@@ -314,3 +314,8 @@ Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 
         Route::post('profile/destroy', 'ChangePasswordController@destroy')->name('password.destroyProfile');
     }
 });
+
+// pdf generate
+Route::get('admin/party-details/{partyDetail}/download/{templateId}', 
+    [App\Http\Controllers\Admin\PartyDetailsController::class, 'download'])
+    ->name('admin.pdf.download');

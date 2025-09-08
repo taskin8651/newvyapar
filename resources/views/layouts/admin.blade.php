@@ -168,6 +168,7 @@
         <!-- Navbar -->
 <header class="flex items-center justify-between bg-white shadow px-6 py-3">
     <div>
+        <img src="{{ asset('logo.png') }}" alt="" class="h-10 w-100 inline-block">
         <button class="md:hidden text-gray-600"><i class="fas fa-bars"></i></button>
     </div>
 
@@ -264,11 +265,42 @@
     <span>Page loaded successfully!</span>
 </div>
 
+{{-- Page Content --}}
+<div id="pageContent" class="watermarked">
+    @yield('content')
+</div>
 
-    {{-- Page Content --}}
-    <div id="pageContent">
-        @yield('content')
-    </div>
+<style>
+    .watermarked {
+        position: relative;
+        overflow: hidden; /* 👈 overflow kaat dega */
+    }
+
+    .watermarked::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg); /* center rotate */
+        
+        width: 150%;   /* 👈 thoda bada rakha taki corners cut na ho */
+        height: 150%;
+
+        background: url("{{ asset('logo.png') }}") center center no-repeat;
+        background-size: 400px auto; /* height maintain */
+        opacity: 0.1; 
+        pointer-events: none;
+        z-index: 1556655; /* content ke neeche */
+    }
+
+    .watermarked > * {
+        position: relative;
+        z-index: 1; /* content upar */
+    }
+</style>
+
+
+
 </main>
 
 {{-- Script for handling loading/offline --}}
