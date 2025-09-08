@@ -22,7 +22,7 @@ class CurrentStock extends Model
     ];
 
     protected $fillable = [
-        'parties_id',
+        'user_id',
         'qty',
         'type',
         'created_at',
@@ -41,9 +41,9 @@ class CurrentStock extends Model
         return $this->belongsToMany(AddItem::class);
     }
 
-    public function parties()
+    public function user()
     {
-        return $this->belongsTo(PartyDetail::class, 'parties_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function created_by()

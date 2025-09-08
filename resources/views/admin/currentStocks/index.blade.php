@@ -39,70 +39,114 @@
                 </div>
             </div>
         </div>
+    @endcan
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    {{ trans('cruds.currentStock.title_singular') }} {{ trans('global.list') }}
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class=" table table-bordered table-striped table-hover datatable datatable-CurrentStock">
+                            <thead>
+                                <tr>
+                                    <th width="10">
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 datatable datatable-CurrentStock">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 w-10"></th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.currentStock.fields.id') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.currentStock.fields.item') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.currentStock.fields.parties') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.gstin') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.phone_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.pan_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.currentStock.fields.qty') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.currentStock.fields.type') }}</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ trans('global.actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($currentStocks as $key => $currentStock)
-                        <tr data-entry-id="{{ $currentStock->id }}" class="hover:bg-gray-50">
-                            <td class="px-4 py-3"></td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->id ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">
-                                @foreach($currentStock->items as $item)
-                                    <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded">{{ $item->item_name }}</span>
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.currentStock.fields.id') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.currentStock.fields.item') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.currentStock.fields.parties') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.partyDetail.fields.gstin') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.partyDetail.fields.phone_number') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.partyDetail.fields.pan_number') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.currentStock.fields.qty') }}
+                                    </th>
+                                    <th>
+                                        {{ trans('cruds.currentStock.fields.type') }}
+                                    </th>
+                                    <th>
+                                        &nbsp;
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($currentStocks as $key => $currentStock)
+                                    <tr data-entry-id="{{ $currentStock->id }}">
+                                        <td>
+
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->id ?? '' }}
+                                        </td>
+                                        <td>
+                                            @foreach($currentStock->items as $key => $item)
+                                                <span class="label label-info label-many">{{ $item->item_name }}</span>
+                                            @endforeach
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->parties->party_name ?? '' }}
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->parties->gstin ?? '' }}
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->parties->phone_number ?? '' }}
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->parties->pan_number ?? '' }}
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->qty ?? '' }}
+                                        </td>
+                                        <td>
+                                            {{ $currentStock->type ?? '' }}
+                                        </td>
+                                        <td>
+                                            @can('current_stock_show')
+                                                <a class="btn btn-xs btn-primary" href="{{ route('admin.current-stocks.show', $currentStock->id) }}">
+                                                    {{ trans('global.view') }}
+                                                </a>
+                                            @endcan
+
+                                            @can('current_stock_edit')
+                                                <a class="btn btn-xs btn-info" href="{{ route('admin.current-stocks.edit', $currentStock->id) }}">
+                                                    {{ trans('global.edit') }}
+                                                </a>
+                                            @endcan
+
+                                            @can('current_stock_delete')
+                                                <form action="{{ route('admin.current-stocks.destroy', $currentStock->id) }}" method="POST" onsubmit="return confirm('{{ trans('global.areYouSure') }}');" style="display: inline-block;">
+                                                    <input type="hidden" name="_method" value="DELETE">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                                    <input type="submit" class="btn btn-xs btn-danger" value="{{ trans('global.delete') }}">
+                                                </form>
+                                            @endcan
+
+                                        </td>
+
+                                    </tr>
                                 @endforeach
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->parties->party_name ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->parties->gstin ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->parties->phone_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->parties->pan_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->qty ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->type ?? '' }}</td>
-                            <td class="px-4 py-3 text-center space-x-1">
-                                @can('current_stock_show')
-                                    <a href="{{ route('admin.current-stocks.show', $currentStock->id) }}" 
-                                       class="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                @endcan
-                                @can('current_stock_edit')
-                                    <a href="{{ route('admin.current-stocks.edit', $currentStock->id) }}" 
-                                       class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                @endcan
-                                @can('current_stock_delete')
-                                    <form action="{{ route('admin.current-stocks.destroy', $currentStock->id) }}" method="POST" 
-                                          onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
-                                        @method('DELETE')
-                                        @csrf
-                                        <button type="submit" 
-                                            class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
 
     </div>
 </div>

@@ -59,6 +59,10 @@ class StoreAddItemRequest extends FormRequest
                 'string',
                 'nullable',
             ],
+            'quantity' => [
+                'integer',
+                'nullable',
+            ],
         ];
     }
 }

@@ -1,193 +1,244 @@
 @extends('layouts.admin')
-@section('content')
-<div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.edit') }} {{ trans('cruds.addItem.title_singular') }}
+@section('content')
+<div class="max-w-6xl mx-auto py-8">
+    <div class="bg-white rounded-lg shadow">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b px-6 py-4">
+            <h2 class="text-xl font-semibold text-gray-800">Edit Item</h2>
+            <div class="mb-4">
+                <span class="text-sm font-medium text-gray-600">Product</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="switchType" value="service" class="sr-only peer"
+                        {{ old('item_type', $addItem->item_type) === 'service' ? 'checked' : '' }}>
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
+                    <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                </label>
+                <span class="text-sm font-medium text-gray-600">Service</span>
+                <input type="hidden" id="itemTypeHidden" name="item_type" value="{{ old('item_type', $addItem->item_type) }}">
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="editItemForm" method="POST" action="{{ route('admin.add-items.update', $addItem->id) }}" enctype="multipart/form-data" class="p-6">
+            @csrf
+            @method('PUT')
+            
+            <!-- Top Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                    <input type="text" name="item_name" value="{{ old('item_name', $addItem->item_name) }}"
+                           class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
                 </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.add-items.update", [$addItem->id]) }}" enctype="multipart/form-data">
-                        @method('PUT')
-                        @csrf
-                        <div class="form-group {{ $errors->has('item_type') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.addItem.fields.item_type') }}</label>
-                            <select class="form-control" name="item_type" id="item_type">
-                                <option value disabled {{ old('item_type', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
-                                @foreach(App\Models\AddItem::ITEM_TYPE_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('item_type', $addItem->item_type) === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('item_type'))
-                                <span class="help-block" role="alert">{{ $errors->first('item_type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.item_type_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('item_name') ? 'has-error' : '' }}">
-                            <label class="required" for="item_name">{{ trans('cruds.addItem.fields.item_name') }}</label>
-                            <input class="form-control" type="text" name="item_name" id="item_name" value="{{ old('item_name', $addItem->item_name) }}" required>
-                            @if($errors->has('item_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('item_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.item_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('item_hsn') ? 'has-error' : '' }}">
-                            <label class="required" for="item_hsn">{{ trans('cruds.addItem.fields.item_hsn') }}</label>
-                            <input class="form-control" type="text" name="item_hsn" id="item_hsn" value="{{ old('item_hsn', $addItem->item_hsn) }}" required>
-                            @if($errors->has('item_hsn'))
-                                <span class="help-block" role="alert">{{ $errors->first('item_hsn') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.item_hsn_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_unit') ? 'has-error' : '' }}">
-                            <label for="select_unit_id">{{ trans('cruds.addItem.fields.select_unit') }}</label>
-                            <select class="form-control select2" name="select_unit_id" id="select_unit_id">
-                                @foreach($select_units as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('select_unit_id') ? old('select_unit_id') : $addItem->select_unit->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_unit'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_unit') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.select_unit_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_categories') ? 'has-error' : '' }}">
-                            <label for="select_categories">{{ trans('cruds.addItem.fields.select_category') }}</label>
-                            <div style="padding-bottom: 4px">
-                                <span class="btn btn-info btn-xs select-all" style="border-radius: 0">{{ trans('global.select_all') }}</span>
-                                <span class="btn btn-info btn-xs deselect-all" style="border-radius: 0">{{ trans('global.deselect_all') }}</span>
-                            </div>
-                            <select class="form-control select2" name="select_categories[]" id="select_categories" multiple>
-                                @foreach($select_categories as $id => $select_category)
-                                    <option value="{{ $id }}" {{ (in_array($id, old('select_categories', [])) || $addItem->select_categories->contains($id)) ? 'selected' : '' }}>{{ $select_category }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_categories'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_categories') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.select_category_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('item_code') ? 'has-error' : '' }}">
-                            <label class="required" for="item_code">{{ trans('cruds.addItem.fields.item_code') }}</label>
-                            <input class="form-control" type="text" name="item_code" id="item_code" value="{{ old('item_code', $addItem->item_code) }}" required>
-                            @if($errors->has('item_code'))
-                                <span class="help-block" role="alert">{{ $errors->first('item_code') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.item_code_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('sale_price') ? 'has-error' : '' }}">
-                            <label class="required" for="sale_price">{{ trans('cruds.addItem.fields.sale_price') }}</label>
-                            <input class="form-control" type="text" name="sale_price" id="sale_price" value="{{ old('sale_price', $addItem->sale_price) }}" required>
-                            @if($errors->has('sale_price'))
-                                <span class="help-block" role="alert">{{ $errors->first('sale_price') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.sale_price_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_type') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.addItem.fields.select_type') }}</label>
-                            <select class="form-control" name="select_type" id="select_type">
-                                <option value disabled {{ old('select_type', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
-                                @foreach(App\Models\AddItem::SELECT_TYPE_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('select_type', $addItem->select_type) === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_type'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.select_type_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('disc_on_sale_price') ? 'has-error' : '' }}">
-                            <label for="disc_on_sale_price">{{ trans('cruds.addItem.fields.disc_on_sale_price') }}</label>
-                            <input class="form-control" type="text" name="disc_on_sale_price" id="disc_on_sale_price" value="{{ old('disc_on_sale_price', $addItem->disc_on_sale_price) }}">
-                            @if($errors->has('disc_on_sale_price'))
-                                <span class="help-block" role="alert">{{ $errors->first('disc_on_sale_price') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.disc_on_sale_price_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('disc_type') ? 'has-error' : '' }}">
-                            <label for="disc_type">{{ trans('cruds.addItem.fields.disc_type') }}</label>
-                            <input class="form-control" type="text" name="disc_type" id="disc_type" value="{{ old('disc_type', $addItem->disc_type) }}">
-                            @if($errors->has('disc_type'))
-                                <span class="help-block" role="alert">{{ $errors->first('disc_type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.disc_type_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('wholesale_price') ? 'has-error' : '' }}">
-                            <label for="wholesale_price">{{ trans('cruds.addItem.fields.wholesale_price') }}</label>
-                            <input class="form-control" type="text" name="wholesale_price" id="wholesale_price" value="{{ old('wholesale_price', $addItem->wholesale_price) }}">
-                            @if($errors->has('wholesale_price'))
-                                <span class="help-block" role="alert">{{ $errors->first('wholesale_price') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.wholesale_price_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_type_wholesale') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.addItem.fields.select_type_wholesale') }}</label>
-                            <select class="form-control" name="select_type_wholesale" id="select_type_wholesale">
-                                <option value disabled {{ old('select_type_wholesale', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
-                                @foreach(App\Models\AddItem::SELECT_TYPE_WHOLESALE_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('select_type_wholesale', $addItem->select_type_wholesale) === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_type_wholesale'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_type_wholesale') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.select_type_wholesale_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('minimum_wholesale_qty') ? 'has-error' : '' }}">
-                            <label for="minimum_wholesale_qty">{{ trans('cruds.addItem.fields.minimum_wholesale_qty') }}</label>
-                            <input class="form-control" type="text" name="minimum_wholesale_qty" id="minimum_wholesale_qty" value="{{ old('minimum_wholesale_qty', $addItem->minimum_wholesale_qty) }}">
-                            @if($errors->has('minimum_wholesale_qty'))
-                                <span class="help-block" role="alert">{{ $errors->first('minimum_wholesale_qty') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.minimum_wholesale_qty_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('purchase_price') ? 'has-error' : '' }}">
-                            <label for="purchase_price">{{ trans('cruds.addItem.fields.purchase_price') }}</label>
-                            <input class="form-control" type="text" name="purchase_price" id="purchase_price" value="{{ old('purchase_price', $addItem->purchase_price) }}">
-                            @if($errors->has('purchase_price'))
-                                <span class="help-block" role="alert">{{ $errors->first('purchase_price') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.purchase_price_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_purchase_type') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.addItem.fields.select_purchase_type') }}</label>
-                            <select class="form-control" name="select_purchase_type" id="select_purchase_type">
-                                <option value disabled {{ old('select_purchase_type', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
-                                @foreach(App\Models\AddItem::SELECT_PURCHASE_TYPE_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('select_purchase_type', $addItem->select_purchase_type) === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_purchase_type'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_purchase_type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.select_purchase_type_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('select_tax') ? 'has-error' : '' }}">
-                            <label for="select_tax_id">{{ trans('cruds.addItem.fields.select_tax') }}</label>
-                            <select class="form-control select2" name="select_tax_id" id="select_tax_id">
-                                @foreach($select_taxes as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('select_tax_id') ? old('select_tax_id') : $addItem->select_tax->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_tax'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_tax') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.addItem.fields.select_tax_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Item HSN</label>
+                    <input type="text" name="item_hsn" value="{{ old('item_hsn', $addItem->item_hsn) }}"
+                           class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                </div>
+                <div>
+                    <label for="unit_id" class="text-sm font-medium text-gray-700">Select Unit *</label>
+                    <select name="select_unit_id" id="unit_id" class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                        @foreach($select_units as $id => $unit)
+                            <option value="{{ $id }}" {{ (old('select_unit_id', $addItem->select_unit_id) == $id) ? 'selected' : '' }}>
+                                {{ $unit }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 
+            <!-- Category, Quantity, Item Code -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select name="select_category[]" class="select2" id="select_category" multiple
+                            class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                        @foreach($select_categories as $id => $entry)
+                            <option value="{{ $id }}"
+                                {{ (in_array($id, old('select_category', $addItem->select_categories->pluck('id')->toArray()))) ? 'selected' : '' }}>
+                                {{ $entry }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                    <input type="number" name="quantity" value="{{ old('quantity', $addItem->quantity) }}"
+                           placeholder="Enter Quantity"
+                           class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Code</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="item_code" name="item_code" value="{{ old('item_code', $addItem->item_code) }}"
+                               class="flex-1 rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                        <button type="button" id="generateCodeBtn"
+                                class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md font-medium">
+                            Assign Code
+                        </button>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Tabs -->
+            <div class="border-b mb-6" x-data="{ tab: 'pricing' }">
+                <nav class="flex space-x-6" aria-label="Tabs">
+                    <button type="button" @click="tab = 'pricing'" :class="tab === 'pricing' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Pricing</button>
+                    <button type="button" @click="tab = 'wholesale'" :class="tab === 'wholesale' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Wholesale</button>
+                    <button type="button" @click="tab = 'purchase'" :class="tab === 'purchase' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Purchase</button>
+                    <button type="button" @click="tab = 'stock'" :class="tab === 'stock' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Stock</button>
+                    <button type="button" @click="tab = 'online'" :class="tab === 'online' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Online Store</button>
+                </nav>
 
-        </div>
+                <!-- Pricing Section -->
+                <div x-show="tab === 'pricing'" class="bg-gray-50 rounded-lg p-4 mb-6 space-y-6">
+                    <div>
+                        <h3 class="text-md font-semibold text-gray-700 mb-3">Sale Price</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="number" step="0.01" name="sale_price" value="{{ old('sale_price', $addItem->sale_price) }}" placeholder="Sale Price" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                            <select name="select_type" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                                @foreach(\App\Models\AddItem::SELECT_TYPE_SELECT as $key => $label)
+                                    <option value="{{ $key }}" {{ old('select_type', $addItem->select_type) == $key ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <input type="number" step="0.01" name="disc_on_sale_price" value="{{ old('disc_on_sale_price', $addItem->disc_on_sale_price) }}" placeholder="Discount on Sale Price" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                            <select name="disc_type" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                                <option value="percentage" {{ old('disc_type', $addItem->disc_type) == 'percentage' ? 'selected' : '' }}>Percentage</option>
+                                <option value="flat" {{ old('disc_type', $addItem->disc_type) == 'flat' ? 'selected' : '' }}>Flat</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-md font-semibold text-gray-700 mb-3">Tax Rate</h3>
+                        <select name="select_tax_id" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                            @foreach($select_taxes as $id => $label)
+                                <option value="{{ $id }}" {{ old('select_tax_id', $addItem->select_tax_id) == $id ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Wholesale Section -->
+                <div x-show="tab === 'wholesale'" class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Wholesale Price</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="number" step="0.01" name="wholesale_price" value="{{ old('wholesale_price', $addItem->wholesale_price) }}" placeholder="Wholesale Price" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                        <select name="select_type_wholesale" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                            @foreach(\App\Models\AddItem::SELECT_TYPE_WHOLESALE_SELECT as $key => $label)
+                                <option value="{{ $key }}" {{ old('select_type_wholesale', $addItem->select_type_wholesale) == $key ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <input type="number" name="minimum_wholesale_qty" value="{{ old('minimum_wholesale_qty', $addItem->minimum_wholesale_qty) }}" placeholder="Minimum Qty" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                    </div>
+                </div>
+
+                <!-- Purchase Section -->
+                <div x-show="tab === 'purchase'" class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Purchase Price</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="number" step="0.01" name="purchase_price" value="{{ old('purchase_price', $addItem->purchase_price) }}" placeholder="Purchase Price" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                        <select name="select_purchase_type" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                            @foreach(\App\Models\AddItem::SELECT_PURCHASE_TYPE_SELECT as $key => $label)
+                                <option value="{{ $key }}" {{ old('select_purchase_type', $addItem->select_purchase_type) == $key ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stock Section -->
+                <div x-show="tab === 'stock'" class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Stock Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="number" name="opening_stock" value="{{ old('opening_stock', $addItem->opening_stock) }}" placeholder="Opening Stock" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                        <input type="number" name="low_stock_warning" value="{{ old('low_stock_warning', $addItem->low_stock_warning) }}" placeholder="Low Stock Warning" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                        <input type="text" name="warehouse_location" value="{{ old('warehouse_location', $addItem->warehouse_location) }}" placeholder="Warehouse Location" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                    </div>
+                </div>
+
+                <!-- Online Store Section -->
+                <div x-show="tab === 'online'" class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Online Store Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" name="online_store_title" value="{{ old('online_store_title', $addItem->online_store_title) }}" placeholder="Store Title" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                        <textarea name="online_store_description" placeholder="Store Description" class="w-full rounded-md border border-gray-300 px-4 py-2">{{ old('online_store_description', $addItem->online_store_description) }}</textarea>
+                        <input type="file" name="online_store_image" class="w-full rounded-md border border-gray-300 px-4 py-2">
+                        @if($addItem->online_store_image)
+                            <img src="{{ asset('storage/' . $addItem->online_store_image) }}" alt="Online Store Image" class="mt-2 w-32 rounded">
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- json_data -->
+            <input type="hidden" id="json_data" name="json_data" value="">
+
+            <!-- Footer -->
+            <div class="flex justify-end space-x-3">
+                <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700">
+                    Update
+                </button>
+                <a href="{{ route('admin.add-items.index') }}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+                    Cancel
+                </a>
+            </div>
+        </form>
     </div>
 </div>
+
+<!-- Scripts -->
+<script>
+    document.getElementById("generateCodeBtn").addEventListener("click", function () {
+        let randomCode = "ITM-" + Math.floor(1000 + Math.random() * 9000) + "-" + Date.now().toString().slice(-4);
+        document.getElementById("item_code").value = randomCode;
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const switchEl = document.getElementById('switchType');
+        const hiddenEl = document.getElementById('itemTypeHidden');
+        switchEl.checked = (hiddenEl.value === 'service');
+        switchEl.addEventListener('change', function () {
+            hiddenEl.value = this.checked ? 'service' : 'product';
+        });
+
+        const form = document.getElementById('editItemForm');
+        form.addEventListener('submit', function () {
+            const payload = {
+                item_type: hiddenEl.value,
+                unit_id: document.getElementById('unit_id')?.value || null,
+                select_category: document.getElementById('select_category')?.value || null,
+                quantity: document.querySelector('[name="quantity"]')?.value || null,
+                item_code: document.getElementById('item_code')?.value || null,
+                pricing: {
+                    sale_price: document.querySelector('[name="sale_price"]').value || null,
+                    select_type: document.querySelector('[name="select_type"]').value || null,
+                    disc_on_sale_price: document.querySelector('[name="disc_on_sale_price"]').value || null,
+                    disc_type: document.querySelector('[name="disc_type"]').value || null,
+                    select_tax_id: document.querySelector('[name="select_tax_id"]').value || null,
+                },
+                wholesale: {
+                    wholesale_price: document.querySelector('[name="wholesale_price"]').value || null,
+                    select_type_wholesale: document.querySelector('[name="select_type_wholesale"]').value || null,
+                    minimum_wholesale_qty: document.querySelector('[name="minimum_wholesale_qty"]').value || null,
+                },
+                purchase: {
+                    purchase_price: document.querySelector('[name="purchase_price"]').value || null,
+                    select_purchase_type: document.querySelector('[name="select_purchase_type"]').value || null,
+                },
+                stock: {
+                    opening_stock: document.querySelector('[name="opening_stock"]').value || null,
+                    low_stock_warning: document.querySelector('[name="low_stock_warning"]').value || null,
+                    warehouse_location: document.querySelector('[name="warehouse_location"]').value || null,
+                },
+                online: {
+                    title: document.querySelector('[name="online_store_title"]').value || null,
+                    description: document.querySelector('[name="online_store_description"]').value || null,
+                }
+            };
+            document.getElementById('json_data').value = JSON.stringify(payload);
+        });
+    });
+</script>
 @endsection

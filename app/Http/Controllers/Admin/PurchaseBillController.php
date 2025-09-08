@@ -16,6 +16,7 @@ use Gate;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Browser\PartyDetailsTest;
 
 class PurchaseBillController extends Controller
 {
@@ -29,6 +30,29 @@ class PurchaseBillController extends Controller
 
         return view('admin.purchaseBills.index', compact('purchaseBills'));
     }
+
+
+    public function getCustomerDetails($id)
+    {
+        $customer = \App\Models\PartyDetail::find($id);
+
+        if (!$customer) {
+            return response()->json(['error' => 'Customer not found'], 404);
+        }
+
+        return response()->json([
+            'party_name'       => $customer->party_name,
+            'gstin'           => $customer->gstin,
+            'phone_number'    => $customer->phone_number,
+            'email'           => $customer->email,
+            'billing_address' => $customer->billing_address,
+            'shipping_address'=> $customer->shipping_address,
+            'state'           => $customer->state,
+            'city'            => $customer->city,
+        ]);
+    }
+
+
 
     public function create()
     {
