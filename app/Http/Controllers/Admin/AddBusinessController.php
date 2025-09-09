@@ -59,25 +59,31 @@ class AddBusinessController extends Controller
     }
 
     public function update(UpdateAddBusinessRequest $request, AddBusiness $addBusiness)
-    {
-        $addBusiness->update($request->all());
+{
+    $addBusiness->update($request->all());
 
-        if (count($addBusiness->logo_upload) > 0) {
-            foreach ($addBusiness->logo_upload as $media) {
-                if (! in_array($media->file_name, $request->input('logo_upload', []))) {
-                    $media->delete();
-                }
+    // Purane media delete karna jo request me nahi aaye
+    if ($addBusiness->logo_upload->count() > 0) {
+        foreach ($addBusiness->logo_upload as $media) {
+            if (! in_array($media->file_name, $request->input('logo_upload', []))) {
+                $media->delete();
             }
         }
-        $media = $addBusiness->logo_upload->pluck('file_name')->toArray();
-        foreach ($request->input('logo_upload', []) as $file) {
-            if (count($media) === 0 || ! in_array($file, $media)) {
-                $addBusiness->addMedia(storage_path('tmp/uploads/' . basename($file)))->toMediaCollection('logo_upload');
-            }
-        }
-
-        return redirect()->route('admin.add-businesses.index');
     }
+
+    $existingMedia = $addBusiness->logo_upload->pluck('file_name')->toArray();
+
+    // Naye media add karna
+    foreach ($request->input('logo_upload', []) as $file) {
+        if (! in_array($file, $existingMedia)) {
+            $addBusiness->addMedia(storage_path('tmp/uploads/' . $file))
+                ->toMediaCollection('logo_upload');
+        }
+    }
+
+    return redirect()->route('admin.add-businesses.index');
+}
+
 
     public function show(AddBusiness $addBusiness)
     {
