@@ -10,6 +10,7 @@ use App\Http\Requests\StorePurchaseBillRequest;
 use App\Http\Requests\UpdatePurchaseBillRequest;
 use App\Models\AddItem;
 use App\Models\BankAccount;
+use App\Models\CurrentStock;
 use App\Models\PartyDetail;
 use App\Models\PurchaseBill;
 use Gate;
@@ -58,14 +59,34 @@ class PurchaseBillController extends Controller
     {
         abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        // Fetch customers
         $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
-        $items = AddItem::pluck('item_name', 'id');
+        // Fetch current stocks with related items & user
+        $items = CurrentStock::with(['items', 'user'])->get()
+            ->mapWithKeys(function ($stock) {
+                $item = $stock->items->first();
 
+                if ($item) {
+                    // Final label: item_name (HSN: 1234 | Price: 500 | Qty: 10)
+                    $label = $item->item_name 
+                        . ' | HSN: ' . $item->item_hsn 
+                        . ' | Price: ' . number_format($item->purchase_price, 2)
+                        . ' | Qty: ' . $stock->qty;
+                } else {
+                    $label = 'N/A';
+                }
+
+                return [$stock->id => $label];
+            });
+
+        // Payment Types
         $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
         return view('admin.purchaseBills.create', compact('items', 'payment_types', 'select_customers'));
     }
+
+
 
     public function store(StorePurchaseBillRequest $request)
     {
