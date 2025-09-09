@@ -280,15 +280,45 @@ $(document).ready(function() {
     $('#addRow').on('click', function() {
         const rowCount = tableBody.find('tr').length;
         const newRow = $(`
-            <tr>
-                <td><select name="items[${rowCount}][id]" class="selectItem select2 w-full"><option value="">Select Item</option></select></td>
-                <td><input type="text" name="items[${rowCount}][description]" class="w-full description"></td>
-                <td><input type="number" name="items[${rowCount}][qty]" value="1" class="w-full qty"></td>
-                <td><select name="items[${rowCount}][unit]" class="unit w-full"><option>Piece</option><option>Kg</option><option>Box</option></select></td>
-                <td><input type="number" name="items[${rowCount}][price]" value="0" class="w-full price"></td>
-                <td><input type="text" name="items[${rowCount}][amount]" readonly class="w-full amount"></td>
-                <td><button type="button" class="removeRow bg-red-600 text-white px-3 py-1 rounded-md">X</button></td>
-            </tr>
+            <tr class="hover:bg-gray-50">
+    <td class="px-4 py-2">
+        <select name="items[${rowCount}][id]" 
+                class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select Item</option>
+        </select>
+    </td>
+    <td class="px-4 py-2">
+        <input type="text" name="items[${rowCount}][description]" 
+               class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description focus:ring-indigo-500 focus:border-indigo-500">
+    </td>
+    <td class="px-4 py-2">
+        <input type="number" name="items[${rowCount}][qty]" value="1" 
+               class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty focus:ring-indigo-500 focus:border-indigo-500">
+    </td>
+    <td class="px-4 py-2">
+        <select name="items[${rowCount}][unit]" 
+                class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option>Piece</option>
+            <option>Kg</option>
+            <option>Box</option>
+        </select>
+    </td>
+    <td class="px-4 py-2">
+        <input type="number" name="items[${rowCount}][price]" value="0" 
+               class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price focus:ring-indigo-500 focus:border-indigo-500">
+    </td>
+    <td class="px-4 py-2">
+        <input type="text" name="items[${rowCount}][amount]" readonly 
+               class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+    </td>
+    <td class="px-4 py-2 text-center">
+        <button type="button" 
+                class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md shadow-sm">
+            X
+        </button>
+    </td>
+</tr>
+
         `);
         tableBody.append(newRow);
         // Populate select options
