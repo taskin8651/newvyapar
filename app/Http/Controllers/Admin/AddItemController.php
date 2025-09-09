@@ -72,7 +72,7 @@ public function store(Request $request)
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         'json_data' => 'nullable',
     ]);
-
+    
     // Handle image upload
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
@@ -94,7 +94,8 @@ public function store(Request $request)
         $defaultPartyId = 1; // ✅ Always 1
 
         $stock = CurrentStock::create([
-            'parties_id'    => $defaultPartyId, // ✅ Fix: hamesha 1
+            'json_data'  => $validated['json_data'],
+            'user_id'    => $defaultPartyId, // ✅ Fix: hamesha 1
             'qty'           => $validated['opening_stock'],
             'type'          => 'Opening Stock',
             'created_by_id' => auth()->id(),
@@ -128,37 +129,49 @@ public function store(Request $request)
 
 public function update(UpdateAddItemRequest $request, AddItem $addItem)
 {
+   
     // ✅ Update item details
     $addItem->update($request->all());
 
-    // ✅ Sync categories into pivot table
-    $addItem->select_categories()->sync($request->input('select_categories', []));
+    // ✅ Update Pivot Table: add_item_category
+    if ($request->has('select_category')) {
+        $addItem->select_categories()->sync($request->input('select_category'));
+    }
 
-    // ✅ If opening stock is updated, save it in current_stocks
+    // ✅ If opening stock is provided, save/update in current_stocks
     if ($request->has('opening_stock') && !empty($request->opening_stock) && $request->opening_stock > 0) {
 
         // ✅ Always use default party_id = 1
         $defaultPartyId = 1;
 
-        // Check if an existing record is there for the same item & party
-        $existingStock = CurrentStock::where('parties_id', $defaultPartyId)
+        // Decode JSON data if available
+        $jsonData = null;
+        if ($request->has('json_data') && !empty($request->json_data)) {
+            $jsonData = json_decode($request->json_data, true);
+        }
+
+
+        // ✅ Check if an existing record exists for the same item & party
+        $existingStock = CurrentStock::where('user_id', $defaultPartyId)
             ->whereHas('items', function ($query) use ($addItem) {
                 $query->where('add_item_id', $addItem->id);
             })
             ->first();
 
         if ($existingStock) {
-            // ✅ Update existing stock quantity
+            // ✅ Update existing stock quantity & json_data
             $existingStock->update([
                 'qty'           => $request->opening_stock,
+                'json_data'     => $jsonData ? json_encode($jsonData) : $existingStock->json_data,
                 'type'          => 'Opening Stock Updated',
                 'created_by_id' => auth()->id(),
             ]);
         } else {
             // ✅ Create a new record if it doesn't exist
             $stock = CurrentStock::create([
-                'parties_id'    => $defaultPartyId, // ✅ Always 1
+                'user_id'       => $defaultPartyId, // ✅ Always 1
                 'qty'           => $request->opening_stock,
+                'json_data'     => $jsonData ? json_encode($jsonData) : null,
                 'type'          => 'Opening Stock',
                 'created_by_id' => auth()->id(),
             ]);
@@ -171,6 +184,7 @@ public function update(UpdateAddItemRequest $request, AddItem $addItem)
     return redirect()->route('admin.add-items.index')
         ->with('success', 'Item updated successfully!');
 }
+
 
 
     public function show(AddItem $addItem)

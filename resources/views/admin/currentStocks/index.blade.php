@@ -30,8 +30,7 @@
                         'model' => 'CurrentStock', 
                         'route' => 'admin.current-stocks.parseCsvImport'
                     ])
-                @endcan
-
+            
                 <!-- Search bar -->
                 <div>
                     <input type="text" id="currentStockSearch" placeholder="Search stocks..."
@@ -63,15 +62,9 @@
                                     <th>
                                         {{ trans('cruds.currentStock.fields.parties') }}
                                     </th>
-                                    <th>
-                                        {{ trans('cruds.partyDetail.fields.gstin') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.partyDetail.fields.phone_number') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.partyDetail.fields.pan_number') }}
-                                    </th>
+                                   <th>
+                                    {{ trans('cruds.currentStock.fields.Pdetails') }}
+                                   </th>
                                     <th>
                                         {{ trans('cruds.currentStock.fields.qty') }}
                                     </th>
@@ -98,17 +91,57 @@
                                             @endforeach
                                         </td>
                                         <td>
-                                            {{ $currentStock->parties->party_name ?? '' }}
+                                            {{ $currentStock->user->name ?? '' }}
                                         </td>
                                         <td>
-                                            {{ $currentStock->parties->gstin ?? '' }}
+                                            @php
+                                                $json = $currentStock->json_data ? json_decode($currentStock->json_data, true) : null;
+                                            @endphp
+
+                                            @if($json)
+                                                <div class="space-y-1">
+                                                    <div><strong>Item Type:</strong> {{ $json['item_type'] ?? 'N/A' }}</div>
+                                                    <div><strong>Item Code:</strong> {{ $json['item_code'] ?? 'N/A' }}</div>
+                                                    
+                                                    <div><strong>Sale Price:</strong> ₹{{ $json['pricing']['sale_price'] ?? 'N/A' }}</div>
+                                                    <div><strong>Purchase Price:</strong> ₹{{ $json['purchase']['purchase_price'] ?? 'N/A' }}</div>
+                                                    <div><strong>Warehouse:</strong> {{ $json['stock']['warehouse_location'] ?? 'N/A' }}</div>
+                                                    <div><strong>Title:</strong> {{ $json['online']['title'] ?? 'N/A' }}</div>
+                                                </div>
+
+                                                <!-- View More Button -->
+                                                <button 
+                                                    class="btn btn-xs btn-primary mt-1 view-more-btn" 
+                                                    data-json='@json($json)'
+                                                    data-toggle="modal" 
+                                                    data-target="#jsonModal">
+                                                    View More
+                                                </button>
+                                            @else
+                                                <span class="text-gray-500 italic">No Data</span>
+                                            @endif
+                                            <!-- JSON Modal -->
+                                            <div class="modal fade" id="jsonModal" tabindex="-1" role="dialog" aria-labelledby="jsonModalLabel" aria-hidden="true">
+                                                <div class="modal-dialog modal-lg" role="document">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header bg-indigo-600 text-white">
+                                                            <h5 class="modal-title" id="jsonModalLabel">Complete JSON Data</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                                <span aria-hidden="true">&times;</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                                                            <pre id="jsonPretty" class="bg-gray-100 p-3 rounded-lg text-sm"></pre>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                         </td>
-                                        <td>
-                                            {{ $currentStock->parties->phone_number ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $currentStock->parties->pan_number ?? '' }}
-                                        </td>
+
                                         <td>
                                             {{ $currentStock->qty ?? '' }}
                                         </td>
@@ -150,10 +183,20 @@
 
     </div>
 </div>
+
 @endsection
 
 @section('scripts')
 @parent
+<script>
+    // ✅ Handle View More button click
+$(document).on('click', '.view-more-btn', function () {
+    let jsonData = $(this).data('json');
+    let prettyJson = JSON.stringify(jsonData, null, 4); // Beautify JSON
+    $('#jsonPretty').text(prettyJson);
+});
+
+</script>
 <script>
     $(function () {
         let dtButtons = $.extend(true, [], $.fn.dataTable.defaults.buttons)

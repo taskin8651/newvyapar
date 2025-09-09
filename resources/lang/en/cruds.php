@@ -1,6 +1,7 @@
 <?php
 
 return [
+    
     'userManagement' => [
         'title'          => 'User management',
         'title_singular' => 'User management',
@@ -715,6 +716,7 @@ return [
             'deleted_at_helper' => ' ',
             'created_by'        => 'Created By',
             'created_by_helper' => ' ',
+            'Pdetails' => 'P. Detailes',
         ],
     ],
     'stocksReport' => [

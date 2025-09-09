@@ -29,6 +29,7 @@ class CurrentStock extends Model
         'updated_at',
         'deleted_at',
         'created_by_id',
+        'json_data',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
