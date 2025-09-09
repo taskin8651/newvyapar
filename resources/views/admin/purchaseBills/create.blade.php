@@ -17,104 +17,88 @@
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
 
-                   <div>
-                    <label class="block text-sm font-medium text-gray-700">Select Customer</label>
-                    <select name="select_customer_id" id="select_customer_id"
-                            class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                        <option value="">-- Select Customer --</option>
-                        @foreach($select_customers as $id => $name)
-                            <option value="{{ $id }}">{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                 <!-- Customer Selection -->
+<div>
+    <label class="block text-sm font-medium text-gray-700">Select Customer</label>
+    <select name="select_customer_id" id="select_customer_id"
+            class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+        <option value="">-- Select Customer --</option>
+        @foreach($select_customers as $id => $name)
+            <option value="{{ $id }}" {{ old('select_customer_id') == $id ? 'selected' : '' }}>
+                {{ $name }}
+            </option>
+        @endforeach
+    </select>
+</div>
 
-                <!-- Customer Details Preview -->
-                <div id="customerDetails" class="hidden mt-4 p-4 border rounded-lg bg-gray-50">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Customer Details</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <p><strong>Full Name:</strong> <span id="preview_party_name"></span></p>
-                        <p><strong>GST No:</strong> <span id="gstin"></span></p>
-                        <p><strong>Phone:</strong> <span id="phone_number"></span></p>
-                        <p><strong>Email:</strong> <span id="email"></span></p>
-                        <p><strong>Billing Address:</strong> <span id="billing_address"></span></p>
-                        <p><strong>Shipping Address:</strong> <span id="shipping_address"></span></p>
-                        <p><strong>State:</strong> <span id="state"></span></p>
-                        <p><strong>City:</strong> <span id="city"></span></p>
-                    </div>
-                </div>
+<!-- Billing & Shipping Inputs -->
+<div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700">Billing Name</label>
+    <input type="text" name="billing_name" id="billing_name"
+           value="{{ old('billing_name') ?? '' }}"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+</div>
 
-                <script>
-                $(document).ready(function () {
-                    $('#select_customer_id').on('change', function () {
-                        let customerId = $(this).val();
+<div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+    <input type="text" name="phone_number" id="phone_number"
+           value="{{ old('phone_number') ?? '' }}"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+</div>
 
-                        if (customerId) {
-                            let url = "{{ route('admin.getCustomerDetails', ':id') }}";
-                            url = url.replace(':id', customerId);
+<div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700">Billing Address</label>
+    <input type="text" name="billing_address" id="billing_address"
+           value="{{ old('billing_address') ?? '' }}"
+           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+</div>
 
-                            fetch(url)
-                                .then(response => response.json())
-                                .then(data => {
-                                    console.log("Customer Data:", data);
+<div class="mt-4">
+    <label class="block text-sm font-medium text-gray-700">Shipping Address</label>
+    <textarea name="shipping_address" id="shipping_address" rows="4"
+              class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('shipping_address') ?? '' }}</textarea>
+    @error('shipping_address')
+    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+    @enderror
+</div>
 
-                                    $('#customerDetails').removeClass('hidden');
-                                    $('#preview_party_name').text(data.party_name || '');
-                                    $('#gstin').text(data.gstin || '');
-                                    $('#phone_number').text(data.phone_number || '');
-                                    $('#email').text(data.email || '');
-                                    $('#billing_address').html(data.billing_address || '');
-                                    $('#shipping_address').html(data.shipping_address || '');
-                                    $('#state').text(data.state || '');
-                                    $('#city').text(data.city || '');
+<!-- JS for Auto-Fill -->
+<script>
+$(document).ready(function () {
+    // Initialize Select2
+    if ($.fn.select2) {
+        $('.select2').select2({ width: '100%' });
+    }
 
-                                    // ✅ Also auto-fill Billing Name input
-                                    $('#billing_name').val(data.party_name || '');
-                                    $('#phone_numbers').val(data.phone_number || '');
-                                    $('#billings_address').val(data.billing_address || '');
-                                })
-                                .catch(error => {
-                                    console.error("Error fetching customer details:", error);
-                                    $('#customerDetails').addClass('hidden');
-                                });
-                        } else {
-                            $('#customerDetails').addClass('hidden');
-                            $('#billing_name').val('');
-                            $('#phone_number').val('');
-                        }
-                    });
+    $('#select_customer_id').on('change', function () {
+        let customerId = $(this).val();
+
+        if (customerId) {
+            let url = "{{ route('admin.getCustomerDetails', ':id') }}";
+            url = url.replace(':id', customerId);
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Customer Data:", data);
+
+                    // Fill form inputs only
+                    $('#billing_name').val(data.party_name || '');
+                    $('#phone_number').val(data.phone_number || '');
+                    $('#billing_address').val(data.billing_address || '');
+                    $('#shipping_address').val(data.shipping_address || '');
+                })
+                .catch(error => {
+                    console.error("Error fetching customer details:", error);
+                    $('#billing_name, #phone_number, #billing_address, #shipping_address').val('');
                 });
-                </script>
-
-                    <!-- Billing Name Input -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Billing Name</label>
-                        <input type="text" name="billing_name" id="billing_name"
-                            value="{{ old('billing_name') ?? '' }}"
-                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-                        <input type="text" name="phone_number" id="phone_numbers" value="{{ old('phone_number') }}"
-                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Billing Address</label>
-                        <input type="text" name="billing_address" id="billings_address"
-                            value="{{ strip_tags(old('billing_address')) }}"
-                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-
-                    </div>
-                     <div class="space-y-4">
-        <h2 class="text-xl font-semibold text-gray-700">Shipping Address</h2>
-        <textarea name="shipping_address" rows="4"
-                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('shipping_address') }}</textarea>
-        @error('shipping_address')
-            <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-        @enderror
-    </div>
-                </div>
+        } else {
+            $('#billing_name, #phone_number, #billing_address, #shipping_address').val('');
+        }
+    });
+});
+</script>
+</div>
 
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
