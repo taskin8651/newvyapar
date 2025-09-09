@@ -478,9 +478,6 @@ $(document).ready(function() {
         </form>
     </div>
 </div>
-@endsection
-<!-- Dynamic Row -->
-
 
 
 <!-- Dropzone Config -->
@@ -522,4 +519,8 @@ Dropzone.options.documentDropzone = {
     }
 }
 </script>
+
+
+@endsection
+
 
