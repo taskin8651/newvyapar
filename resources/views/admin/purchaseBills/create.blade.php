@@ -123,67 +123,197 @@ $(document).ready(function () {
                 </div>
             </div>
 
-            <!-- Items Table -->
-            <div class="px-6 pb-6">
-                <hr class="border-dashed border-gray-300 mb-4">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">ITEMS</h2>
+            
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-2">Item</th>
-                                <th class="px-4 py-2">Description</th>
-                                <th class="px-4 py-2">QTY</th>
-                                <th class="px-4 py-2">Unit</th>
-                                <th class="px-4 py-2">Price/Unit</th>
-                                <th class="px-4 py-2">Amount</th>
-                                <th class="px-4 py-2">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="px-4 py-2">
-                                    <select name="items[0][id]" class="selectItem select2 w-full">
-                                        <option value="">Select Item</option>
-                                        @foreach($items as $id => $name)
-                                            <option value="{{ $id }}">{{ $name }}</option>
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[0][description]"
-                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="number" name="items[0][qty]" value="1"
-                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm qty">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <select name="items[0][unit]" class="select2 w-full">
-                                        <option>Piece</option>
-                                        <option>Kg</option>
-                                        <option>Box</option>
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="number" name="items[0][price]" value="0"
-                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm price">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[0][amount]" readonly
-                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm amount">
-                                </td>
-                                <td class="px-4 py-2 text-center">
-                                    <button type="button" class="removeRow bg-red-600 text-white px-3 py-1 rounded-md">X</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <!-- Include jQuery and Select2 first -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<button type="button" id="addRow" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
-    + ADD ROW
-</button>
+<!-- Items Table -->
+<div class="px-6 pb-6">
+    <hr class="border-dashed border-gray-300 mb-4">
+    <h2 class="text-xl font-semibold text-gray-700 mb-4">ITEMS</h2>
+
+    <!-- Include jQuery and Select2 -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Item</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Description</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">QTY</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Unit</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Price/Unit</th>
+                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Amount</th>
+                <th class="px-4 py-2 text-center text-sm font-medium text-gray-700">Action</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2">
+                    <select name="items[0][id]" class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                        <option value="">Select Item</option>
+                        @foreach($items as $id => $text)
+                            @php $parts = explode('|', $text); $name = trim($parts[0]); @endphp
+                            <option value="{{ $id }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td class="px-4 py-2">
+                    <input type="text" name="items[0][description]" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" name="items[0][qty]" value="1" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty">
+                </td>
+                <td class="px-4 py-2">
+                    <select name="items[0][unit]" class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                        <option>Piece</option>
+                        <option>Kg</option>
+                        <option>Box</option>
+                    </select>
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" name="items[0][price]" value="0" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="text" name="items[0][amount]" readonly class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50">
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button type="button" id="addRow" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
+        + ADD ROW
+    </button>
+
+  
+@php
+$itemsData = [];
+foreach($items as $id => $text) {
+    $parts = explode('|', $text);
+    $name = trim($parts[0]);
+    $description = trim($parts[1] ?? '');
+    $price = isset($parts[2]) ? floatval(str_replace([',', 'Price:'], '', $parts[2])) : 0;
+    $qty = isset($parts[3]) ? floatval(str_replace(['Qty:', ','], '', $parts[3])) : 1;
+    $itemsData[$id] = [
+        'name' => $name,
+        'description' => $description,
+        'price' => $price,
+        'qty' => $qty,
+        'unit' => 'Piece',
+    ];
+}
+@endphp
+
+<script>
+$(document).ready(function() {
+    const tableBody = $('#itemsTable tbody');
+    const itemsList = @json($itemsData);
+
+    function reindexRows() {
+        tableBody.find('tr').each(function(idx, row) {
+            $(row).find('input, select').each(function() {
+                let name = $(this).attr('name');
+                if(name) $(this).attr('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
+            });
+        });
+    }
+
+    function updateItemOptions() {
+        const selected = $('.selectItem').map(function() { return $(this).val(); }).get().filter(v => v !== '');
+        $('.selectItem').each(function() {
+            const currentVal = $(this).val();
+            const $select = $(this);
+            $select.empty().append('<option value="">Select Item</option>');
+            $.each(itemsList, function(id, item) {
+                if(selected.includes(id.toString()) && id != currentVal) return;
+                $select.append(`<option value="${id}">${item.name}</option>`);
+            });
+            $select.val(currentVal).trigger('change.select2');
+        });
+    }
+
+    function recalcAmount(row) {
+        const qty = parseFloat(row.find('.qty').val()) || 0;
+        const price = parseFloat(row.find('.price').val()) || 0;
+        row.find('.amount').val((qty * price).toFixed(2));
+    }
+
+    // Initialize Select2
+    $('.select2').select2({ width: '100%' });
+
+    // On item change
+    tableBody.on('change', '.selectItem', function() {
+        const id = $(this).val();
+        const row = $(this).closest('tr');
+        if(id && itemsList[id]) {
+            const item = itemsList[id];
+            row.find('.description').val(item.description);
+            row.find('.qty').val(item.qty);
+            row.find('.unit').val(item.unit);
+            row.find('.price').val(item.price);
+        } else {
+            row.find('.description').val('');
+            row.find('.qty').val(1);
+            row.find('.unit').val('Piece');
+            row.find('.price').val(0);
+        }
+        recalcAmount(row);
+        updateItemOptions();
+    });
+
+    // On qty or price input
+    tableBody.on('input', '.qty, .price', function() {
+        const row = $(this).closest('tr');
+        recalcAmount(row);
+    });
+
+    // Add row
+    $('#addRow').on('click', function() {
+        const rowCount = tableBody.find('tr').length;
+        const newRow = $(`
+            <tr>
+                <td><select name="items[${rowCount}][id]" class="selectItem select2 w-full"><option value="">Select Item</option></select></td>
+                <td><input type="text" name="items[${rowCount}][description]" class="w-full description"></td>
+                <td><input type="number" name="items[${rowCount}][qty]" value="1" class="w-full qty"></td>
+                <td><select name="items[${rowCount}][unit]" class="unit w-full"><option>Piece</option><option>Kg</option><option>Box</option></select></td>
+                <td><input type="number" name="items[${rowCount}][price]" value="0" class="w-full price"></td>
+                <td><input type="text" name="items[${rowCount}][amount]" readonly class="w-full amount"></td>
+                <td><button type="button" class="removeRow bg-red-600 text-white px-3 py-1 rounded-md">X</button></td>
+            </tr>
+        `);
+        tableBody.append(newRow);
+        // Populate select options
+        $.each(itemsList, function(id, item) {
+            newRow.find('.selectItem').append(`<option value="${id}">${item.name}</option>`);
+        });
+        newRow.find('.select2').select2({ width: '100%' });
+        reindexRows();
+        updateItemOptions();
+    });
+
+    // Remove row
+    tableBody.on('click', '.removeRow', function() {
+        if(tableBody.find('tr').length > 1) {
+            $(this).closest('tr').remove();
+            reindexRows();
+            updateItemOptions();
+        } else {
+            alert('At least one item is required!');
+        }
+    });
+});
+</script>
+
+
 
                 </div>
 
@@ -320,164 +450,6 @@ $(document).ready(function () {
 </div>
 @endsection
 <!-- Dynamic Row -->
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const tableBody = document.querySelector('#itemsTable tbody');
-    const addRowBtn = document.getElementById('addRow');
-    const itemsList = @json($items ?? []);
-
-    // Re-index input/select names: items[0][qty], items[1][price], etc.
-    function reindexRows() {
-        Array.from(tableBody.querySelectorAll('tr')).forEach((row, idx) => {
-            row.querySelectorAll('input, select, textarea').forEach(el => {
-                const name = el.getAttribute('name');
-                if (name) {
-                    el.setAttribute('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
-                }
-            });
-        });
-    }
-
-    // Update item options to avoid duplicate selection
-    function updateItemOptions() {
-        const selected = Array.from(document.querySelectorAll('.selectItem'))
-            .map(s => s.value)
-            .filter(v => v !== '');
-
-        document.querySelectorAll('.selectItem').forEach(select => {
-            const currentVal = select.value;
-
-            // Destroy Select2 if initialized
-            if (window.jQuery && $(select).data('select2')) {
-                $(select).select2('destroy');
-            }
-
-            // Clear options
-            select.innerHTML = '';
-
-            // Default option
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = '';
-            defaultOpt.textContent = 'Select Item';
-            select.appendChild(defaultOpt);
-
-            // Rebuild dropdown excluding duplicates
-            Object.entries(itemsList).forEach(([id, name]) => {
-                if (selected.includes(String(id)) && String(id) !== String(currentVal)) return;
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.textContent = name;
-                select.appendChild(opt);
-            });
-
-            // Restore selected value if still valid
-            if (Array.from(select.options).some(o => o.value === currentVal)) {
-                select.value = currentVal;
-            } else {
-                select.value = '';
-            }
-
-            // Re-initialize Select2
-            if (window.jQuery && $.fn.select2 && select.classList.contains('select2')) {
-                $(select).select2({ width: '100%' });
-            }
-        });
-    }
-
-    // Add new row (clean row, not duplicate clone)
-    addRowBtn.addEventListener('click', function () {
-        const rowCount = tableBody.rows.length;
-
-        // Create new row
-        const newRow = document.createElement('tr');
-        newRow.innerHTML = `
-            <td class="px-4 py-2">
-                <select name="items[${rowCount}][id]" class="selectItem select2 w-full">
-                    <option value="">Select Item</option>
-                    ${Object.entries(itemsList).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}
-                </select>
-            </td>
-            <td class="px-4 py-2">
-                <input type="text" name="items[${rowCount}][description]"
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-            </td>
-            <td class="px-4 py-2">
-                <input type="number" name="items[${rowCount}][qty]" value="1"
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm qty">
-            </td>
-            <td class="px-4 py-2">
-                <select name="items[${rowCount}][unit]" class="select2 w-full">
-                    <option>Piece</option>
-                    <option>Kg</option>
-                    <option>Box</option>
-                </select>
-            </td>
-            <td class="px-4 py-2">
-                <input type="number" name="items[${rowCount}][price]" value="0"
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm price">
-            </td>
-            <td class="px-4 py-2">
-                <input type="text" name="items[${rowCount}][amount]" readonly
-                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm amount">
-            </td>
-            <td class="px-4 py-2 text-center">
-                <button type="button" class="removeRow bg-red-600 text-white px-3 py-1 rounded-md">X</button>
-            </td>
-        `;
-
-        tableBody.appendChild(newRow);
-        reindexRows();
-        updateItemOptions();
-
-        // Re-init select2 for new dropdowns
-        if (window.jQuery && $.fn.select2) {
-            $(newRow).find('.select2').select2({ width: '100%' });
-        }
-    });
-
-    // Remove row
-    tableBody.addEventListener('click', function (e) {
-        if (e.target.classList.contains('removeRow')) {
-            if (tableBody.rows.length > 1) {
-                e.target.closest('tr').remove();
-                reindexRows();
-                updateItemOptions();
-            } else {
-                alert("At least one item is required!");
-            }
-        }
-    });
-
-    // Auto-calculate amount
-    tableBody.addEventListener('input', function (e) {
-        if (e.target.classList.contains('qty') || e.target.classList.contains('price')) {
-            const row = e.target.closest('tr');
-            const qty = parseFloat(row.querySelector('.qty').value) || 0;
-            const price = parseFloat(row.querySelector('.price').value) || 0;
-            row.querySelector('.amount').value = (qty * price).toFixed(2);
-        }
-    });
-
-    // Update options when item selected
-    tableBody.addEventListener('change', function (e) {
-        if (e.target.classList.contains('selectItem')) {
-            updateItemOptions();
-        }
-    });
-
-    // Initialize Select2 for first time
-    if (window.jQuery && $.fn.select2) {
-        $('.select2').each(function () {
-            if (!$(this).data('select2')) {
-                $(this).select2({ width: '100%' });
-            }
-        });
-    }
-
-    // Initial update
-    updateItemOptions();
-});
-</script>
 
 
 
