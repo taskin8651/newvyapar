@@ -17,85 +17,94 @@
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Select Customer</label>
-                        <select name="select_customer_id" id="select_customer_id"
-                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                            <option value="">-- Select Customer --</option>
-                            @foreach($select_customers as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
+                   <div>
+                    <label class="block text-sm font-medium text-gray-700">Select Customer</label>
+                    <select name="select_customer_id" id="select_customer_id"
+                            class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                        <option value="">-- Select Customer --</option>
+                        @foreach($select_customers as $id => $name)
+                            <option value="{{ $id }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Customer Details Preview -->
+                <div id="customerDetails" class="hidden mt-4 p-4 border rounded-lg bg-gray-50">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Customer Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <p><strong>Full Name:</strong> <span id="preview_party_name"></span></p>
+                        <p><strong>GST No:</strong> <span id="gstin"></span></p>
+                        <p><strong>Phone:</strong> <span id="phone_number"></span></p>
+                        <p><strong>Email:</strong> <span id="email"></span></p>
+                        <p><strong>Billing Address:</strong> <span id="billing_address"></span></p>
+                        <p><strong>Shipping Address:</strong> <span id="shipping_address"></span></p>
+                        <p><strong>State:</strong> <span id="state"></span></p>
+                        <p><strong>City:</strong> <span id="city"></span></p>
                     </div>
+                </div>
 
-                    <!-- Customer Details Preview -->
-                   <div id="customerDetails" class="hidden mt-4 p-4 border rounded-lg bg-gray-50">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Customer Details</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <p><strong>Full Name:</strong> <span id="party_name"></span></p>
-                            <p><strong>GST No:</strong> <span id="gstin"></span></p>
-                            <p><strong>Phone:</strong> <span id="phone_number"></span></p>
-                            <p><strong>Email:</strong> <span id="email"></span></p>
-                            <p><strong>Billing Address:</strong> <span id="billing_address"></span></p>
-                            <p><strong>Shipping Address:</strong> <span id="shipping_address"></span></p>
-                            <p><strong>State:</strong> <span id="state"></span></p>
-                            <p><strong>City:</strong> <span id="city"></span></p>
-                        </div>
-                    </div>
+                <script>
+                $(document).ready(function () {
+                    $('#select_customer_id').on('change', function () {
+                        let customerId = $(this).val();
 
-                    <script>
-$(document).ready(function () {
-    $('#select_customer_id').on('change', function () {
-        let customerId = $(this).val();
+                        if (customerId) {
+                            let url = "{{ route('admin.getCustomerDetails', ':id') }}";
+                            url = url.replace(':id', customerId);
 
-        if (customerId) {
-            let url = "{{ route('admin.getCustomerDetails', ':id') }}";
-            url = url.replace(':id', customerId);
+                            fetch(url)
+                                .then(response => response.json())
+                                .then(data => {
+                                    console.log("Customer Data:", data);
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Customer Data:", data); // Debug ke liye
-                    $('#customerDetails').removeClass('hidden');
-                    $('#party_name').text(data.party_name || '');
-                    $('#gstin').text(data.gstin || '');
-                    $('#phone_number').text(data.phone_number || '');
-                    $('#email').text(data.email || '');
-                    $('#billing_address').html(data.billing_address || '');
-                    $('#shipping_address').html(data.shipping_address || '');
-                    $('#state').text(data.state || '');
-                    $('#city').text(data.city || '');
-                })
-                .catch(error => {
-                    console.error("Error fetching customer details:", error);
-                    $('#customerDetails').addClass('hidden');
+                                    $('#customerDetails').removeClass('hidden');
+                                    $('#preview_party_name').text(data.party_name || '');
+                                    $('#gstin').text(data.gstin || '');
+                                    $('#phone_number').text(data.phone_number || '');
+                                    $('#email').text(data.email || '');
+                                    $('#billing_address').html(data.billing_address || '');
+                                    $('#shipping_address').html(data.shipping_address || '');
+                                    $('#state').text(data.state || '');
+                                    $('#city').text(data.city || '');
+
+                                    // ✅ Also auto-fill Billing Name input
+                                    $('#billing_name').val(data.party_name || '');
+                                    $('#phone_numbers').val(data.phone_number || '');
+                                    $('#billings_address').val(data.billing_address || '');
+                                })
+                                .catch(error => {
+                                    console.error("Error fetching customer details:", error);
+                                    $('#customerDetails').addClass('hidden');
+                                });
+                        } else {
+                            $('#customerDetails').addClass('hidden');
+                            $('#billing_name').val('');
+                            $('#phone_number').val('');
+                        }
+                    });
                 });
-        } else {
-            $('#customerDetails').addClass('hidden');
-        }
-    });
-});
-</script>
+                </script>
 
-
-
-
+                    <!-- Billing Name Input -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Billing Name</label>
-                        <input type="text" name="billing_name" value="{{ old('billing_name') }}"
-                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                        <input type="text" name="billing_name" id="billing_name"
+                            value="{{ old('billing_name') ?? '' }}"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Phone Number</label>
-                        <input type="text" name="phone_number" value="{{ old('phone_number') }}"
+                        <input type="text" name="phone_number" id="phone_numbers" value="{{ old('phone_number') }}"
                                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Billing Address</label>
-                        <textarea name="billing_address" rows="3"
-                                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('billing_address') }}</textarea>
+                        <input type="text" name="billing_address" id="billings_address"
+                            value="{{ strip_tags(old('billing_address')) }}"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+
                     </div>
                      <div class="space-y-4">
         <h2 class="text-xl font-semibold text-gray-700">Shipping Address</h2>
@@ -331,27 +340,82 @@ $(document).ready(function () {
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('#itemsTable tbody');
     const addRowBtn = document.getElementById('addRow');
+    const itemsList = @json($items ?? []);
+
+    // Re-index input names: items[0][qty], items[1][price], etc.
+    function reindexRows() {
+        Array.from(tableBody.querySelectorAll('tr')).forEach((row, idx) => {
+            row.querySelectorAll('input, select, textarea').forEach(el => {
+                const name = el.getAttribute('name');
+                if (name) {
+                    el.setAttribute('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
+                }
+            });
+        });
+    }
+
+    // Update item options to avoid duplicate selection
+    function updateItemOptions() {
+        const selected = Array.from(document.querySelectorAll('.selectItem'))
+            .map(s => s.value)
+            .filter(v => v !== '');
+
+        document.querySelectorAll('.selectItem').forEach(select => {
+            const currentVal = select.value;
+
+            // Destroy select2 instance to avoid multiple UI containers
+            if (window.jQuery && $(select).data('select2')) {
+                $(select).select2('destroy');
+            }
+
+            // Clear options
+            select.innerHTML = '';
+
+            // Add default "Select Item"
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Select Item';
+            select.appendChild(defaultOpt);
+
+            // Rebuild dropdown without duplicates
+            Object.entries(itemsList).forEach(([id, name]) => {
+                if (selected.includes(String(id)) && String(id) !== String(currentVal)) return;
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+
+            // Restore previously selected value if still valid
+            select.value = currentVal || '';
+
+            // Re-initialize Select2
+            if (window.jQuery && $.fn.select2 && select.classList.contains('select2')) {
+                $(select).select2({ width: '100%' });
+            }
+        });
+    }
 
     // Add new row
     addRowBtn.addEventListener('click', function () {
-        let rowCount = tableBody.rows.length;
-        let newRow = tableBody.rows[0].cloneNode(true);
+        const newRow = tableBody.rows[0].cloneNode(true);
 
-        newRow.querySelectorAll('input, select').forEach(el => {
-            let name = el.getAttribute('name');
-            if (name) {
-                el.setAttribute('name', name.replace(/\d+/, rowCount));
-            }
-            if (el.classList.contains('amount')) {
-                el.value = '';
-            } else if (el.tagName === 'INPUT') {
-                el.value = '';
-            } else if (el.tagName === 'SELECT') {
-                el.selectedIndex = 0;
-            }
+        // Reset cloned inputs
+        newRow.querySelectorAll('input').forEach(el => {
+            if (el.classList.contains('amount')) el.value = '';
+            else if (el.classList.contains('qty')) el.value = '1';
+            else if (el.classList.contains('price')) el.value = '0';
+            else el.value = '';
+        });
+
+        // Reset dropdowns
+        newRow.querySelectorAll('select').forEach(sel => {
+            if (window.jQuery && $(sel).data('select2')) $(sel).select2('destroy');
+            sel.value = '';
         });
 
         tableBody.appendChild(newRow);
+        reindexRows();
         updateItemOptions();
     });
 
@@ -360,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.classList.contains('removeRow')) {
             if (tableBody.rows.length > 1) {
                 e.target.closest('tr').remove();
+                reindexRows();
                 updateItemOptions();
             } else {
                 alert("At least one item is required!");
@@ -367,42 +432,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Calculate amount automatically
+    // Auto-calculate amount on qty or price change
     tableBody.addEventListener('input', function (e) {
         if (e.target.classList.contains('qty') || e.target.classList.contains('price')) {
-            let row = e.target.closest('tr');
-            let qty = parseFloat(row.querySelector('.qty').value) || 0;
-            let price = parseFloat(row.querySelector('.price').value) || 0;
+            const row = e.target.closest('tr');
+            const qty = parseFloat(row.querySelector('.qty').value) || 0;
+            const price = parseFloat(row.querySelector('.price').value) || 0;
             row.querySelector('.amount').value = (qty * price).toFixed(2);
         }
     });
 
-    // Prevent duplicate item selection
-    tableBody.addEventListener('change', function () {
-        updateItemOptions();
+    // Update options when an item is selected
+    tableBody.addEventListener('change', function (e) {
+        if (e.target.classList.contains('selectItem')) {
+            updateItemOptions();
+        }
     });
 
-    function updateItemOptions() {
-        let selectedItems = [];
-        document.querySelectorAll('.selectItem').forEach(select => {
-            if (select.value) selectedItems.push(select.value);
-        });
-
-        document.querySelectorAll('.selectItem').forEach(select => {
-            select.querySelectorAll('option').forEach(option => {
-                if (option.value && selectedItems.includes(option.value) && option.value !== select.value) {
-                    option.disabled = true;
-                } else {
-                    option.disabled = false;
-                }
-            });
+    // Initialize Select2 for the first time
+    if (window.jQuery && $.fn.select2) {
+        $('.select2').each(function () {
+            if (!$(this).data('select2')) {
+                $(this).select2({ width: '100%' });
+            }
         });
     }
+
+    updateItemOptions();
 });
-
-
-
-
 </script>
 
 
