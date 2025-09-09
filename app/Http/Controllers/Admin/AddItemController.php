@@ -71,7 +71,6 @@ public function store(Request $request)
         'online_store_description' => 'nullable|string',
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         'json_data' => 'nullable',
-        'parties_id' => 'required|integer|exists:party_details,id', // ✅ Added validation for parties_id
     ]);
 
     // Handle image upload
@@ -92,17 +91,23 @@ public function store(Request $request)
 
     // ✅ Save Opening Stock into CurrentStock table
     if (!empty($validated['opening_stock']) && $validated['opening_stock'] > 0) {
-        CurrentStock::create([
-            'parties_id'    => $validated['parties_id'],  // ✅ Parties ID add kiya
+        $defaultPartyId = 1; // ✅ Always 1
+
+        $stock = CurrentStock::create([
+            'parties_id'    => $defaultPartyId, // ✅ Fix: hamesha 1
             'qty'           => $validated['opening_stock'],
             'type'          => 'Opening Stock',
             'created_by_id' => auth()->id(),
         ]);
+
+        // ✅ Attach item to the stock (pivot table)
+        $stock->items()->attach($item->id);
     }
 
     return redirect()->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
+
 
     public function edit(AddItem $addItem)
     {

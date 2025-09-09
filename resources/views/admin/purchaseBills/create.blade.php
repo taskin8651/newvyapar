@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const addRowBtn = document.getElementById('addRow');
     const itemsList = @json($items ?? []);
 
-    // Re-index input names: items[0][qty], items[1][price], etc.
+    // Re-index input/select names: items[0][qty], items[1][price], etc.
     function reindexRows() {
         Array.from(tableBody.querySelectorAll('tr')).forEach((row, idx) => {
             row.querySelectorAll('input, select, textarea').forEach(el => {
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.selectItem').forEach(select => {
             const currentVal = select.value;
 
-            // Destroy select2 instance to avoid multiple UI containers
+            // Destroy Select2 if initialized
             if (window.jQuery && $(select).data('select2')) {
                 $(select).select2('destroy');
             }
@@ -371,13 +371,13 @@ document.addEventListener('DOMContentLoaded', function () {
             // Clear options
             select.innerHTML = '';
 
-            // Add default "Select Item"
+            // Default option
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
             defaultOpt.textContent = 'Select Item';
             select.appendChild(defaultOpt);
 
-            // Rebuild dropdown without duplicates
+            // Rebuild dropdown excluding duplicates
             Object.entries(itemsList).forEach(([id, name]) => {
                 if (selected.includes(String(id)) && String(id) !== String(currentVal)) return;
                 const opt = document.createElement('option');
@@ -386,8 +386,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 select.appendChild(opt);
             });
 
-            // Restore previously selected value if still valid
-            select.value = currentVal || '';
+            // Restore selected value if still valid
+            if (Array.from(select.options).some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = '';
+            }
 
             // Re-initialize Select2
             if (window.jQuery && $.fn.select2 && select.classList.contains('select2')) {
@@ -396,27 +400,55 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Add new row
+    // Add new row (clean row, not duplicate clone)
     addRowBtn.addEventListener('click', function () {
-        const newRow = tableBody.rows[0].cloneNode(true);
+        const rowCount = tableBody.rows.length;
 
-        // Reset cloned inputs
-        newRow.querySelectorAll('input').forEach(el => {
-            if (el.classList.contains('amount')) el.value = '';
-            else if (el.classList.contains('qty')) el.value = '1';
-            else if (el.classList.contains('price')) el.value = '0';
-            else el.value = '';
-        });
-
-        // Reset dropdowns
-        newRow.querySelectorAll('select').forEach(sel => {
-            if (window.jQuery && $(sel).data('select2')) $(sel).select2('destroy');
-            sel.value = '';
-        });
+        // Create new row
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td class="px-4 py-2">
+                <select name="items[${rowCount}][id]" class="selectItem select2 w-full">
+                    <option value="">Select Item</option>
+                    ${Object.entries(itemsList).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')}
+                </select>
+            </td>
+            <td class="px-4 py-2">
+                <input type="text" name="items[${rowCount}][description]"
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+            </td>
+            <td class="px-4 py-2">
+                <input type="number" name="items[${rowCount}][qty]" value="1"
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm qty">
+            </td>
+            <td class="px-4 py-2">
+                <select name="items[${rowCount}][unit]" class="select2 w-full">
+                    <option>Piece</option>
+                    <option>Kg</option>
+                    <option>Box</option>
+                </select>
+            </td>
+            <td class="px-4 py-2">
+                <input type="number" name="items[${rowCount}][price]" value="0"
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm price">
+            </td>
+            <td class="px-4 py-2">
+                <input type="text" name="items[${rowCount}][amount]" readonly
+                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm amount">
+            </td>
+            <td class="px-4 py-2 text-center">
+                <button type="button" class="removeRow bg-red-600 text-white px-3 py-1 rounded-md">X</button>
+            </td>
+        `;
 
         tableBody.appendChild(newRow);
         reindexRows();
         updateItemOptions();
+
+        // Re-init select2 for new dropdowns
+        if (window.jQuery && $.fn.select2) {
+            $(newRow).find('.select2').select2({ width: '100%' });
+        }
     });
 
     // Remove row
@@ -432,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Auto-calculate amount on qty or price change
+    // Auto-calculate amount
     tableBody.addEventListener('input', function (e) {
         if (e.target.classList.contains('qty') || e.target.classList.contains('price')) {
             const row = e.target.closest('tr');
@@ -442,14 +474,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Update options when an item is selected
+    // Update options when item selected
     tableBody.addEventListener('change', function (e) {
         if (e.target.classList.contains('selectItem')) {
             updateItemOptions();
         }
     });
 
-    // Initialize Select2 for the first time
+    // Initialize Select2 for first time
     if (window.jQuery && $.fn.select2) {
         $('.select2').each(function () {
             if (!$(this).data('select2')) {
@@ -458,6 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Initial update
     updateItemOptions();
 });
 </script>
