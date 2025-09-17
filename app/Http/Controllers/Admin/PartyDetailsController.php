@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PartyDetailsController extends Controller
 {
@@ -108,4 +109,21 @@ public function store(StorePartyDetailRequest $request)
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
+ public function download(PartyDetail $partyDetail, $templateId)
+    {
+        $view = "admin.templates.template" . $templateId;
+
+        if (!view()->exists($view)) {
+            abort(404, "Template not found");
+        }
+
+        $pdf = Pdf::loadView($view, [
+            "partyDetail" => $partyDetail,
+            "date"        => now()->format('d-m-Y'),
+            "template"    => $templateId,
+        ]);
+
+        return $pdf->download("party-{$partyDetail->id}-template{$templateId}.pdf");
+    }
+
 }

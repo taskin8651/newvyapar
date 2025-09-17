@@ -153,7 +153,7 @@
             orderCellsTop: true,
             order: [[1, 'desc']],
             pageLength: 25,
-            dom: 'lrtip' // disable default search box
+            dom: 'Brtip' // disable default search box
         });
 
         let table = $('.datatable-PaymentOut:not(.ajaxTable)').DataTable({ buttons: dtButtons })

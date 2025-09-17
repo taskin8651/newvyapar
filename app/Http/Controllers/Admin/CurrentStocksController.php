@@ -22,7 +22,8 @@ class CurrentStocksController extends Controller
     {
         abort_if(Gate::denies('current_stock_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $currentStocks = CurrentStock::with(['items', 'parties', 'created_by'])->get();
+        $currentStocks = CurrentStock::with(['items', 'user', 'created_by'])->get();
+       
 
         return view('admin.currentStocks.index', compact('currentStocks'));
     }

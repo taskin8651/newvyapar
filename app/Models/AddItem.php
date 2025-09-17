@@ -23,7 +23,7 @@ class AddItem extends Model
 
     public const ITEM_TYPE_SELECT = [
         'product' => 'Product',
-        'Service' => 'Service',
+        'service' => 'Service',
     ];
 
     public const SELECT_TYPE_SELECT = [
@@ -47,7 +47,7 @@ class AddItem extends Model
         'item_hsn',
         'select_unit_id',
         'item_code',
-        'created_at',
+        'quantity',
         'sale_price',
         'select_type',
         'disc_on_sale_price',
@@ -58,9 +58,18 @@ class AddItem extends Model
         'purchase_price',
         'select_purchase_type',
         'select_tax_id',
-        'updated_at',
-        'deleted_at',
-        'created_by_id',
+        'opening_stock',
+        'low_stock_warning',
+        'warehouse_location',
+        'online_store_title',
+        'online_store_description',
+        'online_store_image',
+        'json_data',
+        'created_by_id'
+    ];
+
+    protected $casts = [
+        'json_data' => 'array',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -75,7 +84,7 @@ class AddItem extends Model
 
     public function select_categories()
     {
-        return $this->belongsToMany(Category::class);
+        return $this->belongsToMany(Category::class, 'add_item_category', 'add_item_id', 'category_id');
     }
 
     public function select_tax()

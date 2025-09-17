@@ -263,13 +263,76 @@
         </div>
 
         {{-- Footer --}}
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
-            <a href="{{ route('admin.party-details.index') }}" 
-               class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-lg shadow hover:bg-gray-300 transition">
-                {{ trans('global.back_to_list') }}
-            </a>
+        {{-- Footer --}}
+<div class="px-6 py-4 border-t border-gray-200 flex justify-between">
+    <a href="{{ route('admin.party-details.index') }}" 
+       class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-lg shadow hover:bg-gray-300 transition">
+        {{ trans('global.back_to_list') }}
+    </a>
+
+    <!-- Button -->
+<button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        onclick="openModal()">
+    📑 Choose PDF Template & Download
+</button>
+
+<!-- Modal -->
+<div id="templateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
+        <div class="flex justify-between items-center border-b pb-3">
+            <h5 class="text-lg font-semibold">📑 Select PDF Template</h5>
+            <button onclick="closeModal()" class="text-gray-500 hover:text-red-600">✖</button>
+        </div>
+
+        <div class="mt-4">
+            <form id="templateForm">
+                <div class="space-y-2">
+                    @for ($i = 1; $i <= 10; $i++)
+                        <label class="flex items-center justify-between px-3 py-2 border rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <span>Template {{ $i }}</span>
+                            <input type="radio" name="template" value="{{ $i }}" class="form-radio text-indigo-600">
+                        </label>
+                    @endfor
+                </div>
+            </form>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-6 border-t pt-4">
+            <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">❌ Cancel</button>
+            <button id="downloadPdfBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                ⬇ Download
+            </button>
         </div>
     </div>
+</div>
+
+<!-- JS -->
+<script>
+    function openModal() {
+        document.getElementById("templateModal").classList.remove("hidden");
+        document.getElementById("templateModal").classList.add("flex");
+    }
+    function closeModal() {
+        document.getElementById("templateModal").classList.add("hidden");
+        document.getElementById("templateModal").classList.remove("flex");
+    }
+
+   document.getElementById("downloadPdfBtn").addEventListener("click", function(){
+    let templateId = document.querySelector("input[name='template']:checked")?.value;
+    if(!templateId){
+        alert("⚠️ Please select a template!");
+        return;
+    }
+
+    // ✅ Laravel route with PartyDetail ID
+    let url = "{{ route('admin.pdf.download', [$partyDetail->id, ':id']) }}".replace(':id', templateId);
+
+    window.location.href = url;
+    closeModal();
+
+    });
+</script>
+
 
 </div>
 @endsection
