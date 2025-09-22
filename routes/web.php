@@ -310,9 +310,24 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     // custom rote by rock
    
 
+    // Main Cost Center
+    Route::delete('main-cost-centers/destroy', 'MainCostCenterController@massDestroy')->name('main-cost-centers.massDestroy');
+    Route::post('main-cost-centers/media', 'MainCostCenterController@storeMedia')->name('main-cost-centers.storeMedia');
+    Route::post('main-cost-centers/ckmedia', 'MainCostCenterController@storeCKEditorImages')->name('main-cost-centers.storeCKEditorImages');
+    Route::post('main-cost-centers/parse-csv-import', 'MainCostCenterController@parseCsvImport')->name('main-cost-centers.parseCsvImport');
+    Route::post('main-cost-centers/process-csv-import', 'MainCostCenterController@processCsvImport')->name('main-cost-centers.processCsvImport');
+    Route::resource('main-cost-centers', 'MainCostCenterController');
+
+    // Sub Cost Centers
+    Route::delete('sub-cost-centers/destroy', 'SubCostCentersController@massDestroy')->name('sub-cost-centers.massDestroy');
+    Route::post('sub-cost-centers/media', 'SubCostCentersController@storeMedia')->name('sub-cost-centers.storeMedia');
+    Route::post('sub-cost-centers/ckmedia', 'SubCostCentersController@storeCKEditorImages')->name('sub-cost-centers.storeCKEditorImages');
+    Route::post('sub-cost-centers/parse-csv-import', 'SubCostCentersController@parseCsvImport')->name('sub-cost-centers.parseCsvImport');
+    Route::post('sub-cost-centers/process-csv-import', 'SubCostCentersController@processCsvImport')->name('sub-cost-centers.processCsvImport');
+    Route::resource('sub-cost-centers', 'SubCostCentersController');
 
 
-
+    //End Rock
 });
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
     // Change password
