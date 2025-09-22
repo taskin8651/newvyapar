@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="p-6">
+<div class="space-y-6">
     {{-- Top Actions --}}
     @can('main_cost_center_create')
     <div class="flex flex-wrap items-center gap-3 mb-6">
@@ -20,12 +20,12 @@
     @endcan
 
     {{-- Main Card --}}
-    <div class="bg-white shadow-lg rounded-xl overflow-hidden">
-        <div class="bg-indigo-600 text-white px-6 py-4 flex items-center justify-between">
-            <h2 class="text-lg font-semibold">
+    <div class="px-6 py-4 border-b border-gray-200">
+      
+            <h3 class="text-lg font-semibold text-gray-800">
                 <i class="fas fa-project-diagram mr-2"></i>
                 {{ trans('cruds.mainCostCenter.title_singular') }} {{ trans('global.list') }}
-            </h2>
+            </h3>
         </div>
 
         {{-- Table --}}
@@ -33,7 +33,7 @@
             <table class="min-w-full divide-y divide-gray-200 text-sm text-gray-700 datatable datatable-MainCostCenter">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-3 text-left w-10"></th>
+                        <th class="px-4 py-3 text-center w-10 p-3"></th>
                         <th class="px-4 py-3 text-left font-semibold">{{ trans('cruds.mainCostCenter.fields.id') }}</th>
                         <th class="px-4 py-3 text-left font-semibold">{{ trans('cruds.mainCostCenter.fields.cost_center_name') }}</th>
                         <th class="px-4 py-3 text-left font-semibold">{{ trans('cruds.mainCostCenter.fields.unique_code') }}</th>
@@ -71,13 +71,15 @@
                         <td class="px-4 py-3 flex gap-2">
                             @can('main_cost_center_show')
                                 <a href="{{ route('admin.main-cost-centers.show', $mainCostCenter->id) }}"
-                                   class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg shadow">
-                                    {{ trans('global.view') }}
+                                    class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">
+                                           <i class="fas fa-eye mr-1"></i>{{ trans('global.view') }}
+                                      
                                 </a>
                             @endcan
                             @can('main_cost_center_edit')
                                 <a href="{{ route('admin.main-cost-centers.edit', $mainCostCenter->id) }}"
-                                   class="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs rounded-lg shadow">
+                                   class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+                                           <i class="fas fa-edit mr-1"></i>
                                     {{ trans('global.edit') }}
                                 </a>
                             @endcan
@@ -86,8 +88,9 @@
                                       onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline">
                                     <input type="hidden" name="_method" value="DELETE">
                                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                    <button type="submit"
-                                            class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg shadow">
+                                     <button type="submit"
+                                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
+                                                <i class="fas fa-trash mr-1"></i>
                                         {{ trans('global.delete') }}
                                     </button>
                                 </form>

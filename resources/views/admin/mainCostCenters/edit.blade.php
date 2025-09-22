@@ -5,113 +5,166 @@
     <div class="row">
         <div class="col-lg-12">
             <div class="panel panel-default">
-                <div class="panel-heading">
+                {{-- <div class="panel-heading">
                     {{ trans('global.edit') }} {{ trans('cruds.mainCostCenter.title_singular') }}
+                </div> --}}
+   <div class="p-6 max-w-5xl mx-auto">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{{ route('admin.main-cost-centers.index') }}" 
+           class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+            {{ trans('global.back_to_list') }}
+        </a>
+    </div>
+
+    <!-- Edit Main Cost Center Card -->
+    <div class="bg-white shadow-lg rounded-xl p-6 text-sm">
+        <h2 class="text-2xl font-bold mb-6 text-blue-600">
+            {{ trans('global.edit') }} {{ trans('cruds.mainCostCenter.title_singular') }}
+        </h2>
+
+        <form method="POST" action="{{ route('admin.main-cost-centers.update', [$mainCostCenter->id]) }}" enctype="multipart/form-data">
+            @method('PUT')
+            @csrf
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Cost Center Name -->
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="cost_center_name" class="block font-semibold text-gray-700 mb-1 required">
+                        {{ trans('cruds.mainCostCenter.fields.cost_center_name') }}
+                    </label>
+                    <input type="text" name="cost_center_name" id="cost_center_name" 
+                           value="{{ old('cost_center_name', $mainCostCenter->cost_center_name) }}" required
+                           class="w-full p-2 border rounded-md focus:ring focus:ring-blue-200">
+                    @error('cost_center_name') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
                 </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.main-cost-centers.update", [$mainCostCenter->id]) }}" enctype="multipart/form-data">
-                        @method('PUT')
-                        @csrf
-                        <div class="form-group {{ $errors->has('cost_center_name') ? 'has-error' : '' }}">
-                            <label class="required" for="cost_center_name">{{ trans('cruds.mainCostCenter.fields.cost_center_name') }}</label>
-                            <input class="form-control" type="text" name="cost_center_name" id="cost_center_name" value="{{ old('cost_center_name', $mainCostCenter->cost_center_name) }}" required>
-                            @if($errors->has('cost_center_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('cost_center_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.cost_center_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('unique_code') ? 'has-error' : '' }}">
-                            <label for="unique_code">{{ trans('cruds.mainCostCenter.fields.unique_code') }}</label>
-                            <input class="form-control" type="text" name="unique_code" id="unique_code" value="{{ old('unique_code', $mainCostCenter->unique_code) }}">
-                            @if($errors->has('unique_code'))
-                                <span class="help-block" role="alert">{{ $errors->first('unique_code') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.unique_code_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('details_of_cost_center') ? 'has-error' : '' }}">
-                            <label for="details_of_cost_center">{{ trans('cruds.mainCostCenter.fields.details_of_cost_center') }}</label>
-                            <textarea class="form-control ckeditor" name="details_of_cost_center" id="details_of_cost_center">{!! old('details_of_cost_center', $mainCostCenter->details_of_cost_center) !!}</textarea>
-                            @if($errors->has('details_of_cost_center'))
-                                <span class="help-block" role="alert">{{ $errors->first('details_of_cost_center') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.details_of_cost_center_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('link_with_company') ? 'has-error' : '' }}">
-                            <label for="link_with_company_id">{{ trans('cruds.mainCostCenter.fields.link_with_company') }}</label>
-                            <select class="form-control select2" name="link_with_company_id" id="link_with_company_id">
-                                @foreach($link_with_companies as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('link_with_company_id') ? old('link_with_company_id') : $mainCostCenter->link_with_company->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('link_with_company'))
-                                <span class="help-block" role="alert">{{ $errors->first('link_with_company') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.link_with_company_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('responsible_manager') ? 'has-error' : '' }}">
-                            <label for="responsible_manager_id">{{ trans('cruds.mainCostCenter.fields.responsible_manager') }}</label>
-                            <select class="form-control select2" name="responsible_manager_id" id="responsible_manager_id">
-                                @foreach($responsible_managers as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('responsible_manager_id') ? old('responsible_manager_id') : $mainCostCenter->responsible_manager->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('responsible_manager'))
-                                <span class="help-block" role="alert">{{ $errors->first('responsible_manager') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.responsible_manager_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('location') ? 'has-error' : '' }}">
-                            <label for="location">{{ trans('cruds.mainCostCenter.fields.location') }}</label>
-                            <textarea class="form-control ckeditor" name="location" id="location">{!! old('location', $mainCostCenter->location) !!}</textarea>
-                            @if($errors->has('location'))
-                                <span class="help-block" role="alert">{{ $errors->first('location') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.location_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('budget_amount') ? 'has-error' : '' }}">
-                            <label for="budget_amount">{{ trans('cruds.mainCostCenter.fields.budget_amount') }}</label>
-                            <input class="form-control" type="number" name="budget_amount" id="budget_amount" value="{{ old('budget_amount', $mainCostCenter->budget_amount) }}" step="0.01">
-                            @if($errors->has('budget_amount'))
-                                <span class="help-block" role="alert">{{ $errors->first('budget_amount') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.budget_amount_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('actual_amount') ? 'has-error' : '' }}">
-                            <label for="actual_amount">{{ trans('cruds.mainCostCenter.fields.actual_amount') }}</label>
-                            <input class="form-control" type="number" name="actual_amount" id="actual_amount" value="{{ old('actual_amount', $mainCostCenter->actual_amount) }}" step="0.01">
-                            @if($errors->has('actual_amount'))
-                                <span class="help-block" role="alert">{{ $errors->first('actual_amount') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.actual_amount_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('start_date') ? 'has-error' : '' }}">
-                            <label for="start_date">{{ trans('cruds.mainCostCenter.fields.start_date') }}</label>
-                            <input class="form-control date" type="text" name="start_date" id="start_date" value="{{ old('start_date', $mainCostCenter->start_date) }}">
-                            @if($errors->has('start_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('start_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.start_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('status') ? 'has-error' : '' }}">
-                            <label class="required">{{ trans('cruds.mainCostCenter.fields.status') }}</label>
-                            <select class="form-control" name="status" id="status" required>
-                                <option value disabled {{ old('status', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
-                                @foreach(App\Models\MainCostCenter::STATUS_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('status', $mainCostCenter->status) === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('status'))
-                                <span class="help-block" role="alert">{{ $errors->first('status') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.mainCostCenter.fields.status_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+
+                <!-- Unique Code -->
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="unique_code" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.unique_code') }}
+                    </label>
+                    <input type="text" name="unique_code" id="unique_code" 
+                           value="{{ old('unique_code', $mainCostCenter->unique_code) }}"
+                           class="w-full p-2 border rounded-md focus:ring focus:ring-green-200">
+                    @error('unique_code') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
                 </div>
+
+                <!-- Details of Cost Center -->
+                <div class="bg-yellow-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                    <label for="details_of_cost_center" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.details_of_cost_center') }}
+                    </label>
+                    <textarea name="details_of_cost_center" id="details_of_cost_center" 
+                              class="ckeditor w-full p-2 border rounded-md focus:ring focus:ring-yellow-200">{{ old('details_of_cost_center', $mainCostCenter->details_of_cost_center) }}</textarea>
+                    @error('details_of_cost_center') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Link with Company -->
+                <div class="bg-purple-50 p-4 rounded-lg shadow-inner">
+                    <label for="link_with_company_id" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.link_with_company') }}
+                    </label>
+                    <select name="link_with_company_id" id="link_with_company_id" 
+                            class="w-full p-2 border rounded-md focus:ring focus:ring-purple-200">
+                        @foreach($link_with_companies as $id => $entry)
+                            <option value="{{ $id }}" {{ (old('link_with_company_id', $mainCostCenter->link_with_company->id ?? '') == $id) ? 'selected' : '' }}>
+                                {{ $entry }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('link_with_company') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Responsible Manager -->
+                <div class="bg-purple-50 p-4 rounded-lg shadow-inner">
+                    <label for="responsible_manager_id" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.responsible_manager') }}
+                    </label>
+                    <select name="responsible_manager_id" id="responsible_manager_id" 
+                            class="w-full p-2 border rounded-md focus:ring focus:ring-purple-200">
+                        @foreach($responsible_managers as $id => $entry)
+                            <option value="{{ $id }}" {{ (old('responsible_manager_id', $mainCostCenter->responsible_manager->id ?? '') == $id) ? 'selected' : '' }}>
+                                {{ $entry }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('responsible_manager') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Location -->
+                <div class="bg-pink-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                    <label for="location" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.location') }}
+                    </label>
+                    <textarea name="location" id="location" 
+                              class="ckeditor w-full p-2 border rounded-md focus:ring focus:ring-pink-200">{{ old('location', $mainCostCenter->location) }}</textarea>
+                    @error('location') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Budget Amount -->
+                <div class="bg-indigo-50 p-4 rounded-lg shadow-inner">
+                    <label for="budget_amount" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.budget_amount') }}
+                    </label>
+                    <input type="number" step="0.01" name="budget_amount" id="budget_amount" 
+                           value="{{ old('budget_amount', $mainCostCenter->budget_amount) }}"
+                           class="w-full p-2 border rounded-md focus:ring focus:ring-indigo-200">
+                    @error('budget_amount') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Actual Amount -->
+                <div class="bg-indigo-50 p-4 rounded-lg shadow-inner">
+                    <label for="actual_amount" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.actual_amount') }}
+                    </label>
+                    <input type="number" step="0.01" name="actual_amount" id="actual_amount" 
+                           value="{{ old('actual_amount', $mainCostCenter->actual_amount) }}"
+                           class="w-full p-2 border rounded-md focus:ring focus:ring-indigo-200">
+                    @error('actual_amount') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Start Date -->
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="start_date" class="block font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.mainCostCenter.fields.start_date') }}
+                    </label>
+                    <input type="text" name="start_date" id="start_date" 
+                           value="{{ old('start_date', $mainCostCenter->start_date) }}"
+                           class="w-full p-2 border rounded-md focus:ring focus:ring-green-200 date">
+                    @error('start_date') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Status -->
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="status" class="block font-semibold text-gray-700 mb-1 required">
+                        {{ trans('cruds.mainCostCenter.fields.status') }}
+                    </label>
+                    <select name="status" id="status" required 
+                            class="w-full p-2 border rounded-md focus:ring focus:ring-blue-200">
+                        <option value disabled {{ old('status', null) === null ? 'selected' : '' }}>
+                            {{ trans('global.pleaseSelect') }}
+                        </option>
+                        @foreach(App\Models\MainCostCenter::STATUS_SELECT as $key => $label)
+                            <option value="{{ $key }}" {{ old('status', $mainCostCenter->status) === (string) $key ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('status') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="mt-6">
+                <button type="submit" class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg shadow hover:bg-red-600 transition">
+                    {{ trans('global.save') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
             </div>
 
 
