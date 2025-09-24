@@ -160,7 +160,6 @@
                     {{ trans('global.save') }}
                 </button>
             </div>
-
         </form>
     </div>
   </div>

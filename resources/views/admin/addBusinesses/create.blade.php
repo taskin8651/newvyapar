@@ -1,16 +1,16 @@
 @extends('layouts.admin')
 @section('content')
-<div class="max-w-6xl mx-auto py-8">
-    <div class="bg-white shadow rounded-2xl p-8">
-
+<div class="max-w-5xl mx-auto py-8">
+    <div class="bg-white shadow-lg rounded-2xl p-8">
+        
         <!-- Header -->
         <div class="flex justify-between items-center border-b pb-4 mb-6">
-            <h2 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-building text-indigo-600"></i>
+            <h2 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
+                <i class="fas fa-building"></i>
                 {{ trans('global.create') }} {{ trans('cruds.addBusiness.title_singular') }}
             </h2>
             <a href="{{ route('admin.add-businesses.index') }}" 
-               class="text-sm text-indigo-600 hover:text-indigo-800">
+               class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm transition">
                 ← {{ trans('global.back_to_list') }}
             </a>
         </div>
@@ -19,45 +19,38 @@
         <form method="POST" action="{{ route('admin.add-businesses.store') }}" enctype="multipart/form-data">
             @csrf
 
+            <!-- Grid Fields -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 <!-- Company Name -->
-                <div>
-                    <label for="company_name" class="block text-sm font-medium text-gray-700 mb-1">
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="company_name" class="block text-sm font-semibold text-gray-700 mb-1">
                         {{ trans('cruds.addBusiness.fields.company_name') }} <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" 
-                           name="company_name" 
-                           id="company_name" 
-                           value="{{ old('company_name', '') }}" 
-                           required
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" name="company_name" id="company_name" 
+                           value="{{ old('company_name', '') }}" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                     @error('company_name')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-500">{{ trans('cruds.addBusiness.fields.company_name_helper') }}</p>
                 </div>
 
                 <!-- Legal Name -->
-                <div>
-                    <label for="legal_name" class="block text-sm font-medium text-gray-700 mb-1">
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="legal_name" class="block text-sm font-semibold text-gray-700 mb-1">
                         {{ trans('cruds.addBusiness.fields.legal_name') }} <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" 
-                           name="legal_name" 
-                           id="legal_name" 
-                           value="{{ old('legal_name', '') }}" 
-                           required
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" name="legal_name" id="legal_name" 
+                           value="{{ old('legal_name', '') }}" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                     @error('legal_name')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-500">{{ trans('cruds.addBusiness.fields.legal_name_helper') }}</p>
                 </div>
 
                 <!-- Business Type -->
-                <div>
-                    <label for="business_type" class="block text-sm font-medium text-gray-700 mb-1">
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="business_type" class="block text-sm font-semibold text-gray-700 mb-1">
                         {{ trans('cruds.addBusiness.fields.business_type') }}
                     </label>
                     <select name="business_type" id="business_type"
@@ -74,12 +67,11 @@
                     @error('business_type')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-500">{{ trans('cruds.addBusiness.fields.business_type_helper') }}</p>
                 </div>
 
                 <!-- Industry Type -->
-                <div>
-                    <label for="industry_type" class="block text-sm font-medium text-gray-700 mb-1">
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="industry_type" class="block text-sm font-semibold text-gray-700 mb-1">
                         {{ trans('cruds.addBusiness.fields.industry_type') }}
                     </label>
                     <select name="industry_type" id="industry_type"
@@ -96,21 +88,18 @@
                     @error('industry_type')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-500">{{ trans('cruds.addBusiness.fields.industry_type_helper') }}</p>
                 </div>
 
-                <!-- Logo Upload (full width) -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                <!-- Logo Upload -->
+                <div class="md:col-span-2 bg-yellow-50 p-4 rounded-lg shadow-inner">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
                         {{ trans('cruds.addBusiness.fields.logo_upload') }}
                     </label>
                     <div class="needsclick dropzone border-2 border-dashed rounded-lg p-6 text-center text-gray-500" id="logo_upload-dropzone"></div>
                     @error('logo_upload')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-1 text-xs text-gray-500">{{ trans('cruds.addBusiness.fields.logo_upload_helper') }}</p>
                 </div>
-
             </div>
 
             <!-- Actions -->
@@ -127,6 +116,7 @@
         </form>
     </div>
 </div>
+
 @endsection
 
 @section('scripts')
