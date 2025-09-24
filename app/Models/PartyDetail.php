@@ -111,4 +111,11 @@ class PartyDetail extends Model implements HasMedia
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+
+    // In CurrentStock.php
+public function parties()
+{
+    return $this->belongsToMany(PartyDetail::class, 'current_stock_party_detail', 'current_stock_id', 'party_detail_id');
+}
+
 }

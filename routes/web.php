@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PurchaseBillController;
+use App\Http\Controllers\Admin\CurrentStocksController;
 
 Route::redirect('/', '/login');
 Route::get('/home', function () {
@@ -170,6 +171,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('current-stocks/parse-csv-import', 'CurrentStocksController@parseCsvImport')->name('current-stocks.parseCsvImport');
     Route::post('current-stocks/process-csv-import', 'CurrentStocksController@processCsvImport')->name('current-stocks.processCsvImport');
     Route::resource('current-stocks', 'CurrentStocksController');
+    Route::get('current-stocks/{current_stock}/pdf', [CurrentStocksController::class, 'pdf'])->name('current-stocks.pdf');
+
 
     // Stocks Report
     Route::delete('stocks-reports/destroy', 'StocksReportController@massDestroy')->name('stocks-reports.massDestroy');
