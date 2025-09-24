@@ -13,6 +13,7 @@ use App\Models\PartyDetail;
 use Gate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use  PDF;
 
 class CurrentStocksController extends Controller
 {
@@ -72,7 +73,7 @@ class CurrentStocksController extends Controller
     {
         abort_if(Gate::denies('current_stock_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $currentStock->load('items', 'parties', 'created_by');
+         $currentStock->load('items', 'party', 'created_by');
 
         return view('admin.currentStocks.show', compact('currentStock'));
     }
@@ -96,4 +97,13 @@ class CurrentStocksController extends Controller
 
         return response(null, Response::HTTP_NO_CONTENT);
     }
+
+public function pdf(CurrentStock $currentStock)
+{
+    $currentStock->load(['party', 'items']);
+    return view('admin.currentStocks.pdf', compact('currentStock'));
+}
+
+
+
 }

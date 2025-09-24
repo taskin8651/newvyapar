@@ -116,21 +116,33 @@
             </div>
 
             <!-- Full-width CKEditor Textareas -->
-            <div class="space-y-6">
-                <div>
-                    <label class="block font-semibold text-gray-700 mb-2" for="details_of_cost_center">Details of Cost Center</label>
-                    <textarea class="ckeditor w-full border border-gray-300 rounded-xl shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        name="details_of_cost_center" id="details_of_cost_center">{!! old('details_of_cost_center') !!}</textarea>
-                    @error('details_of_cost_center') <p class="text-red-500 text-sm mt-1">{{ $message }}</p> @enderror
-                </div>
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Details of Cost Center -->
+    <div class="bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition">
+        <label for="details_of_cost_center" class="block font-semibold text-gray-700 mb-2">
+            {{ __('Details of Cost Center') }}
+        </label>
+        <textarea id="details_of_cost_center" name="details_of_cost_center"
+            class="ckeditor w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y min-h-[120px]"
+        >{!! old('details_of_cost_center') !!}</textarea>
+        @error('details_of_cost_center')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
 
-                <div>
-                    <label class="block font-semibold text-gray-700 mb-2" for="location">Location</label>
-                    <textarea class="ckeditor w-full border border-gray-300 rounded-xl shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        name="location" id="location">{!! old('location') !!}</textarea>
-                    @error('location') <p class="text-red-500 text-sm mt-1">{{ $message }}</p> @enderror
-                </div>
-            </div>
+    <!-- Location -->
+    <div class="bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow-md transition">
+        <label for="location" class="block font-semibold text-gray-700 mb-2">
+            {{ __('Location') }}
+        </label>
+        <textarea id="location" name="location"
+            class="ckeditor w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y min-h-[120px]"
+        >{!! old('location') !!}</textarea>
+        @error('location')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+</div>
 
             <div class="flex justify-end">
                 <button type="submit" class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-2xl shadow-lg transition duration-300">

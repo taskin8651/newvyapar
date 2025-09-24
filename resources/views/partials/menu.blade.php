@@ -906,7 +906,58 @@
             </a>
             @endcan
 
+            
         </div>
+        @can('cost_center_access')
+<div class="space-y-1 mt-4">
+    <div 
+        x-data="{ costCenterOpen: {{ request()->is('admin/main-cost-centers*') || request()->is('admin/sub-cost-centers*') ? 'true' : 'false' }} }" 
+        class="rounded-xl overflow-hidden">
+
+        <!-- Parent Button -->
+        <button @click="costCenterOpen = !costCenterOpen" 
+            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
+            :class="costCenterOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
+            
+            <span class="flex items-center">
+                <div class="p-2 rounded-lg transition-colors"
+                     :class="costCenterOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
+                    <i class="fas fa-user-astronaut w-5"></i>
+                </div>
+                <span class="ml-3">{{ trans('cruds.costCenter.title') }}</span>
+            </span>
+            
+            <i class="fas transform transition-transform duration-300 text-xs"
+                :class="costCenterOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
+        </button>
+
+        <!-- Dropdown Items -->
+        <div x-show="costCenterOpen" x-collapse.duration.300ms class="ml-9 space-y-2 mt-2">
+
+            @can('main_cost_center_access')
+            <a href="{{ route('admin.main-cost-centers.index') }}"
+               class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+               hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+               {{ request()->is('admin/main-cost-centers*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+               <i class="fas fa-home w-4 mr-3 {{ request()->is('admin/main-cost-centers*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+               <span>{{ trans('cruds.mainCostCenter.title') }}</span>
+            </a>
+            @endcan
+
+            @can('sub_cost_center_access')
+            <a href="{{ route('admin.sub-cost-centers.index') }}"
+               class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+               hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+               {{ request()->is('admin/sub-cost-centers*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+               <i class="fas fa-exchange-alt w-4 mr-3 {{ request()->is('admin/sub-cost-centers*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+               <span>{{ trans('cruds.subCostCenter.title') }}</span>
+            </a>
+            @endcan
+
+        </div>
+    </div>
+</div>
+@endcan
     </div>
 </div>
 @endcan
@@ -971,7 +1022,7 @@
     </div>
 </div>
 @endcan
-@can('cost_center_access')
+{{-- @can('cost_center_access')
 <div class="space-y-1 mt-4">
     <div 
         x-data="{ costCenterOpen: {{ request()->is('admin/main-cost-centers*') || request()->is('admin/sub-cost-centers*') ? 'true' : 'false' }} }" 
@@ -1020,7 +1071,7 @@
         </div>
     </div>
 </div>
-@endcan
+@endcan --}}
 
 @can('item_access')
 <div class="space-y-1 mt-4">

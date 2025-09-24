@@ -51,4 +51,11 @@ class CurrentStock extends Model
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+
+    // In CurrentStock.php
+public function party()
+{
+    return $this->belongsTo(PartyDetail::class, 'party_id');
+}
+
 }
