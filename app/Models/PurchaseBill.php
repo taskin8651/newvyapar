@@ -48,6 +48,8 @@ class PurchaseBill extends Model implements HasMedia
         'updated_at',
         'deleted_at',
         'created_by_id',
+        'main_cost_center_id',
+        'sub_cost_center_id',   
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -107,4 +109,14 @@ class PurchaseBill extends Model implements HasMedia
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+    public function main_cost_center()
+    {
+        return $this->belongsTo(MainCostCenter::class, 'main_cost_center_id');
+    }
+    public function sub_cost_center()
+    {
+        return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
+    }
+
+
 }

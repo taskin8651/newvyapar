@@ -88,4 +88,8 @@ class MainCostCenter extends Model implements HasMedia
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+    public function purchase_bills()
+    {
+        return $this->hasMany(PurchaseBill::class, 'main_cost_center_id');
+    }
 }
