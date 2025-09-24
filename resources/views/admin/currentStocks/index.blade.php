@@ -42,32 +42,32 @@
         <!-- Table -->
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 datatable-CurrentStock">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 w-10"></th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('cruds.currentStock.fields.id') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('cruds.currentStock.fields.item') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('cruds.currentStock.fields.parties') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('cruds.currentStock.fields.Pdetails') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('cruds.currentStock.fields.qty') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('cruds.currentStock.fields.type') }}
-                        </th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {{ trans('global.actions') }}
-                        </th>
-                    </tr>
-                </thead>
+<thead class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white">
+  <tr>
+    <th class="px-4 py-3 w-10"></th>
+    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+      {{ trans('cruds.currentStock.fields.id') }}
+    </th>
+    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+      {{ trans('cruds.currentStock.fields.item') }}
+    </th>
+    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+      {{ trans('cruds.currentStock.fields.parties') }}
+    </th>
+    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+      {{ trans('cruds.currentStock.fields.Pdetails') }}
+    </th>
+    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+      {{ trans('cruds.currentStock.fields.qty') }}
+    </th>
+    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+      {{ trans('cruds.currentStock.fields.type') }}
+    </th>
+    <th class="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider">
+      {{ trans('global.actions') }}
+    </th>
+  </tr>
+</thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($currentStocks as $currentStock)
                         <tr data-entry-id="{{ $currentStock->id }}" class="hover:bg-gray-50">
@@ -88,8 +88,8 @@
                                     <div class="space-y-1">
                                         <div><strong>Item Type:</strong> {{ $json['item_type'] ?? 'N/A' }}</div>
                                         <div><strong>Item Code:</strong> {{ $json['item_code'] ?? 'N/A' }}</div>
-                                        <div><strong>Sale Price:</strong> ₹{{ $json['pricing']['sale_price'] ?? 'N/A' }}</div>
-                                        <div><strong>Purchase Price:</strong> ₹{{ $json['purchase']['purchase_price'] ?? 'N/A' }}</div>
+                                        <div><strong class="text-green-500">Sale Price:</strong> ₹{{ $json['pricing']['sale_price'] ?? 'N/A' }}</div>
+                                        <div><strong class="text-red-500">Purchase Price:</strong> ₹{{ $json['purchase']['purchase_price'] ?? 'N/A' }}</div>
                                         <div><strong>Warehouse:</strong> {{ $json['stock']['warehouse_location'] ?? 'N/A' }}</div>
                                         <div><strong>Title:</strong> {{ $json['online']['title'] ?? 'N/A' }}</div>
                                     </div>
@@ -168,86 +168,114 @@
         </div>
 
         <!-- JSON Modal Alpine -->
-       <div x-data="{ open: false, jsonData: {} }"
+<div x-data="{ open: false, jsonData: {}, activeTab: 'overview' }"
      x-on:open-json-modal.window="jsonData = $event.detail; open = true"
      x-show="open"
      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
      style="display: none;">
 
-            
-            <div x-show="open" x-transition.scale class="bg-white rounded-xl shadow-xl max-w-3xl w-full overflow-hidden">
-                <!-- Header -->
-                <div class="flex justify-between items-center bg-indigo-600 text-white px-4 py-3">
-                    <h3 class="text-lg font-semibold">Complete JSON Data</h3>
-                    <button @click="open = false" class="text-white text-xl">&times;</button>
-                </div>
+    <div x-show="open" x-transition.scale class="bg-white rounded-xl shadow-xl max-w-5xl w-full overflow-hidden">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center bg-indigo-600 text-white px-4 py-3">
+            <h3 class="text-lg font-semibold">Complete JSON Data</h3>
+            <button @click="open = false" class="text-white text-xl">&times;</button>
+        </div>
 
-               <!-- Body -->
-<div class="p-4 max-h-96 overflow-y-auto space-y-2 text-sm">
+        <!-- Tabs -->
+        <div class="border-b border-gray-200 bg-gray-50">
+            <nav class="flex space-x-4 px-4">
+                <template x-for="tab in ['overview','pricing','wholesale','purchase','stock','online']" :key="tab">
+                    <button 
+                        @click="activeTab = tab"
+                        class="px-4 py-2 text-sm font-medium rounded-t-md"
+                        :class="activeTab === tab 
+                            ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' 
+                            : 'text-gray-600 hover:text-indigo-500'">
+                        <span x-text="tab.charAt(0).toUpperCase() + tab.slice(1)"></span>
+                    </button>
+                </template>
+            </nav>
+        </div>
 
-    <!-- Top-level fields -->
-    <template x-for="(value, key) in jsonData" :key="key">
-        <div x-show="typeof value !== 'object'">
-            <span class="font-semibold capitalize" x-text="key.replace(/_/g, ' ') + ':'"></span>
-            <span class="ml-2" x-text="value"></span>
+        <!-- Body -->
+        <div class="p-4 max-h-[28rem] overflow-y-auto text-sm space-y-3">
+
+            <!-- Overview -->
+          <div x-show="activeTab === 'overview'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <template x-for="field in ['item_type','unit_id','select_category','quantity','item_code']" :key="field">
+        <div x-show="jsonData[field]" class="p-4 border rounded-lg shadow-sm bg-white">
+            <span class="block text-gray-500 font-semibold capitalize mb-1" 
+                  x-text="field.replace(/_/g,' ')"></span>
+            <span class="block text-gray-800 font-medium" x-text="jsonData[field]"></span>
         </div>
     </template>
+</div>
 
-    <td class="px-4 py-3 text-sm text-gray-700">
-    @php
-        $json = $currentStock->json_data ? json_decode($currentStock->json_data, true) : null;
-    @endphp
+            <!-- Pricing -->
+            <div x-show="activeTab === 'pricing'"  class="space-y-2">
+                <h4 class="font-bold text-indigo-600 mb-2">Pricing</h4>
+                <template x-for="field in ['sale_price','select_type','disc_on_sale_price','disc_type','select_tax_id']" :key="field">
+                    <div x-show="jsonData.pricing && jsonData.pricing[field]">
+                        <span class="font-semibold capitalize" x-text="field.replace(/_/g,' ') + ':'"></span>
+                        <span class="ml-1" x-text="jsonData.pricing[field]"></span>
+                    </div>
+                </template>
+            </div>
 
-    @if($json)
-        <div x-data="{ jsonData: @js($json) }" class="text-xs max-h-64 overflow-y-auto">
-            
-            <template x-for="[key, value] in Object.entries(jsonData)" :key="key">
-                <div>
-                    <template x-if="typeof value === 'object' && value !== null">
-                        <div class="ml-2">
-                            <span class="font-semibold capitalize" x-text="key.replace(/_/g,' ') + ':'"></span>
-                            <div class="ml-4" x-html="formatNested(value)"></div>
-                        </div>
-                    </template>
-                    <template x-if="typeof value !== 'object' || value === null">
-                        <div>
-                            <span class="font-semibold capitalize" x-text="key.replace(/_/g,' ') + ':'"></span>
-                            <span class="ml-1" x-text="value"></span>
-                        </div>
-                    </template>
-                </div>
-            </template>
+            <!-- Wholesale -->
+            <div x-show="activeTab === 'wholesale'"  class="space-y-2">
+                <h4 class="font-bold text-indigo-600 mb-2">Wholesale</h4>
+                <template x-for="field in ['wholesale_price','select_type_wholesale','minimum_wholesale_qty']" :key="field">
+                    <div x-show="jsonData.wholesale && jsonData.wholesale[field]">
+                        <span class="font-semibold capitalize" x-text="field.replace(/_/g,' ') + ':'"></span>
+                        <span class="ml-1" x-text="jsonData.wholesale[field]"></span>
+                    </div>
+                    
+                </template>
+            </div>
 
-        </div>
-    @else
-        <span class="text-gray-500 italic">No Data</span>
-    @endif
-</td>
+            <!-- Purchase -->
+            <div x-show="activeTab === 'purchase'"  class="space-y-2">
+                <h4 class="font-bold text-indigo-600 mb-2">Purchase</h4>
+                <template x-for="field in ['purchase_price','select_purchase_type']" :key="field">
+                    <div x-show="jsonData.purchase && jsonData.purchase[field]">
+                        <span class="font-semibold capitalize" x-text="field.replace(/_/g,' ') + ':'"></span>
+                        <span class="ml-1" x-text="jsonData.purchase[field]"></span>
+                    </div>
+                </template>
+            </div>
 
+            <!-- Stock -->
+            <div x-show="activeTab === 'stock'"  class="space-y-2">
+                <h4 class="font-bold text-indigo-600 mb-2">Stock</h4>
+                <template x-for="field in ['opening_stock','low_stock_warning','warehouse_location']" :key="field">
+                    <div x-show="jsonData.stock && jsonData.stock[field]">
+                        <span class="font-semibold capitalize" x-text="field.replace(/_/g,' ') + ':'"></span>
+                        <span class="ml-1" x-text="jsonData.stock[field]"></span>
+                    </div>
+                </template>
+            </div>
 
-<script>
-function formatNested(obj) {
-    let html = '';
-    for (const [key, value] of Object.entries(obj)) {
-        if (value && typeof value === 'object') {
-            html += `<div class="ml-4"><span class="font-semibold capitalize">${key.replace(/_/g,' ')}:</span>${formatNested(value)}</div>`;
-        } else {
-            html += `<div><span class="font-semibold capitalize">${key.replace(/_/g,' ')}:</span> <span class="ml-1">${value}</span></div>`;
-        }
-    }
-    return html;
-}
-</script>
-
-
-                <!-- Footer -->
-                <div class="flex justify-end p-4 border-t">
-                    <button @click="open = false" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Close</button>
-                </div>
+            <!-- Online -->
+            <div x-show="activeTab === 'online'"  class="space-y-2">
+                <h4 class="font-bold text-indigo-600 mb-2">Online</h4>
+                <template x-for="field in ['title','description']" :key="field">
+                    <div x-show="jsonData.online && jsonData.online[field]">
+                        <span class="font-semibold capitalize" x-text="field.replace(/_/g,' ') + ':'"></span>
+                        <span class="ml-1" x-text="jsonData.online[field]"></span>
+                    </div>
+                </template>
             </div>
         </div>
 
+        <!-- Footer -->
+        <div class="flex justify-end p-4 border-t">
+            <button @click="open = false" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Close</button>
+        </div>
     </div>
+</div>
+
 </div>
 @endsection
 

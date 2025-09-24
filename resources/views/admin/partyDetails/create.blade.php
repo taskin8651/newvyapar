@@ -204,8 +204,7 @@
                         <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">
                             <i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>
                             Address & Contact
-                        </h3>
-
+                        </h3>                
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 required">Pincode</label>

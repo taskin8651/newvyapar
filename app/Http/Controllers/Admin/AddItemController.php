@@ -45,8 +45,10 @@ class AddItemController extends Controller
 
 public function store(Request $request)
 {
-    // Validate data
+   
+    // ✅ Validate data
     $validated = $request->validate([
+        'item_type' => 'required|string|in:product,service',// ✅ Product/Service compulsory
         'item_name' => 'required|string|max:255',
         'item_hsn' => 'nullable|string|max:255',
         'select_unit_id' => 'required|integer|exists:units,id',
@@ -55,7 +57,7 @@ public function store(Request $request)
         'quantity' => 'nullable|integer',
         'item_code' => 'nullable|string|max:255',
         'sale_price' => 'nullable|numeric',
-        'select_type' => 'nullable|string',
+        'select_type' => 'required', 
         'disc_on_sale_price' => 'nullable|numeric',
         'disc_type' => 'nullable|string',
         'wholesale_price' => 'nullable|numeric',
@@ -72,30 +74,35 @@ public function store(Request $request)
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         'json_data' => 'nullable',
     ]);
-    
-    // Handle image upload
+
+    // ✅ Handle image upload
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
     }
 
-    // Created By User
+    // ✅ Created By User
     $validated['created_by_id'] = auth()->id();
 
-    // Save item
+    // ✅ Save item
     $item = AddItem::create($validated);
 
-    // Sync categories into pivot table
+    // ✅ Sync categories into pivot table
     if ($request->has('select_category')) {
         $item->select_categories()->sync($request->input('select_category'));
     }
 
-    // ✅ Save Opening Stock into CurrentStock table
-    if (!empty($validated['opening_stock']) && $validated['opening_stock'] > 0) {
+    // ✅ Save Opening Stock only if item_type = Product
+    if (
+        isset($validated['item_type']) &&
+        strtolower($validated['item_type']) === 'product' &&
+        !empty($validated['opening_stock']) &&
+        $validated['opening_stock'] > 0
+    ) {
         $defaultPartyId = 1; // ✅ Always 1
 
         $stock = CurrentStock::create([
-            'json_data'  => $validated['json_data'],
-            'user_id'    => $defaultPartyId, // ✅ Fix: hamesha 1
+            'json_data'     => $validated['json_data'],
+            'user_id'       => $defaultPartyId, // ✅ Fix: hamesha 1
             'qty'           => $validated['opening_stock'],
             'type'          => 'Opening Stock',
             'created_by_id' => auth()->id(),
@@ -108,6 +115,7 @@ public function store(Request $request)
     return redirect()->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
+
 
 
     public function edit(AddItem $addItem)

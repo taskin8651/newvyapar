@@ -3,35 +3,30 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto py-8">
+    <!-- Form -->
+    <form id="addItemForm" method="POST" action="{{ route('admin.add-items.store') }}" enctype="multipart/form-data" class="p-6">
+        @csrf
+        <div class="bg-white rounded-lg shadow">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b px-6 py-4">
+                <h2 class="text-xl font-semibold text-gray-800">Add Item</h2>
+                <div class="mb-4">
+                    <span class="text-sm font-medium text-gray-600">Product</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <!-- Switch -->
+                        <input type="checkbox" id="switchType" value="service" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
+                        <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                    </label>
+                    <span class="text-sm font-medium text-gray-600">Service</span>
 
-    <div class="bg-white rounded-lg shadow">
-        <!-- Header -->
-        <div class="flex items-center justify-between border-b px-6 py-4">
-            <h2 class="text-xl font-semibold text-gray-800">Add Item</h2>
-            <div class="mb-4">
-                <span class="text-sm font-medium text-gray-600">Product</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <!-- NOTE: no name on the checkbox; we submit via hidden input below -->
-                    <input type="checkbox" id="switchType" value="service" class="sr-only peer">
-
-                    <!-- Switch Background -->
-                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
-                    <!-- Switch Thumb -->
-                    <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                </label>
-                <span class="text-sm font-medium text-gray-600">Service</span>
-
-                <!-- Actual field posted to server -->
-                <input type="hidden" id="itemTypeHidden" name="item_type" value="{{ old('item_type', 'product') }}">
+                    <!-- Hidden field -->
+                    <input type="hidden" id="itemTypeHidden" name="item_type" value="{{ old('item_type', 'product') }}">
+                </div>
             </div>
-        </div>
-
-        <!-- Form -->
-        <form id="addItemForm" method="POST" action="{{ route('admin.add-items.store') }}" enctype="multipart/form-data" class="p-6">
-            @csrf
 
             <!-- Top Fields -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-6">
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
                     <input type="text" name="item_name" value="{{ old('item_name') }}"
@@ -56,14 +51,12 @@
             </div>
 
             <!-- Category, Quantity, Item Code -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 px-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select name="select_category[]" class="select2" id="select_category" multiple
-                            class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                    <select name="select_category[]" id="select_category" multiple class="select2 w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
                         @foreach($select_categories as $id => $entry)
-                            <option value="{{ $id }}"
-                                {{ (collect(old('select_category'))->contains($id)) ? 'selected' : '' }}>
+                            <option value="{{ $id }}" {{ (collect(old('select_category'))->contains($id)) ? 'selected' : '' }}>
                                 {{ $entry }}
                             </option>
                         @endforeach
@@ -72,7 +65,6 @@
                     @error('select_category')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
-
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
@@ -94,7 +86,7 @@
             </div>
 
             <!-- Tabs -->
-            <div class="border-b mb-6" x-data="{ tab: 'pricing' }">
+            <div class="border-b mb-6 px-6" x-data="{ tab: 'pricing' }">
                 <nav class="flex space-x-6" aria-label="Tabs">
                     <button type="button" @click="tab = 'pricing'" :class="tab === 'pricing' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Pricing</button>
                     <button type="button" @click="tab = 'wholesale'" :class="tab === 'wholesale' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Wholesale</button>
@@ -105,6 +97,7 @@
 
                 <!-- Pricing Section -->
                 <div x-show="tab === 'pricing'" class="bg-gray-50 rounded-lg p-4 mb-6 space-y-6">
+                    <!-- Sale Price -->
                     <div>
                         <h3 class="text-md font-semibold text-gray-700 mb-3">Sale Price</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -121,6 +114,7 @@
                             </select>
                         </div>
                     </div>
+                    <!-- Tax -->
                     <div>
                         <h3 class="text-md font-semibold text-gray-700 mb-3">Tax Rate</h3>
                         <select name="select_tax_id" class="w-full rounded-md border border-gray-300 px-4 py-2">
@@ -181,11 +175,11 @@
                 </div>
             </div>
 
-            <!-- json_data gets filled right before submit -->
+            <!-- json_data -->
             <input type="hidden" id="json_data" name="json_data" value="">
 
             <!-- Footer -->
-            <div class="flex justify-end space-x-3">
+            <div class="flex justify-end space-x-3 px-6 pb-6">
                 <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700">
                     Save
                 </button>
@@ -193,8 +187,8 @@
                     Save & New
                 </a>
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
 <!-- Scripts -->
