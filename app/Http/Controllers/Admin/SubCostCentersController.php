@@ -14,7 +14,7 @@ use Gate;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
-
+use PDF;
 class SubCostCentersController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -106,4 +106,16 @@ class SubCostCentersController extends Controller
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
+public function pdf(SubCostCenter $subCostCenter)
+{
+    // Load relations
+    $subCostCenter->load(['main_cost_center', 'created_by', 'purchase_bills']);
+
+    // Debug
+    dd($subCostCenter->toArray());
+
+    return view('admin.subCostCenters.pdf', compact('subCostCenter'));
+}
+
+
 }

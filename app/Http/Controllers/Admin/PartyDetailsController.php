@@ -109,21 +109,16 @@ public function store(StorePartyDetailRequest $request)
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
- public function download(PartyDetail $partyDetail, $templateId)
+   public function pdf(PartyDetail $partyDetail)
     {
-        $view = "admin.templates.template" . $templateId;
+        // Eager load related user who created
+        $partyDetail->load('created_by');
 
-        if (!view()->exists($view)) {
-            abort(404, "Template not found");
-        }
+        // Debug (optional)
+        // dd($partyDetail->toArray());
 
-        $pdf = Pdf::loadView($view, [
-            "partyDetail" => $partyDetail,
-            "date"        => now()->format('d-m-Y'),
-            "template"    => $templateId,
-        ]);
-
-        return $pdf->download("party-{$partyDetail->id}-template{$templateId}.pdf");
+        // Return Blade view
+        return view('admin.partyDetails.pdf', compact('partyDetail'));
     }
 
 }

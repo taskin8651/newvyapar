@@ -15,6 +15,7 @@ use Gate;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
+use PDF;
 
 class MainCostCenterController extends Controller
 {
@@ -111,4 +112,12 @@ class MainCostCenterController extends Controller
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
+
+   public function pdf(\App\Models\MainCostCenter $mainCostCenter)
+{
+    $mainCostCenter->load(['responsible_manager', 'link_with_company', 'mainCostCenterSubCostCenters']);
+    return view('admin.mainCostCenters.pdf', compact('mainCostCenter'));
+}
+
+
 }
