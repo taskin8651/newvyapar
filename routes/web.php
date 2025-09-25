@@ -334,6 +334,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('sub-cost-centers/{subCostCenters}/pdf', [\App\Http\Controllers\Admin\SubCostCentersController::class, 'pdf'])
     ->name('sub-cost-centers.pdf');
 
+    // purase bill
+    Route::get('purchase-bill/get-sub-cost-centers/{id}', [App\Http\Controllers\Admin\PurchaseBillController::class, 'getSubCostCenters'])->name('purchaseBill.getSubCostCenters');
+    Route::get('sale-invoice/get-sub-cost-centers/{id}', [App\Http\Controllers\Admin\SaleInvoiceController::class, 'getSubCostCenters'])->name('saleInvoice.getSubCostCenters');
 
     //End Rock
 });
