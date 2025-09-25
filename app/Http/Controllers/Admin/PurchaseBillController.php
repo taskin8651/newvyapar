@@ -27,7 +27,7 @@ class PurchaseBillController extends Controller
     {
         abort_if(Gate::denies('purchase_bill_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $purchaseBills = PurchaseBill::with(['select_customer', 'items', 'payment_type', 'created_by', 'media'])->get();
+        $purchaseBills = PurchaseBill::with(['select_customer', 'items', 'payment_type', 'created_by', 'media','main_cost_center', 'sub_cost_center'])->get();
 
         return view('admin.purchaseBills.index', compact('purchaseBills'));
     }
