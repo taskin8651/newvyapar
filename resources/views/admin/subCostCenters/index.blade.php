@@ -1,5 +1,7 @@
 @extends('layouts.admin')
 @section('content')
+<script src="//unpkg.com/alpinejs" defer></script>
+
 <div class="content">
     @can('sub_cost_center_create')
         <div style="margin-bottom: 10px;" class="row">
@@ -65,33 +67,63 @@
                             <td class="px-4 py-3">
                                 {{ App\Models\SubCostCenter::STATUS_SELECT[$subCostCenter->status] ?? '' }}
                             </td>
-                            <td class="px-4 py-3 flex items-center justify-center gap-2">
-                                @can('sub_cost_center_show')
-                                    <a href="{{ route('admin.sub-cost-centers.show', $subCostCenter->id) }}"
-                                       class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">
-                                       <i class="fas fa-eye mr-1"></i>{{ trans('global.view') }}
-                                    </a>
-                                @endcan
+                           <td class="px-4 py-3 text-center relative" 
+    x-data="{ open: false }" 
+    @mouseenter="open = true" 
+    @mouseleave="open = false">
 
-                                @can('sub_cost_center_edit')
-                                    <a href="{{ route('admin.sub-cost-centers.edit', $subCostCenter->id) }}"
-                                       class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                                       <i class="fas fa-edit mr-1"></i>{{ trans('global.edit') }}
-                                    </a>
-                                @endcan
+    <!-- Ellipsis icon -->
+    <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
+        <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+    </button>
 
-                                @can('sub_cost_center_delete')
-                                    <form action="{{ route('admin.sub-cost-centers.destroy', $subCostCenter->id) }}" method="POST"
-                                          onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
-                                        @method('DELETE')
-                                        @csrf
-                                        <button type="submit"
-                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
-                                            <i class="fas fa-trash mr-1"></i>{{ trans('global.delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+    <!-- Dropdown menu (top-left of icon) -->
+    <div x-show="open" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 transform translate-y-1"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-1"
+         class="absolute bottom-full left-0 mb-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+
+        @can('main_cost_center_show')
+            <a href="{{ route('admin.sub-cost-centers.show', $subCostCenter->id) }}"
+               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors">
+                <i class="fas fa-eye mr-2"></i> {{ trans('global.view') }}
+            </a>
+        @endcan
+
+        @can('main_cost_center_edit')
+            <a href="{{ route('admin.sub-cost-centers.edit', $subCostCenter->id) }}"
+               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-colors">
+                <i class="fas fa-edit mr-2"></i> {{ trans('global.edit') }}
+            </a>
+        @endcan
+
+        @can('main_cost_center_delete')
+            <form action="{{ route('admin.sub-cost-centers.destroy', $subCostCenter->id) }}" 
+                  method="POST" 
+                  onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
+                @method('DELETE')
+                @csrf
+                <button type="submit" 
+                        class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors">
+                    <i class="fas fa-trash mr-2"></i> {{ trans('global.delete') }}
+                </button>
+            </form>
+        @endcan
+
+        @can('main_cost_center_pdf')
+            <a href="{{ route('admin.main-cost-centers.pdf', $mainCostCenter->id) }}" target="_blank"
+               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">
+                <i class="fas fa-file-pdf mr-2"></i> {{ trans('global.print') }}
+            </a>
+        @endcan
+
+    </div>
+</td>
+
                         </tr>
                     @endforeach
                 </tbody>
