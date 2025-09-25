@@ -61,7 +61,8 @@ class PurchaseBillController extends Controller
 
         // Fetch customers
         $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-
+        $cost=\App\Models\MainCostCenter::pluck('cost_center_name', 'id', 'unique_code')->prepend(trans('global.pleaseSelect'), '');
+        $sub_cost=\App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id','unique_code')->prepend(trans('global.pleaseSelect'), '');
         // Fetch current stocks with related items & user
         $items = CurrentStock::with(['items', 'user'])->get()
             ->mapWithKeys(function ($stock) {
@@ -83,7 +84,14 @@ class PurchaseBillController extends Controller
         // Payment Types
         $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
-        return view('admin.purchaseBills.create', compact('items', 'payment_types', 'select_customers'));
+        return view('admin.purchaseBills.create', compact('items', 'payment_types', 'select_customers','cost','sub_cost'));
+    }
+    public function getSubCostCenters($mainCostCenterId)
+    {
+        $subCostCenters = \App\Models\SubCostCenter::where('main_cost_center_id', $mainCostCenterId)
+            ->pluck('sub_cost_center_name', 'id');
+
+        return response()->json($subCostCenters);
     }
 
 

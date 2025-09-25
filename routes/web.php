@@ -329,6 +329,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('sub-cost-centers/process-csv-import', 'SubCostCentersController@processCsvImport')->name('sub-cost-centers.processCsvImport');
     Route::resource('sub-cost-centers', 'SubCostCentersController');
 
+    // purase bill
+    Route::get('purchase-bill/get-sub-cost-centers/{id}', [App\Http\Controllers\Admin\PurchaseBillController::class, 'getSubCostCenters'])->name('purchaseBill.getSubCostCenters');
+    Route::get('sale-invoice/get-sub-cost-centers/{id}', [App\Http\Controllers\Admin\SaleInvoiceController::class, 'getSubCostCenters'])->name('saleInvoice.getSubCostCenters');
 
     //End Rock
 });

@@ -36,10 +36,17 @@ class SaleInvoiceController extends Controller
         $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
         $items = AddItem::pluck('item_name', 'id');
-
-        return view('admin.saleInvoices.create', compact('items', 'select_customers'));
+        $cost=\App\Models\MainCostCenter::pluck('cost_center_name', 'id', 'unique_code')->prepend(trans('global.pleaseSelect'), '');
+        $sub_cost=\App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id','unique_code')->prepend(trans('global.pleaseSelect'), '');
+        return view('admin.saleInvoices.create', compact('items', 'select_customers','cost','sub_cost'));
     }
+    public function getSubCostCenters($mainCostCenterId)
+    {
+        $subCostCenters = \App\Models\SubCostCenter::where('main_cost_center_id', $mainCostCenterId)
+            ->pluck('sub_cost_center_name', 'id');
 
+        return response()->json($subCostCenters);
+    }
     public function store(StoreSaleInvoiceRequest $request)
     {
         $saleInvoice = SaleInvoice::create($request->all());

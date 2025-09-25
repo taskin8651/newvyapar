@@ -30,6 +30,27 @@
                             @endforeach
                         </select>
                     </div>
+                    {{-- main cost center --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Main Cost Center</label>
+                        <select name="main_cost_center_id" id="main_cost_center_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Main Cost Center --</option>
+                            @foreach($cost as $id => $name)
+                                <option value="{{ $id }}" {{ old('main_cost_center_id') == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Sub Cost Center</label>
+                        <select name="sub_cost_center_id" id="sub_cost_center_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Sub Cost Center --</option>
+                        </select>
+                    </div>
 
                     <!-- Billing & Shipping Inputs -->
                     <div class="mt-4">
@@ -514,6 +535,31 @@ $(document).ready(function () {
     });
 });
 </script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#main_cost_center_id').on('change', function () {
+            var mainCostCenterId = $(this).val();
+            if (mainCostCenterId) {
+                $.ajax({
+                    url: "{{ route('admin.purchaseBill.getSubCostCenters', '') }}/" + mainCostCenterId,
+                    type: "GET",
+                    success: function (data) {
+                        $('#sub_cost_center_id').empty();
+                        $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
+                        $.each(data, function (key, value) {
+                            $('#sub_cost_center_id').append('<option value="' + key + '">' + value + '</option>');
+                        });
+                    }
+                });
+            } else {
+                $('#sub_cost_center_id').empty();
+                $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
+            }
+        });
+    });
+</script>
+
 @endsection
 
 
