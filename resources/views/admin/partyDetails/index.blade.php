@@ -71,33 +71,57 @@
                                 <td class="px-4 py-3">
                                     {{ App\Models\PartyDetail::STATUS_SELECT[$partyDetail->status] ?? '' }}
                                 </td>
-                                <td class="px-4 py-3 flex items-center justify-center gap-2">
-                                    @can('party_detail_show')
-                                        <a href="{{ route('admin.party-details.show', $partyDetail->id) }}"
-                                           class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">
-                                           <i class="fas fa-eye mr-1"></i>{{ trans('global.view') }}
-                                        </a>
-                                    @endcan
+                                <td class="px-4 py-3 text-center relative" x-data="{ open: false }"
+    @mouseenter="open = true" @mouseleave="open = false">
 
-                                    @can('party_detail_edit')
-                                        <a href="{{ route('admin.party-details.edit', $partyDetail->id) }}"
-                                           class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                                           <i class="fas fa-edit mr-1"></i>{{ trans('global.edit') }}
-                                        </a>
-                                    @endcan
+    <!-- Ellipsis icon -->
+    <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
+        <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+    </button>
 
-                                    @can('party_detail_delete')
-                                        <form action="{{ route('admin.party-details.destroy', $partyDetail->id) }}" method="POST"
-                                              onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
-                                            @method('DELETE')
-                                            @csrf
-                                            <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
-                                                <i class="fas fa-trash mr-1"></i>{{ trans('global.delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
-                                </td>
+    <!-- Dropdown menu: top-left -->
+    <div x-show="open" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 transform translate-y-1"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-1"
+         class="absolute bottom-full left-0 mb-2 w-max bg-white border border-gray-200 rounded-lg shadow-lg z-20 flex flex-col gap-1 p-1">
+
+        @can('main_cost_center_show')
+            <a href="{{ route('admin.party-details.show', $partyDetail->id) }}"
+               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">
+                <i class="fas fa-eye mr-1"></i> View
+            </a>
+        @endcan
+
+        @can('main_cost_center_edit')
+            <a href="{{ route('admin.party-details.edit', $partyDetail->id) }}"
+               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+                <i class="fas fa-edit mr-1"></i> Edit
+            </a>
+        @endcan
+
+        @can('main_cost_center_delete')
+            <form action="{{ route('admin.party-details.destroy', $partyDetail->id) }}" method="POST"
+                  onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
+                @method('DELETE')
+                @csrf
+                <button type="submit"
+                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
+                    <i class="fas fa-trash mr-1"></i> Delete
+                </button>
+            </form>
+        @endcan
+
+        <a href="{{ route('admin.party-details.pdf', $partyDetail->id) }}" target="_blank"
+           class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-green-100 text-green-700 hover:bg-green-200">
+            <i class="fas fa-file-pdf mr-1"></i> Print
+        </a>
+    </div>
+</td>
+
                             </tr>
                         @endforeach
                     </tbody>

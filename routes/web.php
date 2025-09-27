@@ -55,6 +55,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('party-details/parse-csv-import', 'PartyDetailsController@parseCsvImport')->name('party-details.parseCsvImport');
     Route::post('party-details/process-csv-import', 'PartyDetailsController@processCsvImport')->name('party-details.processCsvImport');
     Route::resource('party-details', 'PartyDetailsController');
+    Route::get('party-details/{partyDetail}/pdf', [\App\Http\Controllers\Admin\PartyDetailsController::class, 'pdf'])->name('party-details.pdf');
 
     // Loyalty Point
     Route::delete('loyalty-points/destroy', 'LoyaltyPointController@massDestroy')->name('loyalty-points.massDestroy');
@@ -320,6 +321,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('main-cost-centers/parse-csv-import', 'MainCostCenterController@parseCsvImport')->name('main-cost-centers.parseCsvImport');
     Route::post('main-cost-centers/process-csv-import', 'MainCostCenterController@processCsvImport')->name('main-cost-centers.processCsvImport');
     Route::resource('main-cost-centers', 'MainCostCenterController');
+    Route::get('main-cost-centers/{mainCostCenter}/pdf', [\App\Http\Controllers\Admin\MainCostCenterController::class, 'pdf'])
+    ->name('main-cost-centers.pdf');
 
     // Sub Cost Centers
     Route::delete('sub-cost-centers/destroy', 'SubCostCentersController@massDestroy')->name('sub-cost-centers.massDestroy');
@@ -328,6 +331,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('sub-cost-centers/parse-csv-import', 'SubCostCentersController@parseCsvImport')->name('sub-cost-centers.parseCsvImport');
     Route::post('sub-cost-centers/process-csv-import', 'SubCostCentersController@processCsvImport')->name('sub-cost-centers.processCsvImport');
     Route::resource('sub-cost-centers', 'SubCostCentersController');
+    Route::get('sub-cost-centers/{subCostCenters}/pdf', [\App\Http\Controllers\Admin\SubCostCentersController::class, 'pdf'])
+    ->name('sub-cost-centers.pdf');
 
     // purase bill
     Route::get('purchase-bill/get-sub-cost-centers/{id}', [App\Http\Controllers\Admin\PurchaseBillController::class, 'getSubCostCenters'])->name('purchaseBill.getSubCostCenters');
