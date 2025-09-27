@@ -22,6 +22,7 @@ class PurchaseBill extends Model implements HasMedia
     protected $appends = [
         'image',
         'document',
+        'json_data',
     ];
 
     protected $dates = [
@@ -30,6 +31,10 @@ class PurchaseBill extends Model implements HasMedia
         'updated_at',
         'deleted_at',
     ];
+    protected $casts = [
+    'json_data' => 'array',
+    ];
+
 
     protected $fillable = [
         'select_customer_id',
@@ -50,6 +55,9 @@ class PurchaseBill extends Model implements HasMedia
         'created_by_id',
         'main_cost_center_id',
         'sub_cost_center_id',   
+        'purchase_bill_no',
+        'note',
+        'json_data',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -76,6 +84,10 @@ class PurchaseBill extends Model implements HasMedia
     public function setPoDateAttribute($value)
     {
         $this->attributes['po_date'] = $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
+    }
+    public function getJsonDataAttribute($value)
+    {
+        return $this->attributes['json_data'] ? json_decode($this->attributes['json_data'], true) : [];
     }
 
 

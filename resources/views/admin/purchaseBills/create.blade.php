@@ -30,7 +30,6 @@
                             @endforeach
                         </select>
                     </div>
-                    {{-- main cost center --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Select Main Cost Center</label>
                         <select name="main_cost_center_id" id="main_cost_center_id"
@@ -132,7 +131,7 @@
                                         <option value="">Select Item</option>
                                         @foreach($items as $id => $text)
                                             @php $parts = explode('|', $text); $name = trim($parts[0]); @endphp
-                                            <option value="{{ $id }}">{{ $name }}</option>
+                                            <option value="{{ (int) $id }}">{{ $name }}</option>
                                         @endforeach
                                     </select>
                                 </td>
@@ -182,22 +181,37 @@
                 </div>
 
                 @php
-                $itemsData = [];
-                foreach($items as $id => $text) {
-                    $parts = explode('|', $text);
-                    $name = trim($parts[0]);
-                    $description = trim($parts[1] ?? '');
-                    $price = isset($parts[2]) ? floatval(str_replace([',', 'Price:'], '', $parts[2])) : 0;
-                    $qty = isset($parts[3]) ? floatval(str_replace(['Qty:', ','], '', $parts[3])) : 1;
-                    $itemsData[$id] = [
-                        'name' => $name,
-                        'description' => $description,
-                        'price' => $price,
-                        'qty' => $qty,
-                        'unit' => 'Piece',
-                    ];
-                }
-                @endphp
+                    $itemsData = [];
+                    foreach($items as $id => $text) {
+                        $parts = explode('|', $text);
+                        $name = trim($parts[0]);
+                        $description = trim($parts[1] ?? '');
+                        $price = isset($parts[2]) ? floatval(str_replace([',', 'Price:'], '', $parts[2])) : 0;
+                        $qty = isset($parts[3]) ? floatval(str_replace(['Qty:', ','], '', $parts[3])) : 1;
+
+                        // Determine type
+                        $type = strpos($name, '[Product]') === 0 ? 'product' : 'service';
+
+                        // For products, store CurrentStock ID from text after 'id:'
+                        if($type === 'product') {
+                            preg_match('/\| id: (\d+)/', $text, $matches);
+                            $valueId = $matches[1] ?? $id;
+                        } else {
+                            $valueId = $id; // Service ID
+                        }
+
+                        $itemsData[$valueId] = [
+                            'name' => $name,
+                            'description' => $description,
+                            'price' => $price,
+                            'qty' => $qty,
+                            'unit' => 'Piece',
+                            'type' => $type,
+                        ];
+                    }
+                    
+                    @endphp
+
             </div>
 
             <!-- Payment Details -->
@@ -285,6 +299,30 @@
     </div>
 </div>
 
+<script>
+    $(document).ready(function () {
+        $('#main_cost_center_id').on('change', function () {
+            var mainCostCenterId = $(this).val();
+            if (mainCostCenterId) {
+                $.ajax({
+                    url: "{{ route('admin.purchaseBill.getSubCostCenters', '') }}/" + mainCostCenterId,
+                    type: "GET",
+                    success: function (data) {
+                        $('#sub_cost_center_id').empty();
+                        $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
+                        $.each(data, function (key, value) {
+                            $('#sub_cost_center_id').append('<option value="' + key + '">' + value + '</option>');
+                        });
+                    }
+                });
+            } else {
+                $('#sub_cost_center_id').empty();
+                $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
+            }
+        });
+    });
+</script>
+
 <!-- JS for Preview -->
 <script>
     // Image Preview
@@ -358,148 +396,165 @@ Dropzone.options.documentDropzone = {
 }
 </script>
 <script>
-                    function updateGrandTotals() {
-                        let totalAmount = 0;
-                        let totalQty = 0;
-                        $('#itemsTable tbody tr').each(function () {
-                            const qty = parseFloat($(this).find('.qty').val()) || 0;
-                            const amount = parseFloat($(this).find('.amount').val()) || 0;
-                            totalQty += qty;
-                            totalAmount += amount;
-                        });
-                        $('#grandQty').text(totalQty);
-                        $('#grandTotal').text(totalAmount.toFixed(2));
-                    }
+function updateGrandTotals() {
+    let totalAmount = 0;
+    let totalQty = 0;
+    $('#itemsTable tbody tr').each(function () {
+        const qty = parseFloat($(this).find('.qty').val()) || 0;
+        const amount = parseFloat($(this).find('.amount').val()) || 0;
+        totalQty += qty;
+        totalAmount += amount;
+    });
+    $('#grandQty').text(totalQty);
+    $('#grandTotal').text(totalAmount.toFixed(2));
+}
 
-                    $(document).ready(function() {
-                        const tableBody = $('#itemsTable tbody');
-                        const itemsList = @json($itemsData);
+$(document).ready(function() {
+    const tableBody = $('#itemsTable tbody');
+    const itemsList = @json($itemsData);
 
-                        function reindexRows() {
-                            tableBody.find('tr').each(function(idx, row) {
-                                $(row).find('input, select').each(function() {
-                                    let name = $(this).attr('name');
-                                    if(name) $(this).attr('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
-                                });
-                            });
-                        }
+    function reindexRows() {
+        tableBody.find('tr').each(function(idx, row) {
+            $(row).find('input, select').each(function() {
+                let name = $(this).attr('name');
+                if(name) $(this).attr('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
+            });
+        });
+    }
 
-                        function updateItemOptions() {
-                            const selected = $('.selectItem').map(function() { return $(this).val(); }).get().filter(v => v !== '');
-                            $('.selectItem').each(function() {
-                                const currentVal = $(this).val();
-                                const $select = $(this);
-                                $select.empty().append('<option value="">Select Item</option>');
-                                $.each(itemsList, function(id, item) {
-                                    if(selected.includes(id.toString()) && id != currentVal) return;
-                                    $select.append(`<option value="${id}">${item.name}</option>`);
-                                });
-                                $select.val(currentVal).trigger('change.select2');
-                            });
-                        }
+    function updateItemOptions() {
+        const selected = $('.selectItem').map(function() { return $(this).val(); }).get().filter(v => v !== '');
+        $('.selectItem').each(function() {
+            const currentVal = $(this).val();
+            const $select = $(this);
+            $select.empty().append('<option value="">Select Item</option>');
 
-                        function recalcAmount(row) {
-                            const qty = parseFloat(row.find('.qty').val()) || 0;
-                            const price = parseFloat(row.find('.price').val()) || 0;
-                            row.find('.amount').val((qty * price).toFixed(2));
-                            updateGrandTotals();
-                        }
+            $.each(itemsList, function(id, item) {
+                // show option only if not selected OR is current row
+                if(selected.includes(id.toString()) && id != currentVal) return;
+                $select.append(`<option value="${id}">${item.name}</option>`);
+            });
 
-                        // Initialize Select2
-                        $('.select2').select2({ width: '100%' });
+            // Restore previous selection
+            if(currentVal) $select.val(currentVal);
+        });
+    }
 
-                        // On item change
-                        tableBody.on('change', '.selectItem', function() {
-                            const id = $(this).val();
-                            const row = $(this).closest('tr');
-                            if(id && itemsList[id]) {
-                                const item = itemsList[id];
-                                row.find('.description').val(item.description);
-                                row.find('.qty').val(item.qty);
-                                row.find('.unit').val(item.unit);
-                                row.find('.price').val(item.price);
-                            } else {
-                                row.find('.description').val('');
-                                row.find('.qty').val(1);
-                                row.find('.unit').val('Piece');
-                                row.find('.price').val(0);
-                            }
-                            recalcAmount(row);
-                            updateItemOptions();
-                        });
+    function recalcAmount(row) {
+        const qty = parseFloat(row.find('.qty').val()) || 0;
+        const price = parseFloat(row.find('.price').val()) || 0;
+        row.find('.amount').val((qty * price).toFixed(2));
+        updateGrandTotals();
+    }
 
-                        // On qty or price input
-                        tableBody.on('input', '.qty, .price', function() {
-                            const row = $(this).closest('tr');
-                            recalcAmount(row);
-                        });
+    // Initialize Select2
+    $('.select2').select2({ width: '100%' });
 
-                        // Add row
-                        $('#addRow').on('click', function() {
-                            const rowCount = tableBody.find('tr').length;
-                            const newRow = $(`
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-2">
-                                        <select name="items[${rowCount}][id]" 
-                                                class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                                            <option value="">Select Item</option>
-                                        </select>
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <input type="text" name="items[${rowCount}][description]" 
-                                            class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description">
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <input type="number" name="items[${rowCount}][qty]" value="1" 
-                                            class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty">
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <select name="items[${rowCount}][unit]" 
-                                                class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                                            <option>Piece</option>
-                                            <option>Kg</option>
-                                            <option>Box</option>
-                                        </select>
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <input type="number" name="items[${rowCount}][price]" value="0" 
-                                            class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price">
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <input type="text" name="items[${rowCount}][amount]" readonly 
-                                            class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50">
-                                    </td>
-                                    <td class="px-4 py-2 text-center">
-                                        <button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>
-                                    </td>
-                                </tr>
-                            `);
-                            tableBody.append(newRow);
-                            $.each(itemsList, function(id, item) {
-                                newRow.find('.selectItem').append(`<option value="${id}">${item.name}</option>`);
-                            });
-                            newRow.find('.select2').select2({ width: '100%' });
-                            reindexRows();
-                            updateItemOptions();
-                            updateGrandTotals();
-                        });
+    // On item change
+    tableBody.on('change', '.selectItem', function() {
+        const id = $(this).val();
+        const row = $(this).closest('tr');
 
-                        // Remove row
-                        tableBody.on('click', '.removeRow', function() {
-                            if(tableBody.find('tr').length > 1) {
-                                $(this).closest('tr').remove();
-                                reindexRows();
-                                updateItemOptions();
-                                updateGrandTotals();
-                            } else {
-                                alert('At least one item is required!');
-                            }
-                        });
+        if(id && itemsList[id]) {
+            const item = itemsList[id];
+            row.find('.description').val(item.description);
+            row.find('.qty').val(item.qty);
+            row.find('.unit').val(item.unit);
+            row.find('.price').val(item.price);
+        } else {
+            row.find('.description').val('');
+            row.find('.qty').val(1);
+            row.find('.unit').val('Piece');
+            row.find('.price').val(0);
+        }
+        recalcAmount(row);
+        updateItemOptions();
+    });
 
-                        // Initialize totals on page load
-                        updateGrandTotals();
-                    });
-                </script>
+    // On qty or price input
+    tableBody.on('input', '.qty, .price', function() {
+        recalcAmount($(this).closest('tr'));
+    });
+
+    // Add row
+    $('#addRow').on('click', function() {
+        const rowCount = tableBody.find('tr').length;
+        const newRow = $(`
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2">
+                    <select name="items[${rowCount}][id]" class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                        <option value="">Select Item</option>
+                    </select>
+                </td>
+                <td class="px-4 py-2">
+                    <input type="text" name="items[${rowCount}][description]" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" name="items[${rowCount}][qty]" value="1" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty">
+                </td>
+                <td class="px-4 py-2">
+                    <select name="items[${rowCount}][unit]" class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                        <option>Piece</option>
+                        <option>Kg</option>
+                        <option>Box</option>
+                    </select>
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" name="items[${rowCount}][price]" value="0" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="text" name="items[${rowCount}][amount]" readonly class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50">
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>
+                </td>
+            </tr>
+        `);
+
+        tableBody.append(newRow);
+
+        // Populate select with valid items
+        $.each(itemsList, function(id, item) {
+            newRow.find('.selectItem').append(`<option value="${id}">${item.name}</option>`);
+        });
+
+        // Initialize Select2
+        newRow.find('.select2').select2({ width: '100%' });
+
+        reindexRows();
+        updateItemOptions();
+        updateGrandTotals();
+    });
+
+    // Remove row
+    tableBody.on('click', '.removeRow', function() {
+        if(tableBody.find('tr').length > 1) {
+            $(this).closest('tr').remove();
+            reindexRows();
+            updateItemOptions();
+            updateGrandTotals();
+        } else {
+            alert('At least one item is required!');
+        }
+    });
+
+    // Client-side check before form submit
+    $('form').on('submit', function(e) {
+        let valid = true;
+        $('.selectItem').each(function() {
+            if(!$(this).val()) {
+                alert('Please select a valid item for all rows.');
+                valid = false;
+                return false;
+            }
+        });
+        if(!valid) e.preventDefault();
+    });
+
+    updateGrandTotals();
+});
+</script>
+
 <script>
 $(document).ready(function () {
     // Initialize Select2
@@ -535,31 +590,6 @@ $(document).ready(function () {
     });
 });
 </script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function () {
-        $('#main_cost_center_id').on('change', function () {
-            var mainCostCenterId = $(this).val();
-            if (mainCostCenterId) {
-                $.ajax({
-                    url: "{{ route('admin.purchaseBill.getSubCostCenters', '') }}/" + mainCostCenterId,
-                    type: "GET",
-                    success: function (data) {
-                        $('#sub_cost_center_id').empty();
-                        $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
-                        $.each(data, function (key, value) {
-                            $('#sub_cost_center_id').append('<option value="' + key + '">' + value + '</option>');
-                        });
-                    }
-                });
-            } else {
-                $('#sub_cost_center_id').empty();
-                $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
-            }
-        });
-    });
-</script>
-
 @endsection
 
 

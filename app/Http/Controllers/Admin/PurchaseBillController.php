@@ -60,32 +60,58 @@ class PurchaseBillController extends Controller
         abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
         // Fetch customers
-        $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-        $cost=\App\Models\MainCostCenter::pluck('cost_center_name', 'id', 'unique_code')->prepend(trans('global.pleaseSelect'), '');
-        $sub_cost=\App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id','unique_code')->prepend(trans('global.pleaseSelect'), '');
-        // Fetch current stocks with related items & user
-        $items = CurrentStock::with(['items', 'user'])->get()
-            ->mapWithKeys(function ($stock) {
-                $item = $stock->items->first();
+        $select_customers = PartyDetail::pluck('party_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
 
-                if ($item) {
-                    // Final label: item_name (HSN: 1234 | Price: 500 | Qty: 10)
-                    $label = $item->item_name 
-                        . ' | HSN: ' . $item->item_hsn 
-                        . ' | Price: ' . number_format($item->purchase_price, 2)
-                        . ' | Qty: ' . $stock->qty;
-                } else {
-                    $label = 'N/A';
-                }
+        $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
 
-                return [$stock->id => $label];
-            });
+        $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
+
+        // Products (from CurrentStock)
+       
+        $products = CurrentStock::with('items')->get()->mapWithKeys(function ($stock) {
+            $item = $stock->items->first();
+            if (!$item) return [];
+
+            // Use item id as the key
+            return [
+                $item->id => '[Product] ' . $item->item_name 
+                    . ' | HSN: ' . $item->item_hsn
+                    . ' | Price: ' . number_format($item->purchase_price, 2)
+                    . ' | Qty: ' . $stock->qty
+                    . ' | id: ' . $stock->id
+            ];
+        });
+
+        // Services (from AddItem)
+        $services = AddItem::where('item_type', 'service')->get()->mapWithKeys(function ($item) {
+            return [
+                $item->id => '[Service] ' . $item->item_name
+                    . ' | HSN: ' . $item->item_hsn
+                    . ' | Price: ' . number_format($item->purchase_price, 2)
+                    . ' | id: ' . $item->id
+            ];
+        });
+
+        // Merge products and services
+        $items = $products->merge($services);
+
 
         // Payment Types
-        $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+        $payment_types = BankAccount::pluck('account_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
 
-        return view('admin.purchaseBills.create', compact('items', 'payment_types', 'select_customers','cost','sub_cost'));
+        return view('admin.purchaseBills.create', compact(
+            'items',
+            'payment_types',
+            'select_customers',
+            'cost',
+            'sub_cost'
+        ));
     }
+
     public function getSubCostCenters($mainCostCenterId)
     {
         $subCostCenters = \App\Models\SubCostCenter::where('main_cost_center_id', $mainCostCenterId)
@@ -96,24 +122,67 @@ class PurchaseBillController extends Controller
 
 
 
-    public function store(StorePurchaseBillRequest $request)
-    {
-        $purchaseBill = PurchaseBill::create($request->all());
-        $purchaseBill->items()->sync($request->input('items', []));
-        if ($request->input('image', false)) {
-            $purchaseBill->addMedia(storage_path('tmp/uploads/' . basename($request->input('image'))))->toMediaCollection('image');
-        }
-
-        if ($request->input('document', false)) {
-            $purchaseBill->addMedia(storage_path('tmp/uploads/' . basename($request->input('document'))))->toMediaCollection('document');
-        }
-
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $purchaseBill->id]);
-        }
-
-        return redirect()->route('admin.purchase-bills.index');
+public function store(StorePurchaseBillRequest $request)
+{
+    // 1️⃣ Generate unique purchase bill number
+    $purchaseBillNo = 'PB' . mt_rand(1000000000, 9999999999);
+    while (PurchaseBill::where('purchase_bill_no', $purchaseBillNo)->exists()) {
+        $purchaseBillNo = 'PB' . mt_rand(1000000000, 9999999999);
     }
+
+    // 2️⃣ Prepare full request data with user ID
+    $fullData = $request->all();
+    $fullData['purchase_bill_no'] = $purchaseBillNo;
+    $fullData['user_id'] = auth()->id();
+   
+ 
+    // 3️⃣ Create PurchaseBill and save full JSON in 'json_data' field
+    $purchaseBill = PurchaseBill::create(array_merge($fullData, [
+        'json_data' => json_encode($fullData),
+    ]));
+
+    // 4️⃣ Sync items (if using pivot)
+    if ($request->has('items')) {
+        $purchaseBill->items()->sync(array_column($request->items, 'id'));
+    }
+
+    // 5️⃣ Update current stock for products
+    foreach ($request->items as $item) {
+        $stock = \App\Models\CurrentStock::find($item['id']); // CurrentStock ID
+        if ($stock) {
+            $stock->qty += $item['qty'];
+            $stock->save();
+        }
+    }
+
+    // 6️⃣ Save PurchaseLog with full JSON in 'extra_data'
+    \App\Models\PurchaseLog::create([
+        'user_id' => auth()->id(),
+        'party_id' => $request->select_customer_id,
+        'main_cost_center_id' => $request->main_cost_center_id,
+        'sub_cost_center_id' => $request->sub_cost_center_id,
+        'payment_type_id' => $request->payment_type_id,
+        'items' => $request->items,
+        'extra_data' => $fullData, // everything including user_id
+    ]);
+
+    // 7️⃣ Handle media uploads
+    if ($request->hasFile('image')) {
+        $purchaseBill->addMedia($request->file('image'))->toMediaCollection('image');
+    }
+
+    if ($request->hasFile('document')) {
+        $purchaseBill->addMedia($request->file('document'))->toMediaCollection('document');
+    }
+
+    if ($media = $request->input('ck-media', false)) {
+        \Spatie\MediaLibrary\MediaCollections\Models\Media::whereIn('id', $media)
+            ->update(['model_id' => $purchaseBill->id]);
+    }
+
+    return redirect()->route('admin.purchase-bills.index');
+}
+
 
     public function edit(PurchaseBill $purchaseBill)
     {

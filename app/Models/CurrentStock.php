@@ -57,5 +57,10 @@ public function party()
 {
     return $this->belongsTo(PartyDetail::class, 'party_id');
 }
+public function serviceItems()
+{
+    return $this->belongsToMany(AddItem::class)
+        ->where('item_type', 'service');
+}
 
 }

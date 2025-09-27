@@ -14,49 +14,57 @@ class StorePurchaseBillRequest extends FormRequest
         return Gate::allows('purchase_bill_create');
     }
 
-    public function rules()
-    {
-        return [
-            'select_customer_id' => [
-                'required',
-                'integer',
-            ],
-            'billing_name' => [
-                'string',
-                'nullable',
-            ],
-            'phone_number' => [
-                'string',
-                'nullable',
-            ],
-            'e_way_bill_no' => [
-                'string',
-                'nullable',
-            ],
-            'po_no' => [
-                'string',
-                'nullable',
-            ],
-            'po_date' => [
-                'date_format:' . config('panel.date_format'),
-                'nullable',
-            ],
-            'items.*' => [
-                'integer',
-            ],
-            'items' => [
-                'array',
-            ],
-            'qty' => [
-                'required',
-                'integer',
-                'min:-2147483648',
-                'max:2147483647',
-            ],
-            'reference_no' => [
-                'string',
-                'nullable',
-            ],
-        ];
-    }
+public function rules()
+{
+    return [
+        'select_customer_id' => [
+            'required',
+            'integer',
+        ],
+        'billing_name' => [
+            'string',
+            'nullable',
+        ],
+        'phone_number' => [
+            'string',
+            'nullable',
+        ],
+        'e_way_bill_no' => [
+            'string',
+            'nullable',
+        ],
+        'po_no' => [
+            'string',
+            'nullable',
+        ],
+        'po_date' => [
+            'date_format:' . config('panel.date_format'),
+            'nullable',
+        ],
+        'items' => [
+            'required',
+            'array',
+            'min:1',
+        ],
+        'items.*.id' => [   // product/service id
+            'required',
+            // 'integer',
+          
+        ],
+        'items.*.qty' => [  // per item qty
+            'required',
+            'integer',
+            'min:1',
+        ],
+        'items.*.price' => [
+            'nullable',
+            'numeric',
+        ],
+        'reference_no' => [
+            'string',
+            'nullable',
+        ],
+    ];
+}
+
 }
