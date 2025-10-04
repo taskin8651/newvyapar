@@ -134,36 +134,51 @@ public function store(StorePurchaseBillRequest $request)
     $fullData = $request->all();
     $fullData['purchase_bill_no'] = $purchaseBillNo;
     $fullData['user_id'] = auth()->id();
-   
- 
-    // 3️⃣ Create PurchaseBill and save full JSON in 'json_data' field
+
+    // 3️⃣ Create PurchaseBill and save JSON in 'json_data' field
     $purchaseBill = PurchaseBill::create(array_merge($fullData, [
         'json_data' => json_encode($fullData),
     ]));
 
-    // 4️⃣ Sync items (if using pivot)
+    // 4️⃣ Sync items with qty in pivot
     if ($request->has('items')) {
-        $purchaseBill->items()->sync(array_column($request->items, 'id'));
+        $syncData = [];
+        foreach ($request->items as $item) {
+            $syncData[$item['id']] = ['qty' => $item['qty']]; // ✅ qty pivot me save
+        }
+        $purchaseBill->items()->sync($syncData);
     }
 
-    // 5️⃣ Update current stock for products
-    foreach ($request->items as $item) {
-        $stock = \App\Models\CurrentStock::find($item['id']); // CurrentStock ID
-        if ($stock) {
-            $stock->qty += $item['qty'];
-            $stock->save();
+    // 5️⃣ Update current stock
+    if ($request->has('items')) {
+        foreach ($request->items as $item) {
+            $stock = \App\Models\CurrentStock::where('item_id', $item['id'])->first(); // ✅ correct column
+
+            if ($stock) {
+                $stock->qty += $item['qty'];
+                $stock->save();
+            } else {
+                \App\Models\CurrentStock::create([
+                    'item_id'       => $item['id'], // ✅ correct column
+                    'qty'           => $item['qty'],
+                    'type'          => 'Purchase Stock',
+                    'user_id'       => 1, // default party/user
+                    'created_by_id' => auth()->id(),
+                    'json_data'     => json_encode(['item_id' => $item['id'], 'qty' => $item['qty']]),
+                ]);
+            }
         }
     }
 
-    // 6️⃣ Save PurchaseLog with full JSON in 'extra_data'
+    // 6️⃣ Save PurchaseLog
     \App\Models\PurchaseLog::create([
-        'user_id' => auth()->id(),
-        'party_id' => $request->select_customer_id,
+        'user_id'             => auth()->id(),
+        'party_id'            => $request->select_customer_id,
         'main_cost_center_id' => $request->main_cost_center_id,
-        'sub_cost_center_id' => $request->sub_cost_center_id,
-        'payment_type_id' => $request->payment_type_id,
-        'items' => $request->items,
-        'extra_data' => $fullData, // everything including user_id
+        'sub_cost_center_id'  => $request->sub_cost_center_id,
+        'payment_type_id'     => $request->payment_type_id,
+        'items'               => json_encode($request->items),
+        'extra_data'          => $fullData,
     ]);
 
     // 7️⃣ Handle media uploads
@@ -180,8 +195,11 @@ public function store(StorePurchaseBillRequest $request)
             ->update(['model_id' => $purchaseBill->id]);
     }
 
-    return redirect()->route('admin.purchase-bills.index');
+    return redirect()->route('admin.purchase-bills.index')
+        ->with('success', 'Purchase Bill created successfully.');
 }
+
+
 
 
     public function edit(PurchaseBill $purchaseBill)
