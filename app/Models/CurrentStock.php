@@ -62,5 +62,10 @@ public function serviceItems()
     return $this->belongsToMany(AddItem::class)
         ->where('item_type', 'service');
 }
+public function addItems()
+{
+    // Many-to-many relationship with pivot table
+    return $this->belongsToMany(AddItem::class, 'add_item_current_stock', 'current_stock_id', 'add_item_id');
+}
 
 }

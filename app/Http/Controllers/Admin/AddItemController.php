@@ -74,7 +74,7 @@ public function store(Request $request)
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         'json_data' => 'nullable',
     ]);
-
+   
     // ✅ Handle image upload
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
