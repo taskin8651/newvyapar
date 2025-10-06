@@ -18,7 +18,9 @@ use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Browser\PartyDetailsTest;
-
+use App\Models\Unit;
+use App\Models\TaxRate;
+use Illuminate\Support\Facades\DB;
 class PurchaseBillController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -97,18 +99,21 @@ class PurchaseBillController extends Controller
 
         // Merge products and services
         $items = $products->merge($services);
-
+         $units = Unit::pluck('base_unit', 'id')
+    ->prepend(trans('global.pleaseSelect'), '');
 
         // Payment Types
         $payment_types = BankAccount::pluck('account_name', 'id')
             ->prepend(trans('global.pleaseSelect'), '');
+           $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
+
 
         return view('admin.purchaseBills.create', compact(
             'items',
             'payment_types',
             'select_customers',
             'cost',
-            'sub_cost'
+            'sub_cost', 'units', 'tax_rates'
         ));
     }
 
@@ -134,16 +139,19 @@ public function store(StorePurchaseBillRequest $request)
     $fullData = $request->all();
     $fullData['purchase_bill_no'] = $purchaseBillNo;
     $fullData['user_id'] = auth()->id();
-   
- 
+
     // 3️⃣ Create PurchaseBill and save full JSON in 'json_data' field
     $purchaseBill = PurchaseBill::create(array_merge($fullData, [
         'json_data' => json_encode($fullData),
     ]));
 
-    // 4️⃣ Sync items (if using pivot)
+    // 4️⃣ Sync items with qty in pivot table
     if ($request->has('items')) {
-        $purchaseBill->items()->sync(array_column($request->items, 'id'));
+        $syncData = [];
+        foreach ($request->items as $item) {
+            $syncData[$item['id']] = ['qty' => $item['qty']];
+        }
+        $purchaseBill->items()->sync($syncData);
     }
 
     // 5️⃣ Update current stock for products
@@ -180,53 +188,131 @@ public function store(StorePurchaseBillRequest $request)
             ->update(['model_id' => $purchaseBill->id]);
     }
 
-    return redirect()->route('admin.purchase-bills.index');
+    return redirect()->route('admin.purchase-bills.index')
+                     ->with('success', 'Purchase bill created successfully.');
 }
 
 
-    public function edit(PurchaseBill $purchaseBill)
-    {
-        abort_if(Gate::denies('purchase_bill_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+public function edit(PurchaseBill $purchaseBill)
+{
+    abort_if(Gate::denies('purchase_bill_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $items = AddItem::pluck('item_name', 'id');
+    // 🔹 Dropdown data
+    $select_customers = PartyDetail::pluck('party_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $subCostCenters = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $units = Unit::pluck('base_unit', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $payment_types = BankAccount::pluck('account_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
 
-        $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+   $itemsWithPivot = \DB::table('add_item_purchase_bill as aipb')
+    ->join('current_stocks as cs', 'aipb.add_item_id', '=', 'cs.id') // pivot -> current stock
+    ->join('add_items as ai', 'cs.item_id', '=', 'ai.id')            // current stock -> add_items
+    ->leftJoin('units as u', 'ai.select_unit_id', '=', 'u.id')       // unit
+    ->select(
+        'cs.id as stock_id',        // current stock ID
+        'ai.id as item_id',         // add_item ID
+        'ai.item_name',
+        'ai.purchase_price',
+        'u.base_unit as unit',
+        'aipb.qty'
+    )
+    ->where('aipb.purchase_bill_id', $purchaseBill->id)
+    ->get();
 
-        $purchaseBill->load('select_customer', 'items', 'payment_type', 'created_by');
+    // 🔹 All items for selection dropdown if needed
+    $allItems = AddItem::all();
 
-        return view('admin.purchaseBills.edit', compact('items', 'payment_types', 'purchaseBill', 'select_customers'));
+    return view('admin.purchaseBills.edit', compact(
+        'allItems',
+        'payment_types',
+        'purchaseBill',
+        'select_customers',
+        'cost',
+        'subCostCenters',
+        'units',
+        'tax_rates',
+        'itemsWithPivot'
+    ));
+}
+
+
+
+
+ public function update(UpdatePurchaseBillRequest $request, PurchaseBill $purchaseBill)
+{
+    // 1️⃣ Prepare full request data with user ID
+    $fullData = $request->all();
+    $fullData['user_id'] = auth()->id();
+
+    // 2️⃣ Update PurchaseBill and save full JSON in 'json_data' field
+    $purchaseBill->update(array_merge($fullData, [
+        'json_data' => json_encode($fullData),
+    ]));
+
+    // 3️⃣ Sync items with qty in pivot table
+    if ($request->has('items')) {
+        $syncData = [];
+        foreach ($request->items as $item) {
+            $syncData[$item['id']] = ['qty' => $item['qty']];
+        }
+        $purchaseBill->items()->sync($syncData);
     }
 
-    public function update(UpdatePurchaseBillRequest $request, PurchaseBill $purchaseBill)
-    {
-        $purchaseBill->update($request->all());
-        $purchaseBill->items()->sync($request->input('items', []));
-        if ($request->input('image', false)) {
-            if (! $purchaseBill->image || $request->input('image') !== $purchaseBill->image->file_name) {
-                if ($purchaseBill->image) {
-                    $purchaseBill->image->delete();
-                }
-                $purchaseBill->addMedia(storage_path('tmp/uploads/' . basename($request->input('image'))))->toMediaCollection('image');
-            }
-        } elseif ($purchaseBill->image) {
-            $purchaseBill->image->delete();
+    // 4️⃣ Update current stock for products
+    // Optional: adjust stock based on difference (old vs new qty)
+    foreach ($request->items as $item) {
+        $stock = \App\Models\CurrentStock::find($item['id']); // CurrentStock ID
+        if ($stock) {
+            // Calculate new quantity difference
+            $oldQty = $purchaseBill->items()->where('add_item_id', $item['id'])->first()->pivot->qty ?? 0;
+            $stock->qty = $stock->qty - $oldQty + $item['qty'];
+            $stock->save();
         }
-
-        if ($request->input('document', false)) {
-            if (! $purchaseBill->document || $request->input('document') !== $purchaseBill->document->file_name) {
-                if ($purchaseBill->document) {
-                    $purchaseBill->document->delete();
-                }
-                $purchaseBill->addMedia(storage_path('tmp/uploads/' . basename($request->input('document'))))->toMediaCollection('document');
-            }
-        } elseif ($purchaseBill->document) {
-            $purchaseBill->document->delete();
-        }
-
-        return redirect()->route('admin.purchase-bills.index');
     }
+
+    // 5️⃣ Save PurchaseLog with full JSON in 'extra_data'
+    \App\Models\PurchaseLog::create([
+        'user_id' => auth()->id(),
+        'party_id' => $request->select_customer_id,
+        'main_cost_center_id' => $request->main_cost_center_id,
+        'sub_cost_center_id' => $request->sub_cost_center_id,
+        'payment_type_id' => $request->payment_type_id,
+        'items' => $request->items,
+        'extra_data' => $fullData, // everything including user_id
+    ]);
+
+    // 6️⃣ Handle media uploads
+    if ($request->hasFile('image')) {
+        if ($purchaseBill->getFirstMedia('image')) {
+            $purchaseBill->getFirstMedia('image')->delete();
+        }
+        $purchaseBill->addMedia($request->file('image'))->toMediaCollection('image');
+    }
+
+    if ($request->hasFile('document')) {
+        if ($purchaseBill->getFirstMedia('document')) {
+            $purchaseBill->getFirstMedia('document')->delete();
+        }
+        $purchaseBill->addMedia($request->file('document'))->toMediaCollection('document');
+    }
+
+    if ($media = $request->input('ck-media', false)) {
+        \Spatie\MediaLibrary\MediaCollections\Models\Media::whereIn('id', $media)
+            ->update(['model_id' => $purchaseBill->id]);
+    }
+
+    // 7️⃣ Redirect back with success
+    return redirect()->route('admin.purchase-bills.index')
+                     ->with('success', 'Purchase bill updated successfully.');
+}
+
 
     public function show(PurchaseBill $purchaseBill)
     {

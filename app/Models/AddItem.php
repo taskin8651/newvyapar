@@ -96,9 +96,4 @@ class AddItem extends Model
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
-    public function currentStocks()
-    {
-        return $this->belongsToMany(CurrentStock::class, 'add_item_current_stock', 'add_item_id', 'current_stock_id');
-    }
-
 }

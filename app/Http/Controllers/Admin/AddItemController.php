@@ -45,6 +45,7 @@ class AddItemController extends Controller
 
 public function store(Request $request)
 {
+    // dd($request->all());
    
     // ✅ Validate data
     $validated = $request->validate([
@@ -106,6 +107,7 @@ public function store(Request $request)
             'qty'           => $validated['opening_stock'],
             'type'          => 'Opening Stock',
             'created_by_id' => auth()->id(),
+            'item_id'       => $item->id, // ✅ Link to the item
         ]);
 
         // ✅ Attach item to the stock (pivot table)

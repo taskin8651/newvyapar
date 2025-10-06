@@ -30,6 +30,7 @@ class CurrentStock extends Model
         'deleted_at',
         'created_by_id',
         'json_data',
+        'item_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -66,6 +67,12 @@ public function addItems()
 {
     // Many-to-many relationship with pivot table
     return $this->belongsToMany(AddItem::class, 'add_item_current_stock', 'current_stock_id', 'add_item_id');
+}
+
+public function productItems()
+{
+    return $this->belongsToMany(AddItem::class, 'item_id');
+    
 }
 
 }

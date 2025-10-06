@@ -1,170 +1,239 @@
 @extends('layouts.admin')
-@section('content')
-<div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.edit') }} {{ trans('cruds.purchaseBill.title_singular') }}
+@section('content')
+<div class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-indigo-600 text-white p-6">
+            <h1 class="text-3xl font-bold">Edit Purchase Bill</h1>
+        </div>
+
+        <form action="{{ route('admin.purchase-bills.update', $purchaseBill->id) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+
+            <!-- Customer & Invoice Info -->
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
+
+                    <!-- Customer Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Parties</label>
+                        <select name="select_customer_id" id="select_customer_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Customer --</option>
+                            @foreach($select_customers as $id => $name)
+                                <option value="{{ $id }}" {{ old('select_customer_id', $purchaseBill->select_customer_id) == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Main Cost Center</label>
+                        <select name="main_cost_center_id" id="main_cost_center_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Main Cost Center --</option>
+                            @foreach($cost as $id => $name)
+                                <option value="{{ $id }}" {{ old('main_cost_center_id', $purchaseBill->main_cost_center_id) == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Sub Cost Center</label>
+                        <select name="sub_cost_center_id" id="sub_cost_center_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Sub Cost Center --</option>
+                            @foreach($subCostCenters as $id => $name)
+                                <option value="{{ $id }}" {{ old('sub_cost_center_id', $purchaseBill->sub_cost_center_id) == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Billing & Shipping Inputs -->
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Billing Name</label>
+                        <input type="text" name="billing_name" id="billing_name"
+                               value="{{ old('billing_name', $purchaseBill->billing_name) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="text" name="phone_number" id="phone_number"
+                               value="{{ old('phone_number', $purchaseBill->phone_number) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Billing Address</label>
+                        <input type="text" name="billing_address" id="billing_address"
+                               value="{{ old('billing_address', $purchaseBill->billing_address) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Shipping Address</label>
+                        <textarea name="shipping_address" id="shipping_address" rows="4"
+                                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('shipping_address', $purchaseBill->shipping_address) }}</textarea>
+                    </div>
                 </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.purchase-bills.update", [$purchaseBill->id]) }}" enctype="multipart/form-data">
-                        @method('PUT')
-                        @csrf
-                        <div class="form-group {{ $errors->has('select_customer') ? 'has-error' : '' }}">
-                            <label class="required" for="select_customer_id">{{ trans('cruds.purchaseBill.fields.select_customer') }}</label>
-                            <select class="form-control select2" name="select_customer_id" id="select_customer_id" required>
-                                @foreach($select_customers as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('select_customer_id') ? old('select_customer_id') : $purchaseBill->select_customer->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('select_customer'))
-                                <span class="help-block" role="alert">{{ $errors->first('select_customer') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.select_customer_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('billing_name') ? 'has-error' : '' }}">
-                            <label for="billing_name">{{ trans('cruds.purchaseBill.fields.billing_name') }}</label>
-                            <input class="form-control" type="text" name="billing_name" id="billing_name" value="{{ old('billing_name', $purchaseBill->billing_name) }}">
-                            @if($errors->has('billing_name'))
-                                <span class="help-block" role="alert">{{ $errors->first('billing_name') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.billing_name_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('phone_number') ? 'has-error' : '' }}">
-                            <label for="phone_number">{{ trans('cruds.purchaseBill.fields.phone_number') }}</label>
-                            <input class="form-control" type="text" name="phone_number" id="phone_number" value="{{ old('phone_number', $purchaseBill->phone_number) }}">
-                            @if($errors->has('phone_number'))
-                                <span class="help-block" role="alert">{{ $errors->first('phone_number') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.phone_number_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('e_way_bill_no') ? 'has-error' : '' }}">
-                            <label for="e_way_bill_no">{{ trans('cruds.purchaseBill.fields.e_way_bill_no') }}</label>
-                            <input class="form-control" type="text" name="e_way_bill_no" id="e_way_bill_no" value="{{ old('e_way_bill_no', $purchaseBill->e_way_bill_no) }}">
-                            @if($errors->has('e_way_bill_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('e_way_bill_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.e_way_bill_no_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('billing_address') ? 'has-error' : '' }}">
-                            <label for="billing_address">{{ trans('cruds.purchaseBill.fields.billing_address') }}</label>
-                            <textarea class="form-control ckeditor" name="billing_address" id="billing_address">{!! old('billing_address', $purchaseBill->billing_address) !!}</textarea>
-                            @if($errors->has('billing_address'))
-                                <span class="help-block" role="alert">{{ $errors->first('billing_address') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.billing_address_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('shipping_address') ? 'has-error' : '' }}">
-                            <label for="shipping_address">{{ trans('cruds.purchaseBill.fields.shipping_address') }}</label>
-                            <textarea class="form-control ckeditor" name="shipping_address" id="shipping_address">{!! old('shipping_address', $purchaseBill->shipping_address) !!}</textarea>
-                            @if($errors->has('shipping_address'))
-                                <span class="help-block" role="alert">{{ $errors->first('shipping_address') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.shipping_address_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('po_no') ? 'has-error' : '' }}">
-                            <label for="po_no">{{ trans('cruds.purchaseBill.fields.po_no') }}</label>
-                            <input class="form-control" type="text" name="po_no" id="po_no" value="{{ old('po_no', $purchaseBill->po_no) }}">
-                            @if($errors->has('po_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('po_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.po_no_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('po_date') ? 'has-error' : '' }}">
-                            <label for="po_date">{{ trans('cruds.purchaseBill.fields.po_date') }}</label>
-                            <input class="form-control date" type="text" name="po_date" id="po_date" value="{{ old('po_date', $purchaseBill->po_date) }}">
-                            @if($errors->has('po_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('po_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.po_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('items') ? 'has-error' : '' }}">
-                            <label for="items">{{ trans('cruds.purchaseBill.fields.item') }}</label>
-                            <div style="padding-bottom: 4px">
-                                <span class="btn btn-info btn-xs select-all" style="border-radius: 0">{{ trans('global.select_all') }}</span>
-                                <span class="btn btn-info btn-xs deselect-all" style="border-radius: 0">{{ trans('global.deselect_all') }}</span>
-                            </div>
-                            <select class="form-control select2" name="items[]" id="items" multiple>
-                                @foreach($items as $id => $item)
-                                    <option value="{{ $id }}" {{ (in_array($id, old('items', [])) || $purchaseBill->items->contains($id)) ? 'selected' : '' }}>{{ $item }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('items'))
-                                <span class="help-block" role="alert">{{ $errors->first('items') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.item_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('qty') ? 'has-error' : '' }}">
-                            <label class="required" for="qty">{{ trans('cruds.purchaseBill.fields.qty') }}</label>
-                            <input class="form-control" type="number" name="qty" id="qty" value="{{ old('qty', $purchaseBill->qty) }}" step="1" required>
-                            @if($errors->has('qty'))
-                                <span class="help-block" role="alert">{{ $errors->first('qty') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.qty_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.purchaseBill.fields.description') }}</label>
-                            <textarea class="form-control ckeditor" name="description" id="description">{!! old('description', $purchaseBill->description) !!}</textarea>
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('image') ? 'has-error' : '' }}">
-                            <label for="image">{{ trans('cruds.purchaseBill.fields.image') }}</label>
-                            <div class="needsclick dropzone" id="image-dropzone">
-                            </div>
-                            @if($errors->has('image'))
-                                <span class="help-block" role="alert">{{ $errors->first('image') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.image_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('document') ? 'has-error' : '' }}">
-                            <label for="document">{{ trans('cruds.purchaseBill.fields.document') }}</label>
-                            <div class="needsclick dropzone" id="document-dropzone">
-                            </div>
-                            @if($errors->has('document'))
-                                <span class="help-block" role="alert">{{ $errors->first('document') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.document_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('payment_type') ? 'has-error' : '' }}">
-                            <label for="payment_type_id">{{ trans('cruds.purchaseBill.fields.payment_type') }}</label>
-                            <select class="form-control select2" name="payment_type_id" id="payment_type_id">
-                                @foreach($payment_types as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('payment_type_id') ? old('payment_type_id') : $purchaseBill->payment_type->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('payment_type'))
-                                <span class="help-block" role="alert">{{ $errors->first('payment_type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.payment_type_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('reference_no') ? 'has-error' : '' }}">
-                            <label for="reference_no">{{ trans('cruds.purchaseBill.fields.reference_no') }}</label>
-                            <input class="form-control" type="text" name="reference_no" id="reference_no" value="{{ old('reference_no', $purchaseBill->reference_no) }}">
-                            @if($errors->has('reference_no'))
-                                <span class="help-block" role="alert">{{ $errors->first('reference_no') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.purchaseBill.fields.reference_no_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">PO No.</label>
+                        <input type="text" name="po_no" value="{{ old('po_no', $purchaseBill->po_no) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">PO Date</label>
+                        <input type="date" name="po_date" value="{{ old('po_date', $purchaseBill->po_date) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">E-Way Bill No.</label>
+                        <input type="text" name="e_way_bill_no" value="{{ old('e_way_bill_no', $purchaseBill->e_way_bill_no) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
                 </div>
             </div>
 
+          <!-- Items Table -->
+<div class="overflow-x-auto px-6 pb-6">
+    <table class="min-w-full border border-gray-300 text-sm rounded-lg overflow-hidden">
+        <thead class="bg-gray-200 sticky top-0">
+            <tr>
+                <th class="border px-4 py-2 text-left text-gray-700">Item</th>
+                <th class="border px-4 py-2 text-right text-gray-700">Qty</th>
+                <th class="border px-4 py-2 text-left text-gray-700">Unit</th>
+                <th class="border px-4 py-2 text-right text-gray-700">Rate</th>
+                <th class="border px-4 py-2 text-right text-gray-700">Total</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          @foreach($itemsWithPivot as $i => $item)
+<tr class="hover:bg-gray-50">
+    <td class="border px-4 py-2">
+        <input type="text" name="items[{{ $i }}][name]" 
+            value="{{ $item->item_name ?? '' }}" 
+            readonly
+            class="w-full border border-gray-300 rounded px-2 py-1 bg-gray-100 text-gray-700">
+        <input type="" name="items[{{ $i }}][id]" value="{{ (int) ($item->item_id ?? 0) }}">
+    </td>
+    <td class="border px-4 py-2">
+        <input type="number" name="items[{{ $i }}][qty]" 
+            value="{{ (int) ($item->qty ?? 0) }}" 
+            class="w-full border border-gray-300 rounded px-2 py-1 text-right" 
+            required>
+    </td>
+    <td class="border px-4 py-2">
+        <input type="text" name="items[{{ $i }}][unit]" 
+            value="{{ $item->unit ?? '' }}" 
+            class="w-full border border-gray-300 rounded px-2 py-1 bg-gray-50 text-gray-700">
+    </td>
+    <td class="border px-4 py-2">
+        <input type="number" name="items[{{ $i }}][rate]" 
+            value="{{ (float) ($item->purchase_price ?? 0) }}" 
+            class="w-full border border-gray-300 rounded px-2 py-1 text-right">
+    </td>
+    <td class="border px-4 py-2">
+        <input type="number" name="items[{{ $i }}][total]" 
+            value="{{ ((int) ($item->qty ?? 0)) * ((float) ($item->purchase_price ?? 0)) }}" 
+            readonly
+            class="w-full border border-gray-300 rounded px-2 py-1 bg-gray-100 text-right font-semibold">
+    </td>
+</tr>
+@endforeach
 
 
-        </div>
+        </tbody>
+    </table>
+</div>
+
+
+            <!-- Payment Details -->
+            <div class="space-y-4 py-6 px-6">
+                <h2 class="text-xl font-semibold text-gray-700">Payment Details</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Payment Type</label>
+                        <select name="payment_type_id" class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Payment Type --</option>
+                            @foreach($payment_types as $id => $name)
+                                <option value="{{ $id }}" {{ old('payment_type_id', $purchaseBill->payment_type_id) == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Reference No</label>
+                        <input type="text" name="reference_no" value="{{ old('reference_no', $purchaseBill->reference_no) }}"
+                               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 px-6 pb-6">
+                <!-- Image Upload -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Image</h2>
+                    @if($purchaseBill->getFirstMedia('image'))
+                        <div class="mt-2">
+                            <img src="{{ $purchaseBill->getFirstMediaUrl('image') }}" class="h-20 w-20 object-cover rounded-md" />
+                            <p class="text-sm text-gray-600 mt-1">{{ basename($purchaseBill->getFirstMedia('image')->file_name) }}</p>
+                        </div>
+                    @endif
+                    <input type="file" name="image" accept="image/*" class="mt-2">
+                </div>
+
+                <!-- Document Upload -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Document</h2>
+                    @if($purchaseBill->getFirstMedia('document'))
+                        <div class="mt-2">
+                            <i class="fas fa-file text-gray-500 text-3xl"></i>
+                            <p class="text-sm text-gray-600">{{ basename($purchaseBill->getFirstMedia('document')->file_name) }}</p>
+                        </div>
+                    @endif
+                    <input type="file" name="document" accept=".pdf,.doc,.docx,.xls,.xlsx" class="mt-2">
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="px-6 pb-6">
+                <h2 class="text-xl font-semibold text-gray-700">Notes</h2>
+                <textarea name="notes" rows="3"
+                          class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('notes', $purchaseBill->notes) }}</textarea>
+            </div>
+
+            <!-- Save Button -->
+            <div class="px-6 pb-6">
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md flex items-center justify-center">
+                    <i class="fas fa-save mr-2"></i> UPDATE PURCHASE BILL
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection
+
+
 
 @section('scripts')
 <script>

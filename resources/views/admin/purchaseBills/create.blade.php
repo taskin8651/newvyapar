@@ -113,67 +113,77 @@
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Item</th>
-                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Description</th>
-                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">QTY</th>
-                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Unit</th>
-                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Price/Unit</th>
-                                <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Amount</th>
-                                <th class="px-4 py-2 text-center text-sm font-medium text-gray-700">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-2">
-                                    <select name="items[0][id]" class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                                        <option value="">Select Item</option>
-                                        @foreach($items as $id => $text)
-                                            @php $parts = explode('|', $text); $name = trim($parts[0]); @endphp
-                                            <option value="{{ (int) $id }}">{{ $name }}</option>
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[0][description]" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="number" name="items[0][qty]" value="1" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <select name="items[0][unit]" class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                                        <option>Piece</option>
-                                        <option>Kg</option>
-                                        <option>Box</option>
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="number" name="items[0][price]" value="0" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price">
-                                </td>
-                                <td class="px-4 py-2">
-                                    <input type="text" name="items[0][amount]" readonly class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50">
-                                </td>
-                                <td class="px-4 py-2 text-center">
-                                    <button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+    <thead class="bg-gray-50">
+        <tr>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Item</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Description</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">QTY</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Unit</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Price/Unit</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Tax %</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Discount</th>
+            <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Amount</th>
+            <th class="px-4 py-2 text-center text-sm font-medium text-gray-700">Action</th>
+        </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2">
+                <select name="items[0][id]" class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                    <option value="">Select Item</option>
+                    @foreach($items as $id => $text)
+                        @php $parts = explode('|', $text); $name = trim($parts[0]); @endphp
+                        <option value="{{ (int) $id }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+            </td>
+            <td class="px-4 py-2">
+                <input type="text" name="items[0][description]" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description">
+            </td>
+            <td class="px-4 py-2">
+                <input type="number" name="items[0][qty]" value="1" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty min-w-[60px]">
+            </td>
+            <td class="px-4 py-2">
+                <select name="items[0][unit]" class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
+                    @foreach($units as $id => $unit)
+                        <option value="{{ $unit }}">{{ $unit }}</option>
+                    @endforeach
+                </select>
+            </td>
+            <td class="px-4 py-2">
+                <input type="number" name="items[0][price]" value="0" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price min-w-[80px]">
+            </td>
+           <td class="px-4 py-2">
+    <select name="items[0][tax_rate_id]" class="tax_rate w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm min-w-[120px]">
+        <option value="">Without Tax</option>
+        <option value="with">With Tax</option>
+    </select>
+</td>
+<td class="px-4 py-2 discountCell">
+    <input type="number" name="items[0][discount]" value="0" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm discount min-w-[60px]">
+</td>
 
-                    <!-- Total Section -->
-                    <div class="flex justify-end mt-6 pr-6 space-x-12">
-                        <div class="text-right">
-                            <p class="text-lg font-bold text-gray-700">
-                                Total Quantity: <span id="grandQty">0</span>
-                            </p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-bold text-gray-700">
-                                Total Amount: <span id="grandTotal">0.00</span>
-                            </p>
-                        </div>
-                    </div>
+            <td class="px-4 py-2">
+                <input type="text" name="items[0][amount]" readonly class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50">
+            </td>
+            <td class="px-4 py-2 text-center">
+                <button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>
+            </td>
+        </tr>
+    </tbody>
+    <tfoot>
+        <tr class="bg-gray-100">
+            <td colspan="2" class="px-4 py-2 font-medium">Total</td>
+            <td class="px-4 py-2 font-medium" id="grandQty">0</td>
+            <td colspan="3"></td>
+            <td></td>
+            <td class="px-4 py-2 font-medium" id="grandTotal">0.00</td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
+
+                   
 
                     <button type="button" id="addRow" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md">
                         + ADD ROW
@@ -395,132 +405,188 @@ Dropzone.options.documentDropzone = {
     }
 }
 </script>
-<script>
-function updateGrandTotals() {
-    let totalAmount = 0;
-    let totalQty = 0;
-    $('#itemsTable tbody tr').each(function () {
-        const qty = parseFloat($(this).find('.qty').val()) || 0;
-        const amount = parseFloat($(this).find('.amount').val()) || 0;
-        totalQty += qty;
-        totalAmount += amount;
-    });
-    $('#grandQty').text(totalQty);
-    $('#grandTotal').text(totalAmount.toFixed(2));
-}
 
+<script>
 $(document).ready(function() {
+
     const tableBody = $('#itemsTable tbody');
     const itemsList = @json($itemsData);
+    const unitsList = @json($units);
+    const taxRatesList = @json($tax_rates); // [{id:1,name:"GST",parcentage:"18"}, ...]
+
+    // ---------------- FUNCTIONS ----------------
 
     function reindexRows() {
         tableBody.find('tr').each(function(idx, row) {
             $(row).find('input, select').each(function() {
-                let name = $(this).attr('name');
-                if(name) $(this).attr('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
+                const name = $(this).attr('name');
+                if (name) {
+                    $(this).attr('name', name.replace(/items\[\d+\]/, `items[${idx}]`));
+                }
             });
         });
     }
 
     function updateItemOptions() {
-        const selected = $('.selectItem').map(function() { return $(this).val(); }).get().filter(v => v !== '');
+        const selected = $('.selectItem').map(function() {
+            return $(this).val();
+        }).get().filter(v => v !== '');
+
         $('.selectItem').each(function() {
             const currentVal = $(this).val();
             const $select = $(this);
             $select.empty().append('<option value="">Select Item</option>');
 
             $.each(itemsList, function(id, item) {
-                // show option only if not selected OR is current row
-                if(selected.includes(id.toString()) && id != currentVal) return;
+                // Allow currently selected OR not already used
+                if (selected.includes(id.toString()) && id != currentVal) return;
                 $select.append(`<option value="${id}">${item.name}</option>`);
             });
 
-            // Restore previous selection
-            if(currentVal) $select.val(currentVal);
+            if (currentVal) $select.val(currentVal);
         });
+    }
+
+    function toggleDiscountField(row) {
+        const taxVal = row.find('.tax_rate').val();
+        const discountCell = row.find('.discountCell');
+        discountCell.empty();
+        const idx = row.index();
+
+        if (!taxVal || taxVal === "") {
+            // Without Tax → input for discount
+            const input = $('<input type="number">')
+                .addClass('discount w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm')
+                .val(0)
+                .attr('name', `items[${idx}][discount]`);
+            discountCell.append(input);
+        } else if (taxVal === "with") {
+            // With Tax → dropdown for tax rates
+            const select = $('<select>')
+                .addClass('discount w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm')
+                .attr('name', `items[${idx}][discount]`);
+
+            let firstId = null;
+            $.each(taxRatesList, function(_, tax) {
+                const id = tax.id;
+                const percentage = parseFloat(tax.parcentage) || 0;
+                if (firstId === null) firstId = id;
+                select.append(`<option value="${id}" data-percent="${percentage}">
+                    ${tax.name} (${percentage}%)
+                </option>`);
+            });
+
+            discountCell.append(select);
+            if (firstId !== null) select.val(firstId);
+
+            // Recalculate on change
+            select.on('change', function() {
+                recalcAmount(row);
+            });
+        }
     }
 
     function recalcAmount(row) {
         const qty = parseFloat(row.find('.qty').val()) || 0;
         const price = parseFloat(row.find('.price').val()) || 0;
-        row.find('.amount').val((qty * price).toFixed(2));
+        let discount = 0;
+        let taxAmount = 0;
+
+        const discountField = row.find('.discount');
+        const taxVal = row.find('.tax_rate').val();
+
+        // Normal discount input
+        if (discountField.is('input')) {
+            discount = parseFloat(discountField.val()) || 0;
+        }
+
+        // Tax dropdown → calculate percentage
+        if (taxVal === "with" && discountField.is('select')) {
+            const selectedOption = discountField.find('option:selected');
+            const percentage = parseFloat(selectedOption.data('percent')) || 0;
+            taxAmount = ((qty * price) * percentage) / 100;
+        }
+
+        const amount = (qty * price) - discount + taxAmount;
+        row.find('.amount').val(amount.toFixed(2));
         updateGrandTotals();
     }
 
-    // Initialize Select2
+    function updateGrandTotals() {
+        let totalQty = 0, totalAmount = 0;
+        tableBody.find('tr').each(function() {
+            totalQty += parseFloat($(this).find('.qty').val()) || 0;
+            totalAmount += parseFloat($(this).find('.amount').val()) || 0;
+        });
+        $('#grandQty').text(totalQty);
+        $('#grandTotal').text(totalAmount.toFixed(2));
+    }
+
+    // ---------------- INITIALIZATION ----------------
     $('.select2').select2({ width: '100%' });
 
     // On item change
     tableBody.on('change', '.selectItem', function() {
-        const id = $(this).val();
         const row = $(this).closest('tr');
+        const id = $(this).val();
 
-        if(id && itemsList[id]) {
+        if (id && itemsList[id]) {
             const item = itemsList[id];
-            row.find('.description').val(item.description);
-            row.find('.qty').val(item.qty);
-            row.find('.unit').val(item.unit);
-            row.find('.price').val(item.price);
+            row.find('.description').val(item.description || '');
+            row.find('.unit').val(item.unit || '');
+            row.find('.price').val(item.price || 0);
+            row.find('.qty').val(item.qty || 1);
         } else {
             row.find('.description').val('');
-            row.find('.qty').val(1);
-            row.find('.unit').val('Piece');
+            row.find('.unit').val('');
             row.find('.price').val(0);
+            row.find('.qty').val(1);
         }
+
         recalcAmount(row);
         updateItemOptions();
     });
 
-    // On qty or price input
-    tableBody.on('input', '.qty, .price', function() {
-        recalcAmount($(this).closest('tr'));
+    // On qty, price, discount, tax change
+    tableBody.on('input change', '.qty, .price, .discount, .tax_rate', function() {
+        const row = $(this).closest('tr');
+        if ($(this).hasClass('tax_rate')) toggleDiscountField(row);
+        recalcAmount(row);
     });
 
-    // Add row
+    // Init existing rows
+    tableBody.find('tr').each(function() {
+        toggleDiscountField($(this));
+        recalcAmount($(this));
+    });
+
+    // Add new row
     $('#addRow').on('click', function() {
-        const rowCount = tableBody.find('tr').length;
-        const newRow = $(`
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-2">
-                    <select name="items[${rowCount}][id]" class="selectItem select2 w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                        <option value="">Select Item</option>
-                    </select>
-                </td>
-                <td class="px-4 py-2">
-                    <input type="text" name="items[${rowCount}][description]" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm description">
-                </td>
-                <td class="px-4 py-2">
-                    <input type="number" name="items[${rowCount}][qty]" value="1" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm qty">
-                </td>
-                <td class="px-4 py-2">
-                    <select name="items[${rowCount}][unit]" class="unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm">
-                        <option>Piece</option>
-                        <option>Kg</option>
-                        <option>Box</option>
-                    </select>
-                </td>
-                <td class="px-4 py-2">
-                    <input type="number" name="items[${rowCount}][price]" value="0" class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm price">
-                </td>
-                <td class="px-4 py-2">
-                    <input type="text" name="items[${rowCount}][amount]" readonly class="w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm amount bg-gray-50">
-                </td>
-                <td class="px-4 py-2 text-center">
-                    <button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>
-                </td>
-            </tr>
-        `);
+        const unitSelect = $('<select>').addClass('unit w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm');
+        $.each(unitsList, (_, unit) => unitSelect.append(`<option value="${unit}">${unit}</option>`));
+
+        const taxSelect = $('<select>').addClass('tax_rate w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm');
+        taxSelect.append('<option value="">Without Tax</option>');
+        taxSelect.append('<option value="with">With Tax</option>');
+
+        const newRow = $('<tr class="hover:bg-gray-50">')
+            .append($('<td>').append($('<select>').addClass('selectItem select2 w-full').append('<option value="">Select Item</option>')))
+            .append($('<td>').append($('<input type="text">').addClass('description w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm')))
+            .append($('<td>').append($('<input type="number">').addClass('qty w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm').val(1)))
+            .append($('<td>').append(unitSelect))
+            .append($('<td>').append($('<input type="number">').addClass('price w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm').val(0)))
+            .append($('<td>').append(taxSelect))
+            .append($('<td class="discountCell">').append($('<input type="number">').addClass('discount w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm').val(0)))
+            .append($('<td>').append($('<input type="text" readonly>').addClass('amount w-full border border-gray-300 rounded-md px-2 py-1 shadow-sm bg-gray-50')))
+            .append($('<td>').append('<button type="button" class="removeRow bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md">X</button>'));
 
         tableBody.append(newRow);
-
-        // Populate select with valid items
         $.each(itemsList, function(id, item) {
             newRow.find('.selectItem').append(`<option value="${id}">${item.name}</option>`);
         });
-
-        // Initialize Select2
         newRow.find('.select2').select2({ width: '100%' });
 
+        toggleDiscountField(newRow);
         reindexRows();
         updateItemOptions();
         updateGrandTotals();
@@ -528,7 +594,7 @@ $(document).ready(function() {
 
     // Remove row
     tableBody.on('click', '.removeRow', function() {
-        if(tableBody.find('tr').length > 1) {
+        if (tableBody.find('tr').length > 1) {
             $(this).closest('tr').remove();
             reindexRows();
             updateItemOptions();
@@ -538,22 +604,13 @@ $(document).ready(function() {
         }
     });
 
-    // Client-side check before form submit
-    $('form').on('submit', function(e) {
-        let valid = true;
-        $('.selectItem').each(function() {
-            if(!$(this).val()) {
-                alert('Please select a valid item for all rows.');
-                valid = false;
-                return false;
-            }
-        });
-        if(!valid) e.preventDefault();
-    });
-
-    updateGrandTotals();
 });
 </script>
+
+
+
+
+
 
 <script>
 $(document).ready(function () {
