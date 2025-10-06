@@ -30,6 +30,7 @@ class CurrentStock extends Model
         'deleted_at',
         'created_by_id',
         'json_data',
+        'item_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -61,6 +62,12 @@ public function serviceItems()
 {
     return $this->belongsToMany(AddItem::class)
         ->where('item_type', 'service');
+}
+
+public function productItems()
+{
+    return $this->belongsToMany(AddItem::class, 'item_id');
+    
 }
 
 }

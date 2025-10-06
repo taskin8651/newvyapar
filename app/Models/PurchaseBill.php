@@ -91,11 +91,12 @@ class PurchaseBill extends Model implements HasMedia
     }
 
 
-    public function items()
+ public function items()
 {
     return $this->belongsToMany(AddItem::class, 'add_item_purchase_bill', 'purchase_bill_id', 'add_item_id')
-                ->withPivot('qty'); // bas qty rakho, timestamps nahi
+        ->withPivot('qty');
 }
+
 
 
     public function getImageAttribute()
