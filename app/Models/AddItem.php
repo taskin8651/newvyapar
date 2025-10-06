@@ -96,4 +96,9 @@ class AddItem extends Model
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+    public function purchaseBills()
+    {
+        return $this->belongsToMany(PurchaseBill::class, 'add_item_purchase_bill', 'add_item_id', 'purchase_bill_id')
+            ->withPivot('qty');
+    }
 }
