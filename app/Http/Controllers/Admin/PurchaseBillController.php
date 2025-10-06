@@ -129,41 +129,42 @@ class PurchaseBillController extends Controller
 
 public function store(StorePurchaseBillRequest $request)
 {
-    // 1️⃣ Generate unique purchase bill number
     $purchaseBillNo = 'PB' . mt_rand(1000000000, 9999999999);
     while (PurchaseBill::where('purchase_bill_no', $purchaseBillNo)->exists()) {
         $purchaseBillNo = 'PB' . mt_rand(1000000000, 9999999999);
     }
 
-    // 2️⃣ Prepare full request data with user ID
     $fullData = $request->all();
     $fullData['purchase_bill_no'] = $purchaseBillNo;
     $fullData['user_id'] = auth()->id();
 
-    // 3️⃣ Create PurchaseBill and save full JSON in 'json_data' field
     $purchaseBill = PurchaseBill::create(array_merge($fullData, [
         'json_data' => json_encode($fullData),
     ]));
 
-    // 4️⃣ Sync items with qty in pivot table
     if ($request->has('items')) {
         $syncData = [];
         foreach ($request->items as $item) {
-            $syncData[$item['id']] = ['qty' => $item['qty']];
+            $addItem = \App\Models\AddItem::find($item['id']);
+            if (!$addItem) continue;
+
+            if ($addItem->item_type === 'product') {
+                // Product → link via CurrentStock
+                $stock = \App\Models\CurrentStock::where('item_id', $addItem->id)->first();
+                if ($stock) {
+                    $syncData[$stock->id] = ['qty' => $item['qty']];
+                    $stock->qty += $item['qty'];
+                    $stock->save();
+                }
+            } else {
+                // Service → link directly to AddItem
+                $syncData[$addItem->id] = ['qty' => $item['qty']];
+            }
         }
+
         $purchaseBill->items()->sync($syncData);
     }
 
-    // 5️⃣ Update current stock for products
-    foreach ($request->items as $item) {
-        $stock = \App\Models\CurrentStock::find($item['id']); // CurrentStock ID
-        if ($stock) {
-            $stock->qty += $item['qty'];
-            $stock->save();
-        }
-    }
-
-    // 6️⃣ Save PurchaseLog with full JSON in 'extra_data'
     \App\Models\PurchaseLog::create([
         'user_id' => auth()->id(),
         'party_id' => $request->select_customer_id,
@@ -171,10 +172,9 @@ public function store(StorePurchaseBillRequest $request)
         'sub_cost_center_id' => $request->sub_cost_center_id,
         'payment_type_id' => $request->payment_type_id,
         'items' => $request->items,
-        'extra_data' => $fullData, // everything including user_id
+        'extra_data' => $fullData,
     ]);
 
-    // 7️⃣ Handle media uploads
     if ($request->hasFile('image')) {
         $purchaseBill->addMedia($request->file('image'))->toMediaCollection('image');
     }
