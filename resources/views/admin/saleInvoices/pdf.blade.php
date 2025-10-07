@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Purchase Bill - {{ $purchaseBill->purchase_bill_no }}</title>
+    <title>Sale Invoice - {{ $saleInvoice->sale_invoice_number }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -12,7 +12,6 @@
         .header-gradient { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
         .table-header { background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); }
 
-        /* Print styles */
         @media print {
             body { background: #fff !important; font-size: 10px !important; line-height: 1.2; }
             .invoice-container { box-shadow: none !important; border: none !important; padding: 6px !important; }
@@ -41,7 +40,7 @@
             <div class="header-gradient text-white p-4 text-xs">
                 <div class="flex justify-between items-start">
                     <div>
-                        <h1 class="text-lg font-bold">PURCHASE BILL</h1>
+                        <h1 class="text-lg font-bold">SALE INVOICE</h1>
                         <p class="text-blue-200 mt-1 text-xs">ORIGINAL FOR RECIPIENT</p>
                         <div class="mt-2 text-xs">
                             <p><i class="fas fa-map-marker-alt mr-1"></i> 1st Floor, Kamla Bhattacharya Road, Patna (Bihar) - 800001</p>
@@ -56,17 +55,17 @@
                 </div>
             </div>
 
-            <!-- Bill To / Supplier Info -->
+            <!-- Customer Info -->
             <div class="p-4 border-b border-gray-200 text-xs">
                 <h3 class="text-sm font-semibold text-blue-700 mb-1 flex items-center">
-                    <i class="fas fa-user-circle mr-1"></i> Supplier / Customer
+                    <i class="fas fa-user-circle mr-1"></i> Customer
                 </h3>
                 <div class="bg-blue-50 p-2 rounded-lg border border-blue-200 text-xs">
-                    @if($purchaseBill->select_customer)
-                        <h4 class="font-medium text-blue-800">{{ $purchaseBill->select_customer->party_name ?? '-' }}</h4>
-                        <p class="text-blue-700">{{ html_entity_decode(strip_tags($purchaseBill->billing_address ?? '')) }}</p>
-                        <p class="text-blue-700">Phone: {{ $purchaseBill->phone_number ?? '-' }}</p>
-                        <p class="text-blue-700">State: {{ $purchaseBill->select_customer->state ?? '-' }}</p>
+                    @if($saleInvoice->select_customer)
+                        <h4 class="font-medium text-blue-800">{{ $saleInvoice->select_customer->party_name ?? '-' }}</h4>
+                        <p class="text-blue-700">{{ html_entity_decode(strip_tags($saleInvoice->billing_address ?? '')) }}</p>
+                        <p class="text-blue-700">Phone: {{ $saleInvoice->phone_number ?? '-' }}</p>
+                        <p class="text-blue-700">State: {{ $saleInvoice->select_customer->state ?? '-' }}</p>
                     @else
                         <p class="italic text-gray-500">No customer selected</p>
                     @endif
@@ -89,7 +88,7 @@
                     </thead>
                     <tbody>
                         @php $total = 0; @endphp
-                        @forelse($purchaseBill->items as $key => $item)
+                        @forelse($saleInvoice->items as $key => $item)
                             @php
                                 $qty = $item->pivot->qty ?? 1;
                                 $price = $item->sale_price ?? 0;
@@ -112,7 +111,7 @@
                         @endforelse
                         <tr class="bg-blue-50 font-semibold">
                             <td class="p-1" colspan="3">Total</td>
-                            <td class="p-1">{{ $purchaseBill->items->sum(fn($i) => $i->pivot->qty ?? 1) }}</td>
+                            <td class="p-1">{{ $saleInvoice->items->sum(fn($i) => $i->pivot->qty ?? 1) }}</td>
                             <td class="p-1" colspan="2"></td>
                             <td class="p-1 text-green-600">Rs {{ number_format($total,2) }}</td>
                         </tr>
@@ -124,7 +123,6 @@
             <div class="p-4 border-b border-gray-200 overflow-x-auto text-xs">
                 <table class="w-full text-xs">
                     <tr>
-                        <!-- Invoice Details -->
                         <td class="align-top w-1/2 pr-2">
                             <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
                                 <thead>
@@ -136,22 +134,21 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td class="font-medium py-1 px-2">Bill No.:</td>
-                                        <td class="text-right px-2">{{ $purchaseBill->purchase_bill_no }}</td>
+                                        <td class="font-medium py-1 px-2">Invoice No.:</td>
+                                        <td class="text-right px-2">{{ $saleInvoice->sale_invoice_number }}</td>
                                     </tr>
                                     <tr>
                                         <td class="font-medium py-1 px-2">Date:</td>
-                                        <td class="text-right px-2">{{ $purchaseBill->po_date ?? '-' }}</td>
+                                        <td class="text-right px-2">{{ $saleInvoice->po_date ?? '-' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="font-medium py-1 px-2">PO No.:</td>
-                                        <td class="text-right px-2">{{ $purchaseBill->po_no ?? '-' }}</td>
+                                        <td class="text-right px-2">{{ $saleInvoice->po_no ?? '-' }}</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </td>
 
-                        <!-- Amount in Words -->
                         <td class="align-top w-1/2 pl-2">
                             <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
                                 <thead>
@@ -174,83 +171,77 @@
                 </table>
             </div>
 
-           <!-- Bank, Terms & Authorized Signatory -->
-<div class="p-4 border-b border-gray-200 overflow-x-auto text-xs">
-    <table class="w-full text-xs border border-gray-200 rounded-lg">
-        <tbody>
-            <tr class="align-top">
-                <!-- Bank Details -->
-                <td class="p-2 w-1/3 border-r border-gray-200">
-                    <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
-                        <i class="fas fa-university mr-1"></i> Bank Details
-                    </h3>
-                    <table class="w-full text-xs">
-                       <!-- Bank Details -->
-@foreach($bankDetails as $bank)
-    @if($bank->print_bank_details)
-       
-            <tbody>
-                <tr>
-                    <td class="font-medium px-2 py-1">Bank Name:</td>
-                    <td class="px-2 py-1">{{ $bank->bank_name ?? '-' }}</td>
-                </tr>
-                <tr class="bg-gray-50">
-                    <td class="font-medium px-2 py-1">Account No.:</td>
-                    <td class="px-2 py-1">{{ $bank->account_number ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td class="font-medium px-2 py-1">IFSC Code:</td>
-                    <td class="px-2 py-1">{{ $bank->ifsc_code ?? '-' }}</td>
-                </tr>
-                <tr class="bg-gray-50">
-                    <td class="font-medium px-2 py-1">Account Holder:</td>
-                    <td class="px-2 py-1">{{ $bank->account_holder_name ?? '-' }}</td>
-                </tr>
-            </tbody>
-    @endif
-@endforeach
+            <!-- Bank, Terms & Signatory -->
+            <div class="p-4 border-b border-gray-200 overflow-x-auto text-xs">
+                <table class="w-full text-xs border border-gray-200 rounded-lg">
+                    <tbody>
+                        <tr class="align-top">
+                            <!-- Bank Details -->
+                            <td class="p-2 w-1/3 border-r border-gray-200">
+                                <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
+                                    <i class="fas fa-university mr-1"></i> Bank Details
+                                </h3>
+                                <table class="w-full text-xs">
+                                    @foreach($bankDetails as $bank)
+                                        @if($bank->print_bank_details)
+                                            <tbody>
+                                                <tr>
+                                                    <td class="font-medium px-2 py-1">Bank Name:</td>
+                                                    <td class="px-2 py-1">{{ $bank->bank_name ?? '-' }}</td>
+                                                </tr>
+                                                <tr class="bg-gray-50">
+                                                    <td class="font-medium px-2 py-1">Account No.:</td>
+                                                    <td class="px-2 py-1">{{ $bank->account_number ?? '-' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="font-medium px-2 py-1">IFSC Code:</td>
+                                                    <td class="px-2 py-1">{{ $bank->ifsc_code ?? '-' }}</td>
+                                                </tr>
+                                                <tr class="bg-gray-50">
+                                                    <td class="font-medium px-2 py-1">Account Holder:</td>
+                                                    <td class="px-2 py-1">{{ $bank->account_holder_name ?? '-' }}</td>
+                                                </tr>
+                                            </tbody>
+                                        @endif
+                                    @endforeach
+                                </table>
+                            </td>
 
-                    </table>
-                </td>
+                            <!-- Terms & Conditions -->
+                            <td class="p-2 w-1/3 border-r border-gray-200">
+                                <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
+                                    <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
+                                </h3>
+                                @foreach($terms as $term)
+                                    <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
+                                    <div class="bg-yellow-50 p-2 rounded border text-xs">
+                                        <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
+                                        <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
+                                    </div>
+                                @endforeach
+                            </td>
 
-                <!-- Terms & Conditions -->
-               <td class="p-2 w-1/3 border-r border-gray-200">
-    <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
-        <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
-    </h3>
-    
-    @foreach($terms as $term)
-        <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
-        <div class="bg-yellow-50 p-2 rounded border text-xs">
-            <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
-            <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
-        </div>
-    @endforeach
-</td>
-
-
-                <!-- Authorized Signatory -->
-                <td class="p-2 w-1/3 text-center align-top">
-                    <div class="flex flex-col justify-end h-full" style="height: 120px;">
-                        <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
-                            <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
-                        </div>
-                        <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</div>
-
+                            <!-- Authorized Signatory -->
+                            <td class="p-2 w-1/3 text-center align-top">
+                                <div class="flex flex-col justify-end h-full" style="height: 120px;">
+                                    <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
+                                        <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
+                                    </div>
+                                    <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
         </div>
 
         <!-- Footer -->
         <div class="text-center mt-2 text-xs text-gray-500">
-            <p>This is a computer-generated purchase bill and does not require a physical signature.</p>
+            <p>This is a computer-generated sale invoice and does not require a physical signature.</p>
             <p class="mt-1">
-                Bill generated on: {{ now()->format('d-m-Y \a\t h:i A') }} by {{ auth()->user()->name ?? 'System' }}
+                Invoice generated on: {{ now()->format('d-m-Y \a\t h:i A') }} by {{ auth()->user()->name ?? 'System' }}
             </p>
         </div>
 
@@ -259,7 +250,7 @@
     <!-- Print Button -->
     <div class="fixed bottom-4 right-4 no-print">
         <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center text-xs">
-            <i class="fas fa-print mr-1"></i> Print Purchase Bill
+            <i class="fas fa-print mr-1"></i> Print Sale Invoice
         </button>
     </div>
 </body>

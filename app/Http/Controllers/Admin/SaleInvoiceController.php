@@ -20,6 +20,10 @@ use Nette\Utils\Random;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 
+use App\Models\BankAccount;
+use App\Models\TermAndCondition;
+
+
 class SaleInvoiceController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -317,5 +321,25 @@ public function getCustomerDetails($id)
         $media = $model->addMediaFromRequest('upload')->toMediaCollection('ck-media');
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
+    }
+
+     public function pdf(SaleInvoice $saleInvoice)
+    {
+        // Bank details for PDF
+        $bankDetails = BankAccount::all();
+
+        // Only active terms
+        $terms = TermAndCondition::where('status', 'active')->get();
+
+        // Load relationships
+        $saleInvoice->load(
+            'select_customer', 
+            'items', 
+            'payment_type', 
+            'created_by'
+        );
+
+        // Return PDF view
+        return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms'));
     }
 }

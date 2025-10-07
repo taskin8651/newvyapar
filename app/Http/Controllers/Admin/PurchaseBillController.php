@@ -21,6 +21,7 @@ use Tests\Browser\PartyDetailsTest;
 use App\Models\Unit;
 use App\Models\TaxRate;
 use Illuminate\Support\Facades\DB;
+use App\Models\TermAndCondition;
 class PurchaseBillController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -358,8 +359,9 @@ public function edit(PurchaseBill $purchaseBill)
     public function pdf(PurchaseBill $purchaseBill)
     {
         $bankDetails = BankAccount::all();
+        $terms = TermAndCondition::where('status', 'active')->get();
 
         $purchaseBill->load('select_customer', 'items', 'payment_type', 'created_by', 'main_cost_center', 'sub_cost_center');
-    return view('admin.purchaseBills.pdf', compact('purchaseBill', 'bankDetails'));
+    return view('admin.purchaseBills.pdf', compact('purchaseBill', 'bankDetails', 'terms'));
     }
 }
