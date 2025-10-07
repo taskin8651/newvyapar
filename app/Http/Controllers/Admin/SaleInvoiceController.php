@@ -9,12 +9,14 @@ use App\Http\Requests\MassDestroySaleInvoiceRequest;
 use App\Http\Requests\StoreSaleInvoiceRequest;
 use App\Http\Requests\UpdateSaleInvoiceRequest;
 use App\Models\AddItem;
+use App\Models\CurrentStock;
 use App\Models\PartyDetail;
 use App\Models\SaleInvoice;
 use App\Models\MainCostCenter;
 use App\Models\SubCostCenter;
 use Gate;
 use Illuminate\Http\Request;
+use Nette\Utils\Random;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -35,23 +37,38 @@ public function create()
 {
     abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    // Fetch customers for dropdown
-    $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    // Customers dropdown
+    $select_customers = PartyDetail::pluck('party_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-    // Fetch all products (not services) and eager load related stocks
-    $items = AddItem::where('item_type', 'product')
-                    ->with(['currentStocks' => function ($q) {
-                        $q->select('current_stocks.id', 'qty'); // fetch stock quantity
-                    }])
-                    ->select('id', 'item_name', 'sale_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
-                    ->get();
-
-    // Fetch main and sub cost centers
-    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    // Fetch all items (products + services)
+    $items = AddItem::whereIn('item_type', ['product', 'service'])
+        ->select('id', 'item_name', 'sale_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+        ->with('select_unit') // for unit name
+        ->get()
+        ->map(function ($item) {
+            if ($item->item_type === 'product') {
+                // Get total quantity from current_stocks
+                $item->stock_qty = CurrentStock::whereHas('addItems', function ($q) use ($item) {
+                    $q->where('add_item_id', $item->id);
+                })->sum('qty');
+            } else {
+                // Services don't have stock
+                $item->stock_qty = null;
+            }
+            return $item;
+        });
+       
+    // Cost centers
+    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
     return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
 }
+
+
 
 
 public function getCustomerDetails($id)
@@ -94,53 +111,120 @@ public function getCustomerDetails($id)
         return response()->json($subCostCenters);
     }
 
-    public function store(StoreSaleInvoiceRequest $request)
+    public function store(Request $request)
     {
-        abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $request->validate([
+            'select_customer_id' => 'required|exists:party_details,id',
+            'po_no' => 'required|string',
+            'po_date' => 'required|date',
+            'docket_no' => 'nullable|string',
+            'billing_address_invoice' => 'nullable|string',
+            'items' => 'required|array',
+            'items.*.add_item_id' => 'required|exists:add_items,id',
+            'items.*.qty' => 'required|numeric|min:1',
+        ]);
+       
+        // Handle attachment
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('attachments', 'public');
+        }
 
-        // Create Sale Invoice
-        $saleInvoice = SaleInvoice::create([
-            'customer_id' => $request->customer_id,
-            'bill_date' => $request->bill_date,
+        // Generate random sale invoice number
+        $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100,999);
+
+        // Save invoice
+        $invoice = SaleInvoice::create([
+            'sale_invoice_number' => $sale_invoice_number,
             'payment_type' => $request->payment_type,
-            'subtotal' => $request->subtotal ?? 0,
-            'total_tax' => $request->total_tax ?? 0,
-            'grand_total' => $request->grand_total ?? 0,
-            'main_cost_center' => $request->main_cost_center,
-            'sub_cost_center' => $request->sub_cost_center,
+            'select_customer_id' => $request->select_customer_id,
+            'po_no' => $request->po_no,
+            'docket_no' => $request->docket_no,
+            'po_date' => $request->po_date,
+            'due_date' => $request->due_date,
+            'e_way_bill_no' => $request->e_way_bill_no,
+            'phone_number' => $request->customer_phone_invoice,
+            'billing_address' => $request->billing_address_invoice,
+            'shipping_address' => $request->shipping_address_invoice,
             'notes' => $request->notes,
+            'terms' => $request->terms,
+            'overall_discount' => $request->overall_discount ?? 0,
+            'subtotal' => $request->subtotal ?? 0,
+            'tax' => $request->tax ?? 0,
+            'discount' => $request->discount ?? 0,
+            'total' => $request->total ?? 0,
+            'attachment' => $attachmentPath,
             'created_by_id' => auth()->id(),
+            'json_data' => json_encode($request->all()),
+            'status' => 'pending',
         ]);
 
-        // Save Items
-        if ($request->has('products')) {
-            foreach ($request->products as $prod) {
-                if (!empty($prod['product_id'])) {
-                    $saleInvoice->items()->attach($prod['product_id'], [
-                        'quantity' => $prod['quantity'] ?? 1,
-                        'unit' => $prod['unit'] ?? '',
-                        'price' => $prod['price'] ?? 0,
-                        'discount' => $prod['discount'] ?? 0,
-                        'tax' => $prod['tax'] ?? 0,
-                        'total' => $prod['total'] ?? 0,
+        foreach ($request->items as $itemData) {
+            $item = \App\Models\AddItem::find($itemData['add_item_id']);
+
+            // Attach item to invoice pivot
+            $invoice->items()->attach($item->id, [
+                'description' => $itemData['description'] ?? null,
+                'qty' => $itemData['qty'],
+                'unit' => $itemData['unit'] ?? null,
+                'price' => $itemData['price'] ?? 0,
+                'discount_type' => $itemData['discount_type'] ?? 'value',
+                'discount' => $itemData['discount'] ?? 0,
+                'tax_type' => $itemData['tax_type'] ?? 'without',
+                'tax' => $itemData['tax'] ?? 0,
+                'amount' => $itemData['amount'] ?? 0,
+                'created_by_id' => auth()->id(),
+                'json_data' => json_encode($itemData),
+            ]);
+
+            if($item->item_type === 'product'){
+                $stock = \App\Models\CurrentStock::find($item->id);
+                if($stock){
+                    $previousQty = $stock->quantity_available;
+                    $previousAmount = $previousQty * $itemData['price'];
+                    $stock->qty -= $itemData['qty'];
+                    $stock->save();
+
+                    // Create Sale Log
+                    \App\Models\SaleLog::create([
+                        'sale_invoice_id' => $invoice->id,
+                        'item_id' => $item->id,
+                        'item_type' => 'product',
+                        'stock_id' => $stock->id,
+                        'previous_qty' => $previousQty,
+                        'sold_qty' => $itemData['qty'],
+                        'previous_amount' => $previousAmount,
+                        'sold_amount' => $itemData['amount'] ?? 0,
+                        'price' => $itemData['price'],
+                        'sold_to_user_id' => $request->select_customer_id,
+                        'created_by_id' => auth()->id(),
+                        'json_data_add_item_sale_invoice' => json_encode($itemData),
+                        'json_data_current_stock' => json_encode($stock),
+                        'json_data_sale_invoice' => json_encode($invoice),
+                       
                     ]);
                 }
+            } else {
+                // For service, just log sale
+                \App\Models\SaleLog::create([
+                    'sale_invoice_id' => $invoice->id,
+                    'item_id' => $item->id,
+                    'item_type' => 'service',
+                    'sold_qty' => $itemData['qty'],
+                    'sold_amount' => $itemData['amount'] ?? 0,
+                    'price' => $itemData['price'],
+                    'sold_to_user_id' => $request->select_customer_id,
+                    'json_data_sale_invoice' => json_encode($invoice),
+                    'json_data_add_item_sale_invoice' => json_encode($itemData),
+
+                ]);
             }
         }
 
-        // Handle uploads
-        if ($request->file('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $saleInvoice->addMedia($file)->toMediaCollection('attachments');
-            }
-        }
-
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $saleInvoice->id]);
-        }
-
-        return redirect()->route('admin.sale-invoices.index')->with('success', 'Sale Invoice created successfully!');
+        return redirect()->route('admin.sale-invoices.index')->with('success', 'Sale Invoice Created Successfully.');
     }
+
+
 
     public function edit(SaleInvoice $saleInvoice)
     {

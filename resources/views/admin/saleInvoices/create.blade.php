@@ -27,7 +27,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
-                    <select name="customer_id" id="customer_id" class="form-select select2 w-full" required>
+                    <select name="select_customer_id" id="customer_id" class="form-select select2 w-full" required>
                         <option value="">-- Select Customer --</option>
                         @foreach($select_customers as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
@@ -96,26 +96,16 @@
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
                     @php
-                    // Get today's date in Ymd format
                     $datePart = date('Ymd');
-
-                    // Get last PO of today
                     $lastPO = \App\Models\SaleInvoice::whereDate('created_at', now()->format('Y-m-d'))
                         ->orderBy('id', 'desc')
                         ->first();
-
-                    // Determine serial number
                     $serial = $lastPO ? intval(substr($lastPO->po_no, -4)) + 1 : 1;
-
-                    // Pad serial to 4 digits
                     $serial = str_pad($serial, 4, '0', STR_PAD_LEFT);
-
-                    // Full PO number
                     $poNo = 'PO-'.$datePart.'-'.$serial;
-                @endphp
+                    @endphp
 
-                <input type="text" name="po_no" value="{{ $poNo }}" placeholder="Invoice/PO No." class="w-full rounded-md border px-3 py-2">
-
+                    <input type="text" name="po_no" value="{{ $poNo }}" placeholder="Invoice/PO No." class="w-full rounded-md border px-3 py-2">
                     <input type="text" name="docket_no" placeholder="Docket Number" class="w-full rounded-md border px-3 py-2 mt-2">
 
                     <div class="grid grid-cols-2 gap-4 mt-2">
@@ -125,6 +115,7 @@
                     <input type="text" name="e_way_bill_no" placeholder="E-Way Bill No." class="w-full rounded-md border px-3 py-2 mt-2">
                     <input type="text" name="customer_phone_invoice" id="invoice_customer_phone" placeholder="Customer Phone" class="w-full rounded-md border px-3 py-2 mt-2">
                     <textarea name="billing_address_invoice" id="invoice_billing_address" rows="2" class="w-full rounded-md border px-3 py-2 mt-2" placeholder="Billing Address"></textarea>
+                    <textarea name="shipping_address_invoice" id="customer_shipping_address2" rows="2" class="w-full rounded-md border px-3 py-2 mt-2" placeholder="Shipping Address"></textarea>
                 </div>
             </div>
 
@@ -151,44 +142,42 @@
                         <tbody>
                             <tr>
                                 <td class="px-1 py-1">
-                                    <select class="item-select w-full select2" name="items[0][id]">
-                                        <option value="">Select Item</option>
+                                    <select name="items[0][add_item_id]" class="form-select item-select select2">
+                                        <option value="">-- Select Item --</option>
                                         @foreach($items as $item)
-                                            @foreach($item->currentStocks as $stock)
-                                                <option 
-                                                    value="{{ $item->id }}"
-                                                    data-sale-price="{{ $item->sale_price }}"
-                                                    data-stock="{{ $stock->qty }}"
-                                                    data-unit="{{ $item->select_unit_id }}"
-                                                    data-hsn="{{ $item->item_hsn }}"
-                                                    data-code="{{ $item->item_code }}"
-                                                    data-type="{{ $item->item_type }}"
-                                                >
-                                                    {{ $item->item_name }} (Stock: {{ $stock->qty }})
-                                                </option>
-                                            @endforeach
+                                            <option value="{{ $item->id }}"
+                                                data-sale-price="{{ $item->sale_price }}"
+                                                data-unit="{{ $item->select_unit->unit_name ?? '' }}"
+                                                data-hsn="{{ $item->item_hsn }}"
+                                                data-code="{{ $item->item_code }}"
+                                                data-stock="{{ $item->item_type === 'product' ? $item->stock_qty : '' }}">
+                                                {{ $item->item_name }} ({{ ucfirst($item->item_type) }})
+                                                @if($item->item_type === 'product' && $item->stock_qty !== null)
+                                                    - Stock: {{ $item->stock_qty }}
+                                                @endif
+                                            </option>
                                         @endforeach
                                     </select>
                                 </td>
                                 <td class="px-1 py-1 description"></td>
-                                <td class="px-1 py-1"><input type="number" class="qty w-full border px-2 py-1" min="1" value="1"></td>
+                                <td class="px-1 py-1"><input type="number" name="items[0][qty]" class="qty w-full border px-2 py-1" min="1" value="1"></td>
                                 <td class="px-1 py-1 unit"></td>
-                                <td class="px-1 py-1"><input type="number" class="price w-full border px-2 py-1" step="0.01"></td>
+                                <td class="px-1 py-1"><input type="number" name="items[0][price]" class="price w-full border px-2 py-1" step="0.01"></td>
                                 <td class="px-1 py-1">
-                                    <select class="discount_type w-full select2">
+                                    <select name="items[0][discount_type]" class="discount_type w-full select2">
                                         <option value="value">Value</option>
                                         <option value="percentage">Percentage</option>
                                     </select>
-                                    <input type="number" class="discount w-full mt-1 border px-2 py-1" value="0" step="0.01">
+                                    <input type="number" name="items[0][discount]" class="discount w-full mt-1 border px-2 py-1" value="0" step="0.01">
                                 </td>
                                 <td class="px-1 py-1">
-                                    <select class="tax_type w-full select2">
+                                    <select name="items[0][tax_type]" class="tax_type w-full select2">
                                         <option value="without">Without Tax</option>
                                         <option value="with">With Tax</option>
                                     </select>
-                                    <input type="number" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                                    <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
                                 </td>
-                                <td class="px-1 py-1"><input type="text" class="amount w-full border px-2 py-1" readonly></td>
+                                <td class="px-1 py-1"><input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly></td>
                                 <td class="px-1 py-1 text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
                             </tr>
                         </tbody>
@@ -209,27 +198,40 @@
                 <div>
                     <div class="mb-2">
                         <label class="font-semibold">Overall Discount:</label>
-                        <input type="number" id="overall_discount" class="w-full border px-2 py-1 mt-1" value="0" step="0.01">
+                        <input type="number" name="overall_discount" id="overall_discount" class="w-full border px-2 py-1 mt-1" value="0" step="0.01">
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg space-y-2">
-                        <div class="flex justify-between"><span>Subtotal:</span><span id="subtotal">0.00</span></div>
-                        <div class="flex justify-between"><span>Tax:</span><span id="tax">0.00</span></div>
-                        <div class="flex justify-between"><span>Discount:</span><span id="discount">0.00</span></div>
-                        <div class="flex justify-between border-t pt-2 font-bold"><span>Total:</span><span id="total">0.00</span></div>
+                        <div class="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span id="subtotal_display">0.00</span>
+                            <input type="hidden" name="subtotal" id="subtotal" value="0.00">
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Tax:</span>
+                            <span id="tax_display">0.00</span>
+                            <input type="hidden" name="tax" id="tax_input" value="0.00">
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Discount:</span>
+                            <span id="discount_display">0.00</span>
+                            <input type="hidden" name="discount" id="discount_input" value="0.00">
+                        </div>
+                        <div class="flex justify-between border-t pt-2 font-bold">
+                            <span>Total:</span>
+                            <span id="total_display">0.00</span>
+                            <input type="hidden" name="total" id="total_input" value="0.00">
+                        </div>
                     </div>
+
                     <div class="mb-6">
-                            <label class="font-semibold">Attachment:</label>
-                            <input type="file" name="attachment" class="w-full border px-3 py-2 rounded-md">
+                        <label class="font-semibold">Attachment:</label>
+                        <input type="file" name="attachment" class="w-full border px-3 py-2 rounded-md">
                     </div>
                     <div class="mt-6">
                         <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700">SAVE INVOICE</button>
                     </div>
                 </div>
             </div>
-
-            <!-- Attachment -->
-
-
         </form>
     </div>
 </div>
@@ -241,7 +243,6 @@
 $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
 
-    // Customer details AJAX
     $('#customer_id').on('change', function() {
         let customerId = $(this).val();
         if(customerId){
@@ -253,6 +254,7 @@ $(document).ready(function() {
                 $('#customer_pan').text(stripTags(data.pan_number));
                 $('#customer_billing_address').text(stripTags(data.billing_address));
                 $('#customer_shipping_address').text(stripTags(data.shipping_address));
+                $('#customer_shipping_address2').text(stripTags(data.shipping_address));
                 $('#customer_state').text(stripTags(data.state));
                 $('#customer_city').text(stripTags(data.city));
                 $('#customer_pincode').text(stripTags(data.pincode));
@@ -308,10 +310,16 @@ $(document).ready(function() {
         let overallDiscount = parseFloat($('#overall_discount').val()) || 0;
         let total = subtotal + taxTotal - overallDiscount;
 
-        $('#subtotal').text(subtotal.toFixed(2));
-        $('#discount').text((discountTotal + overallDiscount).toFixed(2));
-        $('#tax').text(taxTotal.toFixed(2));
-        $('#total').text(total.toFixed(2));
+        $('#subtotal_display').text(subtotal.toFixed(2));
+        $('#tax_display').text(taxTotal.toFixed(2));
+        $('#discount_display').text((discountTotal + overallDiscount).toFixed(2));
+        $('#total_display').text(total.toFixed(2));
+
+        // Update hidden inputs to send to server
+        $('#subtotal').val(subtotal.toFixed(2));
+        $('#tax_input').val(taxTotal.toFixed(2));
+        $('#discount_input').val((discountTotal + overallDiscount).toFixed(2));
+        $('#total_input').val(total.toFixed(2));
     }
 
     $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function(){
@@ -322,14 +330,13 @@ $(document).ready(function() {
         calculateRow(row); calculateTotals();
     });
 
-    // Item select
     $(document).on('change', '.item-select', function(){
         let row = $(this).closest('tr');
         let selected = $(this).find(':selected');
         if(selected.val()==='') return;
 
         row.find('.description').html(
-            `<div class="text-sm text-gray-700 bg-gray-100 p-1 rounded">${selected.data('hsn')} | ${selected.data('code')} | ${selected.data('type')}</div>`
+            `<div class="text-sm text-gray-700 bg-gray-100 p-1 rounded">${selected.data('hsn')} | ${selected.data('code')}</div>`
         );
         row.find('.price').val(selected.data('sale-price'));
         row.find('.unit').text(selected.data('unit'));
@@ -337,7 +344,6 @@ $(document).ready(function() {
 
         calculateRow(row); calculateTotals();
 
-        // Remove selected option from other rows only if not already removed
         $('.item-select').not(this).each(function(){
             if($(this).find('option[value="'+selected.val()+'"]').length){
                 $(this).find('option[value="'+selected.val()+'"]').remove();
@@ -346,13 +352,11 @@ $(document).ready(function() {
         });
     });
 
-    // Add row
     $('#addRow').click(function(){
         let tbody = $('#itemsTable tbody');
         let newRow = tbody.find('tr:first').clone();
         let rowCount = tbody.find('tr').length;
 
-        // Reset inputs and names
         newRow.find('input, select').each(function(){
             let name = $(this).attr('name');
             if(name){ $(this).attr('name', name.replace(/\d+/, rowCount)); }
@@ -362,7 +366,6 @@ $(document).ready(function() {
         });
         newRow.find('.description, .unit, .amount').text('');
 
-        // Remove already selected items from options
         let selectedItems = [];
         $('.item-select').each(function(){
             let val = $(this).val();
@@ -376,7 +379,6 @@ $(document).ready(function() {
         newRow.find('select.select2').select2({ width: '100%' });
     });
 
-    // Remove row
     $(document).on('click', '.removeRow', function(){
         let tbody = $('#itemsTable tbody');
         if(tbody.find('tr').length>1){

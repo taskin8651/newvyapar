@@ -96,9 +96,24 @@ class AddItem extends Model
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
-    public function purchaseBills()
+
+    public function currentStocks()
     {
-        return $this->belongsToMany(PurchaseBill::class, 'add_item_purchase_bill', 'add_item_id', 'purchase_bill_id')
-            ->withPivot('qty');
+        return $this->belongsToMany(CurrentStock::class, 'add_item_current_stock', 'add_item_id', 'current_stock_id');
     }
+
+
+    public function purchaseBills()
+{
+    return $this->belongsToMany(PurchaseBill::class, 'add_item_purchase_bill', 'add_item_id', 'purchase_bill_id')
+        ->withPivot('qty');
+}
+
+public function productCurrentStocks()
+{
+    // Only for products, join pivot table and alias qty to avoid ambiguity
+    return $this->belongsToMany(CurrentStock::class, 'add_item_current_stock', 'add_item_id', 'current_stock_id')
+                ->select('current_stocks.id', 'current_stocks.qty as stock_qty'); // alias qty
+}
+
 }
