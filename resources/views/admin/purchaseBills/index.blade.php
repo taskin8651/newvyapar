@@ -95,27 +95,61 @@
                                     </a>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-center space-x-1">
-                                @can('purchase_bill_show')
-                                    <a href="{{ route('admin.purchase-bills.show', $purchaseBill->id) }}" class="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                @endcan
-                                @can('purchase_bill_edit')
-                                    <a href="{{ route('admin.purchase-bills.edit', $purchaseBill->id) }}" class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                @endcan
-                                @can('purchase_bill_delete')
-                                    <form action="{{ route('admin.purchase-bills.destroy', $purchaseBill->id) }}" method="POST" onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
-                                        @method('DELETE')
-                                        @csrf
-                                        <button type="submit" class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                           <td class="px-4 py-3 text-center relative"
+    x-data="{ open: false }"
+    @mouseenter="open = true"
+    @mouseleave="open = false">
+
+    <!-- Ellipsis icon -->
+    <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
+        <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+    </button>
+
+    <!-- Dropdown menu -->
+    <div x-show="open"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 transform translate-y-1"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-1"
+         class="absolute top-full left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+         style="display: none;">
+
+        @can('purchase_bill_show')
+            <a href="{{ route('admin.purchase-bills.show', $purchaseBill->id) }}"
+               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors">
+                <i class="fas fa-eye mr-2"></i> {{ trans('global.view') }}
+            </a>
+        @endcan
+
+        @can('purchase_bill_edit')
+            <a href="{{ route('admin.purchase-bills.edit', $purchaseBill->id) }}"
+               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-colors">
+                <i class="fas fa-edit mr-2"></i> {{ trans('global.edit') }}
+            </a>
+        @endcan
+
+        @can('purchase_bill_delete')
+            <form action="{{ route('admin.purchase-bills.destroy', $purchaseBill->id) }}"
+                  method="POST"
+                  onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
+                @method('DELETE')
+                @csrf
+                <button type="submit"
+                        class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors">
+                    <i class="fas fa-trash mr-2"></i> {{ trans('global.delete') }}
+                </button>
+            </form>
+        @endcan
+
+        <a href="{{ route('admin.purchase-bills.pdf', $purchaseBill->id) }}" target="_blank"
+           class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">
+            <i class="fas fa-file-pdf mr-2"></i> Print
+        </a>
+    </div>
+</td>
+
                         </tr>
                     @endforeach
                 </tbody>

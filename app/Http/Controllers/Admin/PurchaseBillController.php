@@ -354,4 +354,12 @@ public function edit(PurchaseBill $purchaseBill)
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
+
+    public function pdf(PurchaseBill $purchaseBill)
+    {
+        $bankDetails = BankAccount::all();
+
+        $purchaseBill->load('select_customer', 'items', 'payment_type', 'created_by', 'main_cost_center', 'sub_cost_center');
+    return view('admin.purchaseBills.pdf', compact('purchaseBill', 'bankDetails'));
+    }
 }

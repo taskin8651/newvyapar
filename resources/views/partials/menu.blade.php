@@ -1541,6 +1541,19 @@
                 </a>
             @endcan
 
+
+            @can('terms_access')
+    <a href="{{ route('admin.terms.index') }}"
+       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+              hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+              {{ request()->is('admin/terms*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+        <i class="fas fa-file-contract w-4 mr-3 {{ request()->is('admin/terms*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+        <span>{{ trans('cruds.terms.title') }}</span>
+    </a>
+@endcan
+
+
+
         </div>
     </div>
 </div>
