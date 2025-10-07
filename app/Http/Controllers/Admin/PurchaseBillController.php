@@ -21,6 +21,7 @@ use Tests\Browser\PartyDetailsTest;
 use App\Models\Unit;
 use App\Models\TaxRate;
 use Illuminate\Support\Facades\DB;
+use App\Models\TermAndCondition;
 class PurchaseBillController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -57,65 +58,61 @@ class PurchaseBillController extends Controller
 
 
 
-    public function create()
-    {
-        abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+ public function create()
+{
+    abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        // Fetch customers
-        $select_customers = PartyDetail::pluck('party_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
+    // Customers dropdown
+    $select_customers = PartyDetail::pluck('party_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-
-        $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-
-        // Products (from CurrentStock)
-       
-        $products = CurrentStock::with('items')->get()->mapWithKeys(function ($stock) {
-            $item = $stock->items->first();
-            if (!$item) return [];
-
-            // Use item id as the key
-            return [
-                $item->id => '[Product] ' . $item->item_name 
-                    . ' | HSN: ' . $item->item_hsn
-                    . ' | Price: ' . number_format($item->purchase_price, 2)
-                    . ' | Qty: ' . $stock->qty
-                    . ' | id: ' . $stock->id
-            ];
+    // Fetch products (with stock) and services (without stock)
+    $items = AddItem::whereIn('item_type', ['product', 'service'])
+        ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+        ->with('select_unit')
+        ->get()
+        ->map(function ($item) {
+            if ($item->item_type === 'product') {
+                $item->stock_qty = CurrentStock::where('item_id', $item->id)->sum('qty');
+            } else { // service
+                $item->stock_qty = null;
+            }
+            return $item;
         });
+    
+    // Only get product IDs for stock
+    $product_ids = $items->where('item_type', 'product')->pluck('id')->toArray();
+    
+    // Units
+    $units = Unit::pluck('base_unit', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        // Services (from AddItem)
-        $services = AddItem::where('item_type', 'service')->get()->mapWithKeys(function ($item) {
-            return [
-                $item->id => '[Service] ' . $item->item_name
-                    . ' | HSN: ' . $item->item_hsn
-                    . ' | Price: ' . number_format($item->purchase_price, 2)
-                    . ' | id: ' . $item->id
-            ];
-        });
+    // Cost centers
+    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        // Merge products and services
-        $items = $products->merge($services);
-         $units = Unit::pluck('base_unit', 'id')
-    ->prepend(trans('global.pleaseSelect'), '');
+    // Payment Types
+    $payment_types = BankAccount::pluck('account_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        // Payment Types
-        $payment_types = BankAccount::pluck('account_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-           $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
+    // Tax Rates
+    $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
+
+    return view('admin.purchaseBills.create', compact(
+        'items',
+        'product_ids',
+        'payment_types',
+        'select_customers',
+        'cost',
+        'sub_cost',
+        'units',
+        'tax_rates'
+    ));
+}
 
 
-        return view('admin.purchaseBills.create', compact(
-            'items',
-            'payment_types',
-            'select_customers',
-            'cost',
-            'sub_cost', 'units', 'tax_rates'
-        ));
-    }
 
     public function getSubCostCenters($mainCostCenterId)
     {
@@ -129,9 +126,10 @@ class PurchaseBillController extends Controller
 
 public function store(StorePurchaseBillRequest $request)
 {
-    $purchaseBillNo = 'PB' . mt_rand(1000000000, 9999999999);
+    dd( $request->all());
+    $purchaseBillNo = 'ET' . mt_rand(1000000000, 9999999999);
     while (PurchaseBill::where('purchase_bill_no', $purchaseBillNo)->exists()) {
-        $purchaseBillNo = 'PB' . mt_rand(1000000000, 9999999999);
+        $purchaseBillNo = 'ET' . mt_rand(1000000000, 9999999999);
     }
 
     $fullData = $request->all();
@@ -358,8 +356,9 @@ public function edit(PurchaseBill $purchaseBill)
     public function pdf(PurchaseBill $purchaseBill)
     {
         $bankDetails = BankAccount::all();
+        $terms = TermAndCondition::where('status', 'active')->get();
 
         $purchaseBill->load('select_customer', 'items', 'payment_type', 'created_by', 'main_cost_center', 'sub_cost_center');
-    return view('admin.purchaseBills.pdf', compact('purchaseBill', 'bankDetails'));
+    return view('admin.purchaseBills.pdf', compact('purchaseBill', 'bankDetails', 'terms'));
     }
 }

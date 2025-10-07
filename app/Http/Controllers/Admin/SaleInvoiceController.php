@@ -230,63 +230,149 @@ public function getCustomerDetails($id)
 
 
 
-    public function edit(SaleInvoice $saleInvoice)
-    {
-        abort_if(Gate::denies('sale_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function edit(SaleInvoice $saleInvoice)
+{
+    abort_if(Gate::denies('sale_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $select_customers = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-        $items = AddItem::select('id', 'item_name', 'price', 'unit', 'hsn')->get();
-        $mainCostCenters = MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-        $subCostCenters = SubCostCenter::where('main_cost_center_id', $saleInvoice->main_cost_center)->pluck('sub_cost_center_name', 'id');
+    // Customers dropdown
+    $select_customers = PartyDetail::pluck('party_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        $saleInvoice->load('select_customer', 'items', 'created_by');
+    // Fetch all items (products + services) with stock qty
+    $items = AddItem::whereIn('item_type', ['product', 'service'])
+        ->select('id', 'item_name', 'sale_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+        ->with('select_unit')
+        ->get()
+        ->map(function ($item) {
+            if ($item->item_type === 'product') {
+                $item->stock_qty = CurrentStock::where('item_id', $item->id)->sum('qty');
+            } else {
+                $item->stock_qty = null;
+            }
+            return $item;
+        });
 
-        return view('admin.saleInvoices.edit', compact('saleInvoice', 'select_customers', 'items', 'mainCostCenters', 'subCostCenters'));
+    // Cost centers
+    $cost = MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $sub_cost = SubCostCenter::pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+
+    // Load invoice relations
+    $saleInvoice->load('select_customer', 'items');
+
+    return view('admin.saleInvoices.edit', compact('saleInvoice', 'items', 'select_customers', 'cost', 'sub_cost'));
+}
+
+public function update(Request $request, SaleInvoice $saleInvoice)
+{
+    abort_if(Gate::denies('sale_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+    $request->validate([
+        'select_customer_id' => 'required|exists:party_details,id',
+        'po_no' => 'required|string',
+        'po_date' => 'required|date',
+        'docket_no' => 'nullable|string',
+        'billing_address_invoice' => 'nullable|string',
+        'items' => 'required|array',
+        'items.*.add_item_id' => 'required|exists:add_items,id',
+        'items.*.qty' => 'required|numeric|min:1',
+    ]);
+
+    // Handle attachment
+    if ($request->hasFile('attachment')) {
+        $saleInvoice->attachment = $request->file('attachment')->store('attachments', 'public');
     }
 
-    public function update(UpdateSaleInvoiceRequest $request, SaleInvoice $saleInvoice)
-    {
-        abort_if(Gate::denies('sale_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    // Update invoice details
+    $saleInvoice->update([
+        'payment_type' => $request->payment_type,
+        'select_customer_id' => $request->select_customer_id,
+        'po_no' => $request->po_no,
+        'docket_no' => $request->docket_no,
+        'po_date' => $request->po_date,
+        'due_date' => $request->due_date,
+        'e_way_bill_no' => $request->e_way_bill_no,
+        'phone_number' => $request->customer_phone_invoice,
+        'billing_address' => $request->billing_address_invoice,
+        'shipping_address' => $request->shipping_address_invoice,
+        'notes' => $request->notes,
+        'terms' => $request->terms,
+        'overall_discount' => $request->overall_discount ?? 0,
+        'subtotal' => $request->subtotal ?? 0,
+        'tax' => $request->tax ?? 0,
+        'discount' => $request->discount ?? 0,
+        'total' => $request->total ?? 0,
+        'json_data' => json_encode($request->all()),
+    ]);
 
-        $saleInvoice->update([
-            'customer_id' => $request->customer_id,
-            'bill_date' => $request->bill_date,
-            'payment_type' => $request->payment_type,
-            'subtotal' => $request->subtotal ?? 0,
-            'total_tax' => $request->total_tax ?? 0,
-            'grand_total' => $request->grand_total ?? 0,
-            'main_cost_center' => $request->main_cost_center,
-            'sub_cost_center' => $request->sub_cost_center,
-            'notes' => $request->notes,
+    // Detach old items
+    $saleInvoice->items()->detach();
+
+    // Loop through new items
+    foreach ($request->items as $itemData) {
+        $item = AddItem::find($itemData['add_item_id']);
+
+        // Attach item to pivot
+        $saleInvoice->items()->attach($item->id, [
+            'description' => $itemData['description'] ?? null,
+            'qty' => $itemData['qty'],
+            'unit' => $itemData['unit'] ?? null,
+            'price' => $itemData['price'] ?? 0,
+            'discount_type' => $itemData['discount_type'] ?? 'value',
+            'discount' => $itemData['discount'] ?? 0,
+            'tax_type' => $itemData['tax_type'] ?? 'without',
+            'tax' => $itemData['tax'] ?? 0,
+            'amount' => $itemData['amount'] ?? 0,
+            'created_by_id' => auth()->id(),
+            'json_data' => json_encode($itemData),
         ]);
 
-        // Update Items
-        $saleInvoice->items()->detach();
-        if ($request->has('products')) {
-            foreach ($request->products as $prod) {
-                if (!empty($prod['product_id'])) {
-                    $saleInvoice->items()->attach($prod['product_id'], [
-                        'quantity' => $prod['quantity'] ?? 1,
-                        'unit' => $prod['unit'] ?? '',
-                        'price' => $prod['price'] ?? 0,
-                        'discount' => $prod['discount'] ?? 0,
-                        'tax' => $prod['tax'] ?? 0,
-                        'total' => $prod['total'] ?? 0,
-                    ]);
-                }
-            }
-        }
+        if ($item->item_type === 'product') {
+            // Fetch current stock by item_id
+            $stock = CurrentStock::where('item_id', $item->id)->first();
+            if ($stock) {
+                $previousQty = $stock->qty;
+                $previousAmount = $previousQty * $itemData['price'];
 
-        // Re-upload attachments
-        if ($request->file('attachments')) {
-            $saleInvoice->clearMediaCollection('attachments');
-            foreach ($request->file('attachments') as $file) {
-                $saleInvoice->addMedia($file)->toMediaCollection('attachments');
-            }
-        }
+                // Deduct sold quantity
+                $stock->qty -= $itemData['qty'];
+                $stock->save();
 
-        return redirect()->route('admin.sale-invoices.index')->with('success', 'Sale Invoice updated successfully!');
+                // Create Sale Log
+                \App\Models\SaleLog::create([
+                    'sale_invoice_id' => $saleInvoice->id,
+                    'item_id' => $item->id,
+                    'item_type' => 'product',
+                    'stock_id' => $stock->id,
+                    'previous_qty' => $previousQty,
+                    'sold_qty' => $itemData['qty'],
+                    'previous_amount' => $previousAmount,
+                    'sold_amount' => $itemData['amount'] ?? 0,
+                    'price' => $itemData['price'],
+                    'sold_to_user_id' => $request->select_customer_id,
+                    'created_by_id' => auth()->id(),
+                    'json_data_add_item_sale_invoice' => json_encode($itemData),
+                    'json_data_current_stock' => json_encode($stock),
+                    'json_data_sale_invoice' => json_encode($saleInvoice),
+                ]);
+            }
+        } else {
+            // For service, just log sale
+            \App\Models\SaleLog::create([
+                'sale_invoice_id' => $saleInvoice->id,
+                'item_id' => $item->id,
+                'item_type' => 'service',
+                'sold_qty' => $itemData['qty'],
+                'sold_amount' => $itemData['amount'] ?? 0,
+                'price' => $itemData['price'],
+                'sold_to_user_id' => $request->select_customer_id,
+                'json_data_sale_invoice' => json_encode($saleInvoice),
+                'json_data_add_item_sale_invoice' => json_encode($itemData),
+            ]);
+        }
     }
+
+    return redirect()->route('admin.sale-invoices.index')->with('success', 'Sale Invoice Updated Successfully.');
+}
 
     public function show(SaleInvoice $saleInvoice)
     {
