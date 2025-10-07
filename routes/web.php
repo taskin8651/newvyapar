@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\PurchaseBillController;
 use App\Http\Controllers\Admin\CurrentStocksController;
+use App\Http\Controllers\Admin\TermAndConditionController;
 
 Route::redirect('/', '/login');
 Route::get('/home', function () {
@@ -166,6 +167,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('purchase-bills/parse-csv-import', 'PurchaseBillController@parseCsvImport')->name('purchase-bills.parseCsvImport');
     Route::post('purchase-bills/process-csv-import', 'PurchaseBillController@processCsvImport')->name('purchase-bills.processCsvImport');
     Route::resource('purchase-bills', 'PurchaseBillController');
+    Route::get('purchase-bills/{purchase_bill}/pdf', [App\Http\Controllers\Admin\PurchaseBillController::class, 'pdf'])->name('purchase-bills.pdf');
 
     // Current Stocks
     Route::delete('current-stocks/destroy', 'CurrentStocksController@massDestroy')->name('current-stocks.massDestroy');
@@ -341,6 +343,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     ->name('saleInvoice.getCustomerDetails');
 
     //End Rock
+
+     Route::resource('terms', TermAndConditionController::class);
 });
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
     // Change password
