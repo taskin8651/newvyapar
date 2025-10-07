@@ -132,7 +132,7 @@ public function getCustomerDetails($id)
 
         // Generate random sale invoice number
         $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100,999);
-
+      
         // Save invoice
         $invoice = SaleInvoice::create([
             'sale_invoice_number' => $sale_invoice_number,
@@ -177,11 +177,15 @@ public function getCustomerDetails($id)
                 'json_data' => json_encode($itemData),
             ]);
 
-            if($item->item_type === 'product'){
-                $stock = \App\Models\CurrentStock::find($item->id);
-                if($stock){
-                    $previousQty = $stock->quantity_available;
+            if ($item->item_type === 'product') {
+                // Fetch current stock by item_id
+                $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
+               
+                if ($stock) {
+                    $previousQty = $stock->qty; // or quantity_available if using that column
                     $previousAmount = $previousQty * $itemData['price'];
+
+                    // Deduct sold quantity
                     $stock->qty -= $itemData['qty'];
                     $stock->save();
 
@@ -201,10 +205,10 @@ public function getCustomerDetails($id)
                         'json_data_add_item_sale_invoice' => json_encode($itemData),
                         'json_data_current_stock' => json_encode($stock),
                         'json_data_sale_invoice' => json_encode($invoice),
-                       
                     ]);
                 }
-            } else {
+            }
+            else {
                 // For service, just log sale
                 \App\Models\SaleLog::create([
                     'sale_invoice_id' => $invoice->id,
