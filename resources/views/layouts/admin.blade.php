@@ -349,7 +349,7 @@
 <script>
     $(document).ready(function() {
         $('.select2').select2({
-            placeholder: "🔍 Select Item",
+            // placeholder: "🔍 Select Item",
             allowClear: true,
             width: '100%' // Tailwind ke saath full width
         });

@@ -32,7 +32,10 @@
                         @foreach($select_customers as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
                         @endforeach
+
+                        
                     </select>
+                    
 
                     <div id="customerDetailsCard" class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-white border-4 border-blue-300 rounded-xl shadow-xl hidden">
                         <div class="overflow-x-auto">
@@ -91,7 +94,29 @@
                             </table>
                         </div>
                     </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Main Cost Center</label>
+                        <select name="main_cost_center_id" id="main_cost_center_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Main Cost Center --</option>
+                            @foreach($cost as $id => $name)
+                                <option value="{{ $id }}" {{ old('main_cost_center_id') == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Sub Cost Center</label>
+                        <select name="sub_cost_center_id" id="sub_cost_center_id"
+                                class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Sub Cost Center --</option>
+                        </select>
+                    </div>
                 </div>
+
+               
 
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
@@ -387,5 +412,30 @@ $(document).ready(function() {
         } else { alert('At least one row is required'); }
     });
 });
+</script>
+
+
+<script>
+    $(document).ready(function () {
+        $('#main_cost_center_id').on('change', function () {
+            var mainCostCenterId = $(this).val();
+            if (mainCostCenterId) {
+                $.ajax({
+                    url: "{{ route('admin.purchaseBill.getSubCostCenters', '') }}/" + mainCostCenterId,
+                    type: "GET",
+                    success: function (data) {
+                        $('#sub_cost_center_id').empty();
+                        $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
+                        $.each(data, function (key, value) {
+                            $('#sub_cost_center_id').append('<option value="' + key + '">' + value + '</option>');
+                        });
+                    }
+                });
+            } else {
+                $('#sub_cost_center_id').empty();
+                $('#sub_cost_center_id').append('<option value="">-- Select Sub Cost Center --</option>');
+            }
+        });
+    });
 </script>
 @endsection
