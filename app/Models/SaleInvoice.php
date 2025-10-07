@@ -58,6 +58,8 @@ class SaleInvoice extends Model implements HasMedia
         'payment_type',
         'status',
         'sale_invoice_number',
+        'main_cost_center_id',
+        'sub_cost_center_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -124,6 +126,16 @@ class SaleInvoice extends Model implements HasMedia
     public function created_by()
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+    // ✅ Added relationships for cost centers
+    public function main_cost_center()
+    {
+        return $this->belongsTo(MainCostCenter::class, 'main_cost_center_id');
+    }
+
+    public function sub_cost_center()
+    {
+        return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
     }
     
 }

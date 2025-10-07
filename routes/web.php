@@ -97,6 +97,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('sale-invoices/parse-csv-import', 'SaleInvoiceController@parseCsvImport')->name('sale-invoices.parseCsvImport');
     Route::post('sale-invoices/process-csv-import', 'SaleInvoiceController@processCsvImport')->name('sale-invoices.processCsvImport');
     Route::resource('sale-invoices', 'SaleInvoiceController');
+    Route::get('sale-invoices/{sale_invoice}/pdf', [App\Http\Controllers\Admin\SaleInvoiceController::class, 'pdf'])->name('sale-invoices.pdf');
 
     // Estimate Quotation
     Route::delete('estimate-quotations/destroy', 'EstimateQuotationController@massDestroy')->name('estimate-quotations.massDestroy');
