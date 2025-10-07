@@ -23,29 +23,41 @@ class SaleInvoice extends Model implements HasMedia
         'image',
         'document',
     ];
-
+    protected $casts = [
+        'po_date' => 'date',
+        'due_date' => 'date',
+    ];
     protected $dates = [
         'po_date',
+        
         'created_at',
         'updated_at',
         'deleted_at',
     ];
 
     protected $fillable = [
-        'select_customer_id',
-        'billing_name',
-        'phone_number',
+        'select_customer_id',                 // Customer
+        'po_no',                    // Invoice/PO Number
+        'docket_no',
+        'po_date',
+        'due_date',
         'e_way_bill_no',
+        'phone_number',
         'billing_address',
         'shipping_address',
-        'po_no',
-        'po_date',
-        'qty',
-        'description',
-        'created_at',
-        'updated_at',
-        'deleted_at',
+        'notes',
+        'terms',
+        'overall_discount',
+        'subtotal',
+        'tax',
+        'discount',
+        'total',
+        'attachment',               // File path
         'created_by_id',
+        'json_data',
+        'payment_type',
+        'status',
+        'sale_invoice_number',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -76,7 +88,20 @@ class SaleInvoice extends Model implements HasMedia
 
     public function items()
     {
-        return $this->belongsToMany(AddItem::class);
+        return $this->belongsToMany(\App\Models\AddItem::class, 'add_item_sale_invoice', 'sale_invoice_id', 'add_item_id')
+            ->withPivot([
+                'description', 
+                'qty', 
+                'unit', 
+                'price', 
+                'discount_type', 
+                'discount', 
+                'tax_type', 
+                'tax', 
+                'amount',
+                'created_by_id',
+                'json_data'
+            ])->withTimestamps();
     }
 
     public function getImageAttribute()
@@ -100,4 +125,5 @@ class SaleInvoice extends Model implements HasMedia
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+    
 }
