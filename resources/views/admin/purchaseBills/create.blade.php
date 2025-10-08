@@ -120,12 +120,21 @@
                     
                     <input type="text" name="po_no" value="{{ $poNo }}" placeholder="Invoice/PO No." class="w-full rounded-md border px-3 py-2">
                     <input type="text" name="docket_no" placeholder="Docket Number" class="w-full rounded-md border px-3 py-2 mt-2">
-                    <input type="text" name="ref_no" placeholder="Reference Bill  Number" class="w-full rounded-md border px-3 py-2 mt-2">
+                    <input type="text" name="purchase_bill_no" placeholder="Reference Bill  Number" class="w-full rounded-md border px-3 py-2 mt-2">
 
                     <div class="grid grid-cols-2 gap-4 mt-2">
-                        <input type="date" name="po_date" class="w-full rounded-md border px-3 py-2">
+                    <label for="po_date">Billing Date</label>
+                    <input 
+                        type="date" 
+                        name="po_date" 
+                        class="w-full rounded-md border px-3 py-2" 
+                        value="{{ old('po_date', date('Y-m-d')) }}"
+                    >
+
+                        <label for="due_date">Purchace Bill Date</label>
                         <input type="date" name="due_date" class="w-full rounded-md border px-3 py-2">
                     </div>
+                    
                     <input type="text" name="e_way_bill_no" placeholder="E-Way Bill No." class="w-full rounded-md border px-3 py-2 mt-2">
                     <input type="text" name="customer_phone_invoice" id="invoice_customer_phone" placeholder="Customer Phone" class="w-full rounded-md border px-3 py-2 mt-2">
                     <textarea name="billing_address_invoice" id="invoice_billing_address" rows="2" class="w-full rounded-md border px-3 py-2 mt-2" placeholder="Billing Address"></textarea>
@@ -338,7 +347,7 @@ $(document).ready(function() {
             <!-- Totals & Overall Discount -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="space-y-4">
-                    <textarea name="notes" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Notes"></textarea>
+                    <textarea name="description" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Notes"></textarea>
                     <textarea name="terms" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Terms & Conditions"></textarea>
                 </div>
                 <div>

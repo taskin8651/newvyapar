@@ -174,6 +174,10 @@ class PurchaseBillController extends Controller
         'status' => 'pending',
         'main_cost_center_id' => $request->main_cost_center_id,
         'sub_cost_center_id'  => $request->sub_cost_center_id,
+        'reference_no' => $request->reference_no,
+        'ddescription' => $request->ddescription,
+        'created_by_id' => auth()->id(),
+        'payment_type_id' => $request->payment_type_id,
     ]);
 
     // Loop through items
@@ -262,120 +266,223 @@ public function edit(PurchaseBill $purchaseBill)
 {
     abort_if(Gate::denies('purchase_bill_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    // 🔹 Dropdown data
+    // Customers
     $select_customers = PartyDetail::pluck('party_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
+
+    // Cost Centers
     $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
-    $subCostCenters = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
+    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
+
+    // Units
     $units = Unit::pluck('base_unit', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
+
+    // Payment Types
     $payment_types = BankAccount::pluck('account_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
+
+    // Tax Rates
     $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
 
-   $itemsWithPivot = \DB::table('add_item_purchase_bill as aipb')
-    ->join('current_stocks as cs', 'aipb.add_item_id', '=', 'cs.id') // pivot -> current stock
-    ->join('add_items as ai', 'cs.item_id', '=', 'ai.id')            // current stock -> add_items
-    ->leftJoin('units as u', 'ai.select_unit_id', '=', 'u.id')       // unit
-    ->select(
-        'cs.id as stock_id',        // current stock ID
-        'ai.id as item_id',         // add_item ID
-        'ai.item_name',
-        'ai.purchase_price',
-        'u.base_unit as unit',
-        'aipb.qty'
-    )
-    ->where('aipb.purchase_bill_id', $purchaseBill->id)
-    ->get();
+    // Fetch items with their pivot data (products via current_stocks, services direct)
+    $itemsWithPivot = collect();
 
-    // 🔹 All items for selection dropdown if needed
-    $allItems = AddItem::all();
+    $pivotRecords = \DB::table('add_item_purchase_bill')
+        ->where('purchase_bill_id', $purchaseBill->id)
+        ->get();
+
+    foreach ($pivotRecords as $pivot) {
+        // Try joining current_stock → add_item
+        $stock = \App\Models\CurrentStock::find($pivot->add_item_id);
+        if ($stock && $stock->item_id) {
+            $item = \App\Models\AddItem::find($stock->item_id);
+            $itemsWithPivot->push([
+                'pivot_id' => $pivot->id,
+                'stock_id' => $stock->id,
+                'item_id' => $item->id,
+                'item_name' => $item->item_name,
+                'item_code' => $item->item_code,
+                'item_hsn' => $item->item_hsn,
+                'purchase_price' => $item->purchase_price,
+                'unit' => $item->select_unit->base_unit ?? '',
+                'qty' => $pivot->qty,
+                'price' => $pivot->price,
+                'discount' => $pivot->discount,
+                'tax' => $pivot->tax,
+                'amount' => $pivot->amount,
+                'description' => $pivot->description,
+            ]);
+        } else {
+            // For services (direct link)
+            $item = \App\Models\AddItem::find($pivot->add_item_id);
+            if ($item) {
+                $itemsWithPivot->push([
+                    'pivot_id' => $pivot->id,
+                    'stock_id' => null,
+                    'item_id' => $item->id,
+                    'item_name' => $item->item_name,
+                    'item_code' => $item->item_code,
+                    'item_hsn' => $item->item_hsn,
+                    'purchase_price' => $item->purchase_price,
+                    'unit' => $item->select_unit->base_unit ?? '',
+                    'qty' => $pivot->qty,
+                    'price' => $pivot->price,
+                    'discount' => $pivot->discount,
+                    'tax' => $pivot->tax,
+                    'amount' => $pivot->amount,
+                    'description' => $pivot->description,
+                ]);
+            }
+        }
+    }
+
+    // All available items for dropdown
+    $items = AddItem::whereIn('item_type', ['product', 'service'])
+        ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+        ->with('select_unit')
+        ->get();
+
+    foreach ($items as $itm) {
+        $itm->stock_qty = $itm->item_type === 'product'
+            ? CurrentStock::where('item_id', $itm->id)->sum('qty')
+            : null;
+    }
 
     return view('admin.purchaseBills.edit', compact(
-        'allItems',
-        'payment_types',
         'purchaseBill',
+        'itemsWithPivot',
+        'items',
         'select_customers',
         'cost',
-        'subCostCenters',
+        'sub_cost',
         'units',
-        'tax_rates',
-        'itemsWithPivot'
+        'payment_types',
+        'tax_rates'
     ));
 }
 
 
 
 
- public function update(UpdatePurchaseBillRequest $request, PurchaseBill $purchaseBill)
+
+public function update(Request $request, PurchaseBill $purchaseBill)
 {
-    // 1️⃣ Prepare full request data with user ID
-    $fullData = $request->all();
-    $fullData['user_id'] = auth()->id();
-
-    // 2️⃣ Update PurchaseBill and save full JSON in 'json_data' field
-    $purchaseBill->update(array_merge($fullData, [
-        'json_data' => json_encode($fullData),
-    ]));
-
-    // 3️⃣ Sync items with qty in pivot table
-    if ($request->has('items')) {
-        $syncData = [];
-        foreach ($request->items as $item) {
-            $syncData[$item['id']] = ['qty' => $item['qty']];
-        }
-        $purchaseBill->items()->sync($syncData);
-    }
-
-    // 4️⃣ Update current stock for products
-    // Optional: adjust stock based on difference (old vs new qty)
-    foreach ($request->items as $item) {
-        $stock = \App\Models\CurrentStock::find($item['id']); // CurrentStock ID
-        if ($stock) {
-            // Calculate new quantity difference
-            $oldQty = $purchaseBill->items()->where('add_item_id', $item['id'])->first()->pivot->qty ?? 0;
-            $stock->qty = $stock->qty - $oldQty + $item['qty'];
-            $stock->save();
-        }
-    }
-
-    // 5️⃣ Save PurchaseLog with full JSON in 'extra_data'
-    \App\Models\PurchaseLog::create([
-        'user_id' => auth()->id(),
-        'party_id' => $request->select_customer_id,
-        'main_cost_center_id' => $request->main_cost_center_id,
-        'sub_cost_center_id' => $request->sub_cost_center_id,
-        'payment_type_id' => $request->payment_type_id,
-        'items' => $request->items,
-        'extra_data' => $fullData, // everything including user_id
+    $request->validate([
+        'select_customer_id' => 'required|exists:party_details,id',
+        'po_no' => 'required|string',
+        'ref_no' => 'required|string',
+        'due_date' => 'required|date',
+        'po_date' => 'required|date',
+        'items' => 'required|array|min:1',
+        'items.*.id' => 'required|exists:add_items,id',
+        'items.*.qty' => 'required|numeric|min:1',
+        'main_cost_center_id' => 'required|exists:main_cost_centers,id',
+        'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
     ]);
 
-    // 6️⃣ Handle media uploads
-    if ($request->hasFile('image')) {
-        if ($purchaseBill->getFirstMedia('image')) {
-            $purchaseBill->getFirstMedia('image')->delete();
+    // Handle new attachment
+    $attachmentPath = $request->hasFile('attachment') 
+        ? $request->file('attachment')->store('attachments', 'public') 
+        : $purchaseBill->attachment;
+
+    // Update PurchaseBill
+    $purchaseBill->update([
+        'select_customer_id' => $request->select_customer_id,
+        'po_no' => $request->po_no,
+        'ref_no' => $request->ref_no,
+        'docket_no' => $request->docket_no,
+        'po_date' => $request->po_date,
+        'due_date' => $request->due_date,
+        'billing_address' => $request->billing_address_invoice,
+        'shipping_address' => $request->shipping_address_invoice,
+        'notes' => $request->notes,
+        'terms' => $request->terms,
+        'overall_discount' => $request->overall_discount ?? 0,
+        'subtotal' => $request->subtotal ?? 0,
+        'tax' => $request->tax ?? 0,
+        'discount' => $request->discount ?? 0,
+        'total' => $request->total ?? 0,
+        'attachment' => $attachmentPath,
+        'main_cost_center_id' => $request->main_cost_center_id,
+        'sub_cost_center_id'  => $request->sub_cost_center_id,
+        'json_data' => json_encode($request->all()),
+    ]);
+
+    // Sync / update items
+    $purchaseBill->items()->detach();
+
+    foreach ($request->items as $itemData) {
+        $item = \App\Models\AddItem::find($itemData['id']);
+        if (!$item) continue;
+
+        $pivotData = [
+            'description' => $itemData['description'] ?? null,
+            'qty' => $itemData['qty'],
+            'unit' => $itemData['unit'] ?? null,
+            'price' => $itemData['price'] ?? 0,
+            'discount_type' => $itemData['discount_type'] ?? 'value',
+            'discount' => $itemData['discount'] ?? 0,
+            'tax_type' => $itemData['tax_type'] ?? 'without',
+            'tax' => $itemData['tax'] ?? 0,
+            'amount' => $itemData['amount'] ?? 0,
+            'created_by_id' => auth()->id(),
+            'json_data' => json_encode($itemData),
+        ];
+
+        if ($item->item_type === 'product') {
+            $stock = \App\Models\CurrentStock::firstOrCreate(['item_id' => $item->id], ['qty' => 0]);
+            $oldQty = $stock->qty;
+            $stock->qty = $oldQty + ($itemData['qty'] ?? 0);
+            $stock->save();
+
+            $purchaseBill->items()->attach($stock->id, $pivotData);
+
+            \App\Models\PurchaseLog::create([
+                'purchase_bill_id' => $purchaseBill->id,
+                'party_id' => $request->select_customer_id,
+                'main_cost_center_id' => $request->main_cost_center_id,
+                'sub_cost_center_id' => $request->sub_cost_center_id,
+                'payment_type_id' => $request->payment_type_id,
+                'json_data' => json_encode($request->all()),
+                'stock_id' => $stock->id,
+                'previous_qty' => $oldQty,
+                'purchased_qty' => $itemData['qty'],
+                'price' => $itemData['price'],
+                'purchased_amount' => $itemData['amount'] ?? 0,
+                'purchased_to_user_id' => $request->select_customer_id,
+                'created_by_id' => auth()->id(),
+                'json_data_purchase_invoice' => json_encode($itemData),
+                'json_data_current_stock' => json_encode($stock->toArray()),
+                'json_data_add_item_purchase_invoice' => json_encode($purchaseBill->toArray()),
+            ]);
+        } else {
+            $purchaseBill->items()->attach($item->id, $pivotData);
+
+            \App\Models\PurchaseLog::create([
+                'purchase_bill_id' => $purchaseBill->id,
+                'party_id' => $request->select_customer_id,
+                'main_cost_center_id' => $request->main_cost_center_id,
+                'sub_cost_center_id' => $request->sub_cost_center_id,
+                'payment_type_id' => $request->payment_type_id,
+                'json_data' => json_encode($request->all()),
+                'purchased_qty' => $itemData['qty'],
+                'price' => $itemData['price'],
+                'purchased_amount' => $itemData['amount'] ?? 0,
+                'purchased_to_user_id' => $request->select_customer_id,
+                'created_by_id' => auth()->id(),
+                'json_data_purchase_invoice' => json_encode($itemData),
+                'json_data_add_item_purchase_invoice' => json_encode($purchaseBill->toArray()),
+            ]);
         }
-        $purchaseBill->addMedia($request->file('image'))->toMediaCollection('image');
     }
 
-    if ($request->hasFile('document')) {
-        if ($purchaseBill->getFirstMedia('document')) {
-            $purchaseBill->getFirstMedia('document')->delete();
-        }
-        $purchaseBill->addMedia($request->file('document'))->toMediaCollection('document');
-    }
-
-    if ($media = $request->input('ck-media', false)) {
-        \Spatie\MediaLibrary\MediaCollections\Models\Media::whereIn('id', $media)
-            ->update(['model_id' => $purchaseBill->id]);
-    }
-
-    // 7️⃣ Redirect back with success
     return redirect()->route('admin.purchase-bills.index')
-                     ->with('success', 'Purchase bill updated successfully.');
+                     ->with('success', 'Purchase Bill Updated Successfully.');
 }
+
 
 
     public function show(PurchaseBill $purchaseBill)

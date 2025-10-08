@@ -61,6 +61,12 @@ class PurchaseBill extends Model implements HasMedia
         'sale_invoice_number',
         'main_cost_center_id',
         'sub_cost_center_id',
+        'purchase_invoice_number',
+        'description',
+        'reference_no',
+        'payment_type_id',
+        'purchase_bill_no',
+        'purchase_bill_no',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
