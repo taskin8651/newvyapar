@@ -42,14 +42,15 @@ public function create()
     abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     // Customers dropdown
-    $select_customers = \App\Models\PartyDetail::select('id', 'party_name', 'opening_balance', 'opening_balance_type')
+  $select_customers = \App\Models\PartyDetail::select('id', 'party_name', 'opening_balance', 'opening_balance_type')
     ->get()
     ->mapWithKeys(function($customer) {
         $balance = number_format($customer->opening_balance, 2);
         $type = $customer->opening_balance_type === 'Debit' ? 'Dr' : 'Cr';
         return [$customer->id => "{$customer->party_name} (₹{$balance} {$type})"];
-    })
-    ->prepend(trans('global.pleaseSelect'), '');
+    });
+
+
 
 
     // Fetch all items (products + services)
