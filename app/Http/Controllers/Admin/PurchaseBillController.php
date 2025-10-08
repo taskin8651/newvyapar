@@ -22,6 +22,8 @@ use App\Models\Unit;
 use App\Models\TaxRate;
 use Illuminate\Support\Facades\DB;
 use App\Models\TermAndCondition;
+use Carbon\Carbon;
+
 class PurchaseBillController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -62,49 +64,73 @@ class PurchaseBillController extends Controller
 {
     abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    // Customers dropdown
-    $select_customers = PartyDetail::pluck('party_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
+    // 1️⃣ Fetch full customer details
+    $select_customers = PartyDetail::all();
 
-    // Fetch products (with stock) and services (without stock)
+    // 2️⃣ Prepare array for dropdown + JS
+    $select_customers_details = $select_customers->map(function($c){
+    $opening_balance_date = $c->opening_balance_date ? Carbon::parse($c->opening_balance_date)->format('d-m-Y') : '-';
+    
+    $balance_type = $c->opening_balance_type ?? 'Debit'; // Default Debit
+    if($balance_type === 'Debit'){
+        $icon = '↓';
+        $color = 'red';
+        $label = 'Receivable';
+    } else {
+        $icon = '↑';
+        $color = 'green';
+        $label = 'Payable';
+    }
+
+    $opening_balance_text = "<span style='color: $color; font-weight:bold;'>"
+                            . $c->opening_balance . " ($opening_balance_date) $balance_type ($label) $icon</span>";
+
+    return [
+        'id' => $c->id,
+        'name' => $c->party_name . ' - ' . $opening_balance_text, // HTML included
+        'party_name' => $c->party_name,
+        'gstin' => $c->gstin,
+        'phone' => $c->phone_number,
+        'pan' => $c->pan_number,
+        'billing_address' => $c->billing_address,
+        'shipping_address' => $c->shipping_address,
+        'state' => $c->state,
+        'city' => $c->city,
+        'pincode' => $c->pincode,
+        'email' => $c->email,
+        'credit_limit' => $c->credit_limit,
+        'payment_terms' => $c->payment_terms,
+        'opening_balance' => $c->opening_balance,
+        'opening_balance_date' => $opening_balance_date,
+        'opening_balance_type' => $c->opening_balance_type,
+        'current_balance' => $c->current_balance,
+    ];
+});
+
+    // 3️⃣ Fetch products, units, cost centers, payment types, tax rates (same as before)
     $items = AddItem::whereIn('item_type', ['product', 'service'])
         ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
         ->with('select_unit')
         ->get()
         ->map(function ($item) {
-            if ($item->item_type === 'product') {
-                $item->stock_qty = CurrentStock::where('item_id', $item->id)->sum('qty');
-            } else { // service
-                $item->stock_qty = null;
-            }
+            $item->stock_qty = ($item->item_type === 'product') ? CurrentStock::where('item_id', $item->id)->sum('qty') : null;
             return $item;
         });
-    
-    // Only get product IDs for stock
+
     $product_ids = $items->where('item_type', 'product')->pluck('id')->toArray();
-    
-    // Units
-    $units = Unit::pluck('base_unit', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-
-    // Cost centers
-    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-
-    // Payment Types
-    $payment_types = BankAccount::pluck('account_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-
-    // Tax Rates
+    $units = Unit::pluck('base_unit', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
     $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
 
+    // 4️⃣ Pass to view
     return view('admin.purchaseBills.create', compact(
         'items',
         'product_ids',
         'payment_types',
         'select_customers',
+        'select_customers_details', // 🔹 pass extra details for JS
         'cost',
         'sub_cost',
         'units',
@@ -207,7 +233,7 @@ class PurchaseBillController extends Controller
             $stock->save();
 
             // Attach using CurrentStock ID for clarity
-            $invoice->items()->attach($stock->id, $pivotData);
+            $invoice->items()->attach($item->id, $pivotData);
 
             // Purchase Log
             \App\Models\PurchaseLog::create([
@@ -267,9 +293,8 @@ public function edit(PurchaseBill $purchaseBill)
     abort_if(Gate::denies('purchase_bill_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     // Customers
-    $select_customers = PartyDetail::pluck('party_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-
+    $select_customers = PartyDetail::pluck('party_name', 'id');
+   
     // Cost Centers
     $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
@@ -300,7 +325,7 @@ public function edit(PurchaseBill $purchaseBill)
         if ($stock && $stock->item_id) {
             $item = \App\Models\AddItem::find($stock->item_id);
             $itemsWithPivot->push([
-                'pivot_id' => $pivot->id,
+               
                 'stock_id' => $stock->id,
                 'item_id' => $item->id,
                 'item_name' => $item->item_name,
@@ -320,7 +345,7 @@ public function edit(PurchaseBill $purchaseBill)
             $item = \App\Models\AddItem::find($pivot->add_item_id);
             if ($item) {
                 $itemsWithPivot->push([
-                    'pivot_id' => $pivot->id,
+                   
                     'stock_id' => null,
                     'item_id' => $item->id,
                     'item_name' => $item->item_name,

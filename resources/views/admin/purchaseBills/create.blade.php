@@ -20,10 +20,11 @@
                     <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
                     <select name="select_customer_id" id="customer_id" class="form-select select2 w-full" required>
                         <option value="">-- Select Customer --</option>
-                        @foreach($select_customers as $id => $name)
-                            <option value="{{ $id }}">{{ $name }}</option>
+                        @foreach($select_customers_details as $customer)
+                            <option value="{{ $customer['id'] }}">{!! $customer['name'] !!}</option>
                         @endforeach
                     </select>
+
 
                     <div id="customerDetailsCard" class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-white border-4 border-blue-300 rounded-xl shadow-xl hidden">
                         <div class="overflow-x-auto">
@@ -582,54 +583,62 @@ $(document).ready(function() {
 
 <script>
 $(document).ready(function() {
-    $('.select2').select2({ width: '100%' });
+    // Prepare customer data
+    let customerData = @json($select_customers_details); // Array of objects with id, name, opening_balance, date, type
+
+    function formatCustomer(customer) {
+        if (!customer.id) return customer.text; // placeholder
+        let balanceText = customer.opening_balance + ' (' + customer.date + ') ' + customer.type + ' ' + (customer.type === 'Debit' ? '↓' : '↑');
+        let color = customer.type === 'Debit' ? 'red' : 'green';
+        return $('<span style="color:' + color + '">' + customer.text + ' - ' + balanceText + '</span>');
+    }
+
+    $('#customer_id').select2({
+        width: '100%',
+        data: customerData.map(c => ({
+            id: c.id,
+            text: c.name,
+            opening_balance: c.opening_balance,
+            date: c.opening_balance_date,
+            type: c.opening_balance_type
+        })),
+        templateResult: formatCustomer,  // for dropdown list
+        templateSelection: formatCustomer // for selected value
+    });
 
     $('#customer_id').on('change', function() {
         let customerId = $(this).val();
         if(customerId){
-            $.get("{{ route('admin.saleInvoice.getCustomerDetails', '') }}/"+customerId, function(data){
-                function stripTags(input){ return $('<div>').html(input).text(); }
-                $('#customer_name').text(stripTags(data.party_name));
-                $('#customer_gstin').text(stripTags(data.gstin));
-                $('#customer_phone').text(stripTags(data.phone_number));
-                $('#customer_pan').text(stripTags(data.pan_number));
-                $('#customer_billing_address').text(stripTags(data.billing_address));
-                $('#customer_shipping_address').text(stripTags(data.shipping_address));
-                $('#customer_shipping_address2').text(stripTags(data.shipping_address));
-                $('#customer_state').text(stripTags(data.state));
-                $('#customer_city').text(stripTags(data.city));
-                $('#customer_pincode').text(stripTags(data.pincode));
-                $('#customer_email').text(stripTags(data.email));
-                $('#customer_credit_limit').text(stripTags(data.credit_limit));
-                $('#customer_payment_terms').text(stripTags(data.payment_terms));
-                $('#customer_opening_balance').text(stripTags(data.opening_balance) + ' (' + stripTags(data.opening_balance_date) + ')');
-                let balanceType = stripTags(data.opening_balance_type);
-                if(balanceType==='Debit'){
-                    $('#opening_balance_type').text(balanceType + ' (Receivable)').removeClass('text-green-700').addClass('text-red-600 font-bold');
-                } else {
-                    $('#opening_balance_type').text(balanceType + ' (Payable)').removeClass('text-red-600').addClass('text-green-700 font-bold');
-                }
-                $('#customer_current_balance').text(data.current_balance ?? '0.00');
-                $('#invoice_customer_phone').val(stripTags(data.phone_number));
-                $('#invoice_billing_address').val(stripTags(data.billing_address));
-                $('#customerDetailsCard').removeClass('hidden');
-            });
-        } else { $('#customerDetailsCard').addClass('hidden'); }
-    });
+            let data = customerData.find(c => c.id == customerId);
 
-    
+            // Fill card details
+            $('#customer_name').text(data.name);
+            $('#customer_gstin').text(data.gstin);
+            $('#customer_phone').text(data.phone);
+            $('#customer_pan').text(data.pan);
+            $('#customer_billing_address').text(data.billing_address);
+            $('#customer_shipping_address').text(data.shipping_address);
+            $('#customer_shipping_address2').text(data.shipping_address);
+            $('#customer_state').text(data.state);
+            $('#customer_city').text(data.city);
+            $('#customer_pincode').text(data.pincode);
+            $('#customer_email').text(data.email);
+            $('#customer_credit_limit').text(data.credit_limit);
+            $('#customer_payment_terms').text(data.payment_terms);
+            $('#customer_opening_balance').text(data.opening_balance + ' (' + data.opening_balance_date + ')');
+            $('#opening_balance_type').text(data.opening_balance_type + ' (' + (data.opening_balance_type==='Debit' ? 'Receivable' : 'Payable') + ') ' + (data.opening_balance_type==='Debit' ? '↓' : '↑'))
+                .removeClass('text-red-600 text-green-700 font-bold')
+                .addClass(data.opening_balance_type==='Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold');
+            $('#customer_current_balance').text(data.current_balance ?? '0.00');
+            $('#invoice_customer_phone').val(data.phone);
+            $('#invoice_billing_address').val(data.billing_address);
+            $('#customerDetailsCard').removeClass('hidden');
+        } else { 
+            $('#customerDetailsCard').addClass('hidden'); 
+        }
+    });
 });
 </script>
+
+
 @endsection
-
-
-
-
-
-
-
-
-
-
-
-
