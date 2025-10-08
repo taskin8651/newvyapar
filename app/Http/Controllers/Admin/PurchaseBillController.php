@@ -398,7 +398,7 @@ public function update(Request $request, PurchaseBill $purchaseBill)
     $request->validate([
         'select_customer_id' => 'required|exists:party_details,id',
         'po_no' => 'required|string',
-        'ref_no' => 'required|string',
+        'reference_no' => 'required|string',
         'due_date' => 'required|date',
         'po_date' => 'required|date',
         'items' => 'required|array|min:1',
@@ -417,7 +417,7 @@ public function update(Request $request, PurchaseBill $purchaseBill)
     $purchaseBill->update([
         'select_customer_id' => $request->select_customer_id,
         'po_no' => $request->po_no,
-        'ref_no' => $request->ref_no,
+        'reference_no' => $request->ref_no,
         'docket_no' => $request->docket_no,
         'po_date' => $request->po_date,
         'due_date' => $request->due_date,
@@ -434,11 +434,11 @@ public function update(Request $request, PurchaseBill $purchaseBill)
         'main_cost_center_id' => $request->main_cost_center_id,
         'sub_cost_center_id'  => $request->sub_cost_center_id,
         'json_data' => json_encode($request->all()),
+         'updated_by_id' => auth()->id(),
     ]);
 
     // Sync / update items
     $purchaseBill->items()->detach();
-
     foreach ($request->items as $itemData) {
         $item = \App\Models\AddItem::find($itemData['id']);
         if (!$item) continue;

@@ -38,9 +38,14 @@
 
             <!-- Header Gradient -->
             <div class="header-gradient text-white p-4 text-xs">
+                <div class="flex items-center justify-center relative mb-4">
+    <h1 class="text-lg font-bold absolute left-1/2 transform -translate-x-1/2 text-center">PURCHASE BILL</h1>
+    <img src="{{ asset('logo.png') }}" alt="Logo" class="h-12 ml-auto">
+</div>
+
+
                 <div class="flex justify-between items-start">
                     <div>
-                        <h1 class="text-lg font-bold">PURCHASE BILL</h1>
                         <p class="text-blue-200 mt-1 text-xs">ORIGINAL FOR RECIPIENT</p>
                         <div class="mt-2 text-xs">
                             <p><i class="fas fa-map-marker-alt mr-1"></i> 1st Floor, Kamla Bhattacharya Road, Patna (Bihar) - 800001</p>
@@ -60,23 +65,45 @@
                 <tr>
                     <!-- Supplier Info -->
                     <td class="w-1/2 p-2 align-top">
-                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-200 text-xs">
-                            <h3 class="text-sm font-semibold text-blue-700 mb-1 flex items-center">
-                                <i class="fas fa-user-circle mr-1"></i> Supplier
-                            </h3>
-                            @if($purchaseBill->select_customer)
-                                <h4 class="font-medium text-blue-800">
-                                    {{ $purchaseBill->select_customer->party_name ?? '-' }}
-                                </h4>
-                                <p class="text-blue-700">
-                                    {!! nl2br(e($purchaseBill->billing_address ?? '-')) !!}
-                                </p>
-                                <p class="text-blue-700">Phone: {{ $purchaseBill->phone_number ?? '-' }}</p>
-                                <p class="text-blue-700">State: {{ $purchaseBill->select_customer->state ?? '-' }}</p>
-                            @else
-                                <p class="italic text-gray-500">No supplier selected</p>
-                            @endif
-                        </div>
+                       <div class="flex  rounded-lg border border-blue-200">
+    <!-- Left Column: Supplier Details -->
+    <div class="w-1/2 bg-blue-50 p-2  text-xs">
+        <h3 class="text-sm font-semibold text-blue-700 mb-1 flex items-center">
+            <i class="fas fa-user-circle mr-1"></i> Supplier
+        </h3>
+        @if($purchaseBill->select_customer)
+            <h4 class="font-medium text-blue-800">
+                {{ $purchaseBill->select_customer->party_name ?? '-' }}
+            </h4>
+            <p class="text-blue-700">Phone: {{ $purchaseBill->phone_number ?? '-' }}</p>
+            <p class="text-blue-700">State: {{ $purchaseBill->select_customer->state ?? '-' }}</p>
+            <p class="text-blue-700">GSTIN: {{ $purchaseBill->select_customer->gstin ?? '-' }}</p>
+            <p class="text-blue-700 mt-1">
+                {!! nl2br(trim($purchaseBill->select_customer->billing_address) ?: '-') !!}
+            </p>
+        @else
+            <p class="italic text-gray-500">No supplier selected</p>
+        @endif
+    </div>
+
+    <!-- Right Column: Billing Address -->
+    <div class="w-1/2 bg-blue-50 border-l border-blue-200 p-2 text-xs">
+        <h3 class="text-sm font-semibold text-blue-700 mb-1">
+            Billing Address
+        </h3>
+        <p class="text-blue-700">
+           {!! nl2br(trim($purchaseBill->billing_address) ?: '-') !!}
+
+        </p>
+        <h3 class="text-sm font-semibold text-blue-700 mt-2 mb-1">
+            Shipping Address
+        </h3>
+        <p class="text-blue-700">
+            {!! nl2br(trim($purchaseBill->shipping_address ?? '-')) !!}
+        </p>
+    </div>
+</div>
+
                     </td>
 
                     <!-- Bill Details -->
@@ -181,8 +208,20 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td class="bg-blue-100 font-medium py-1 px-2">
+                                        <td class="bg-blue-100 font-medium py-1 px-2 text-center">
                                             {{ \App\Helpers\NumberHelper::toWords($total) }}
+                                        </td>
+                                    </tr>
+
+                                     <tr>
+                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
+                                            <i class="fas fa-receipt mr-1"></i> Payment Mode
+                                        </th>
+                                    </tr>
+
+                                     <tr>
+                                        <td class="bg-blue-100 font-medium py-7 px-2 text-center">
+                                            {{ $purchaseBill->payment_mode ?? 'N/A' }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -204,16 +243,21 @@
                                         <td class="text-right font-medium py-1 px-2">Rs {{ number_format($total, 2) }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="font-medium py-1 px-2">Discount</td>
+                                      <td class="font-medium py-1 px-2">Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})</td>
                                         <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->discount ?? 0, 2) }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="font-medium py-1 px-2">Tax</td>
+                                        <td class="font-medium py-1 px-2">GST({{ $item->pivot->tax ?? 0 }}%)</td>
                                         <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->tax ?? 0, 2) }}</td>
                                     </tr>
                                     <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
                                         <td class="py-1 px-2">Grand Total</td>
                                         <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->total ?? $total, 2) }}</td>
+                                    </tr>
+
+                                    <tr class="border-t border-gray-200 bg-blue-50">
+                                        <td class="py-1 px-2">Current Balance</td>
+                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->select_customer->opening_balance ?? 0, 2) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -225,76 +269,62 @@
             <!-- Bank, Terms & Signatory -->
             <div class="p-4 border-b border-gray-200 overflow-x-auto text-xs">
                 <table class="w-full text-xs border border-gray-200 rounded-lg">
-                    <tbody>
-                        <tr class="align-top">
-                            <!-- Bank Details -->
-                            <td class="p-2 w-1/3 border-r border-gray-200">
-                                <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
-                                    <i class="fas fa-university mr-1"></i> Bank Details
-                                </h3>
-                                @foreach($bankDetails as $bank)
-                                    @if($bank->print_bank_details)
-                                        <table class="w-full text-xs mb-1">
-                                            <tr>
-                                                <td class="font-medium px-2 py-1">Bank Name:</td>
-                                                <td class="px-2 py-1">{{ $bank->bank_name ?? '-' }}</td>
-                                            </tr>
-                                            <tr class="bg-gray-50">
-                                                <td class="font-medium px-2 py-1">Account No.:</td>
-                                                <td class="px-2 py-1">{{ $bank->account_number ?? '-' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-medium px-2 py-1">IFSC Code:</td>
-                                                <td class="px-2 py-1">{{ $bank->ifsc_code ?? '-' }}</td>
-                                            </tr>
-                                            <tr class="bg-gray-50">
-                                                <td class="font-medium px-2 py-1">Account Holder:</td>
-                                                <td class="px-2 py-1">{{ $bank->account_holder_name ?? '-' }}</td>
-                                            </tr>
-                                        </table>
-                                    @endif
-                                @endforeach
-                            </td>
+                   <tbody>
+    <tr class="align-top">
+        <!-- Terms -->
+        <td class="p-2 w-1/2 border-r border-gray-200">
+            <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
+                <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
+            </h3>
+            @forelse($terms as $term)
+                <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
+                <div class="bg-yellow-50 p-2 rounded border text-xs mb-1">
+                    <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
+                    <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
+                </div>
+            @empty
+                <p class="italic text-gray-500">No terms available</p>
+            @endforelse
+        </td>
 
-                            <!-- Terms -->
-                            <td class="p-2 w-1/3 border-r border-gray-200">
-                                <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
-                                    <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
-                                </h3>
-                                @forelse($terms as $term)
-                                    <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
-                                    <div class="bg-yellow-50 p-2 rounded border text-xs mb-1">
-                                        <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
-                                        <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
-                                    </div>
-                                @empty
-                                    <p class="italic text-gray-500">No terms available</p>
-                                @endforelse
-                            </td>
+        <!-- Authorized Signatory -->
+        <td class="p-2 w-1/2 text-center align-top">
+            <div class="flex flex-col justify-end h-full" style="height: 120px;">
+                <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
+                    <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
+                </div>
+                <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
+            </div>
+        </td>
+    </tr>
+</tbody>
 
-                            <!-- Authorized Signatory -->
-                            <td class="p-2 w-1/3 text-center align-top">
-                                <div class="flex flex-col justify-end h-full" style="height: 120px;">
-                                    <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
-                                        <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
-                                    </div>
-                                    <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
                 </table>
             </div>
 
         </div>
 
         <!-- Footer -->
-        <div class="text-center mt-2 text-xs text-gray-500">
-            <p>This is a computer-generated purchase bill and does not require a physical signature.</p>
-            <p class="mt-1">
-                Bill generated on: {{ now()->format('d-m-Y \a\t h:i A') }} by {{ auth()->user()->name ?? 'System' }}
-            </p>
-        </div>
+       <div class="mt-4 p-3 border-t border-gray-300 text-xs text-gray-600 space-y-1 text-center">
+    <p class="italic text-gray-500">
+        This is a computer-generated purchase bill and does not require a physical signature.
+    </p>
+
+    <div class="flex flex-col sm:flex-row justify-center sm:justify-between mt-2 space-y-1 sm:space-y-0 sm:space-x-4">
+        <p>
+            <span class="font-semibold text-gray-700">Generated On:</span>
+            {{ $purchaseBill->created_at->format('d-m-Y \a\t h:i A') }}
+            by <span class="font-medium">{{ $purchaseBill->created_by->name ?? 'System' }}</span>
+        </p>
+
+        <p>
+            <span class="font-semibold text-gray-700">Updated On:</span>
+           {{ optional($purchaseBill->updated_at)->format('d-m-Y \a\t h:i A') ?? 'N/A' }}
+            by <span class="font-medium">{{ $purchaseBill->updated_by->name ?? 'System' }}</span>
+        </p>
+    </div>
+</div>
+
     </div>
 
     <!-- Print Button -->

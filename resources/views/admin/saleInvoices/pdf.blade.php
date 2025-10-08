@@ -59,26 +59,48 @@
            <table class="w-full border-b border-gray-200 text-xs">
     <tr>
         <!-- Customer Info -->
-        <td class="w-1/2 p-2 align-top">
-           
-            <div class="bg-blue-50 p-2 rounded-lg border border-blue-200 text-xs">
-                 <h3 class="text-sm font-semibold text-blue-700 mb-1 flex items-center">
-                <i class="fas fa-user-circle mr-1"></i> Customer
-            </h3>
-                @if($saleInvoice->select_customer)
-                    <h4 class="font-medium text-blue-800">
-                        {{ $saleInvoice->select_customer->party_name ?? '-' }}
-                    </h4>
-                    <p class="text-blue-700">
-                        {{ html_entity_decode(strip_tags($saleInvoice->billing_address ?? '-')) }}
-                    </p>
-                    <p class="text-blue-700">Phone: {{ $saleInvoice->phone_number ?? '-' }}</p>
-                    <p class="text-blue-700">State: {{ $saleInvoice->select_customer->state ?? '-' }}</p>
-                @else
-                    <p class="italic text-gray-500">No customer selected</p>
-                @endif
-            </div>
-        </td>
+         <!-- Supplier Info -->
+                    <td class="w-1/2 p-2 align-top">
+                       <div class="flex  rounded-lg border border-blue-200">
+    <!-- Left Column: Supplier Details -->
+    <div class="w-1/2 bg-blue-50 p-2  text-xs">
+        <h3 class="text-sm font-semibold text-blue-700 mb-1 flex items-center">
+            <i class="fas fa-user-circle mr-1"></i> Supplier
+        </h3>
+        @if($saleInvoice->select_customer)
+            <h4 class="font-medium text-blue-800">
+                {{ $saleInvoice->select_customer->party_name ?? '-' }}
+            </h4>
+            <p class="text-blue-700">Phone: {{ $saleInvoice->phone_number ?? '-' }}</p>
+            <p class="text-blue-700">State: {{ $saleInvoice->select_customer->state ?? '-' }}</p>
+            <p class="text-blue-700">GSTIN: {{ $saleInvoice->select_customer->gstin ?? '-' }}</p>
+            <p class="text-blue-700 mt-1">
+                {!! nl2br(trim($saleInvoice->select_customer->billing_address) ?: '-') !!}
+            </p>
+        @else
+            <p class="italic text-gray-500">No supplier selected</p>
+        @endif
+    </div>
+
+    <!-- Right Column: Billing Address -->
+    <div class="w-1/2 bg-blue-50 border-l border-blue-200 p-2 text-xs">
+        <h3 class="text-sm font-semibold text-blue-700 mb-1">
+            Billing Address
+        </h3>
+        <p class="text-blue-700">
+           {!! nl2br(trim($saleInvoice->billing_address) ?: '-') !!}
+
+        </p>
+        <h3 class="text-sm font-semibold text-blue-700 mt-2 mb-1">
+            Shipping Address
+        </h3>
+        <p class="text-blue-700">
+            {!! nl2br(trim($saleInvoice->shipping_address ?? '-')) !!}
+        </p>
+    </div>
+</div>
+
+                    </td>
 
         <!-- Bill Details -->
         <td class="w-1/2 p-2 align-top">
@@ -172,8 +194,20 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td class="bg-blue-100 font-medium py-1 px-2 rounded mb-1">
+                                        <td class="bg-blue-100 font-medium py-1 px-2 rounded mb-1 text-center">
                                             {{ \App\Helpers\NumberHelper::toWords($total) }}
+                                        </td>
+                                    </tr>
+
+                                     <tr>
+                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
+                                            <i class="fas fa-receipt mr-1"></i> Payment Mode
+                                        </th>
+                                    </tr>
+
+                                     <tr>
+                                        <td class="bg-blue-100 font-medium py-7 px-2 text-center">
+                                            {{ $saleInvoice->payment_mode ?? 'N/A' }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -198,13 +232,13 @@
                 </td>
             </tr>
             <tr>
-                <td class="font-medium py-1 px-2">Discount</td>
+                <td class="font-medium py-1 px-2">Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})</td>
                 <td class="text-right py-1 px-2">
                     Rs {{ number_format($saleInvoice->discount ?? 0, 2) }}
                 </td>
             </tr>
             <tr>
-                <td class="font-medium py-1 px-2">Tax</td>
+            <td class="font-medium py-1 px-2">GST({{ $item->pivot->tax ?? 0 }}%)</td>
                 <td class="text-right py-1 px-2">
                     Rs {{ number_format($saleInvoice->tax ?? 0, 2) }}
                 </td>
@@ -215,6 +249,11 @@
                     Rs {{ number_format($saleInvoice->total ?? $total, 2) }}
                 </td>
             </tr>
+
+             <tr class="border-t border-gray-200 bg-blue-50">
+                                        <td class="py-1 px-2">Current Balance</td>
+                                        <td class="text-right py-1 px-2">Rs {{ number_format($saleInvoice->select_customer->opening_balance ?? 0, 2) }}</td>
+                                    </tr>
         </tbody>
     </table>
 </td>
@@ -290,12 +329,26 @@
         </div>
 
         <!-- Footer -->
-        <div class="text-center mt-2 text-xs text-gray-500">
-            <p>This is a computer-generated sale invoice and does not require a physical signature.</p>
-            <p class="mt-1">
-                Invoice generated on: {{ now()->format('d-m-Y \a\t h:i A') }} by {{ auth()->user()->name ?? 'System' }}
-            </p>
-        </div>
+        <!-- Footer -->
+       <div class="mt-4 p-3 border-t border-gray-300 text-xs text-gray-600 space-y-1 text-center">
+    <p class="italic text-gray-500">
+        This is a computer-generated purchase bill and does not require a physical signature.
+    </p>
+
+    <div class="flex flex-col sm:flex-row justify-center sm:justify-between mt-2 space-y-1 sm:space-y-0 sm:space-x-4">
+        <p>
+            <span class="font-semibold text-gray-700">Generated On:</span>
+            {{ $saleInvoice->created_at->format('d-m-Y \a\t h:i A') }}
+            by <span class="font-medium">{{ $saleInvoice->created_by->name ?? 'System' }}</span>
+        </p>
+
+        <p>
+            <span class="font-semibold text-gray-700">Updated On:</span>
+           {{ optional($saleInvoice->updated_at)->format('d-m-Y \a\t h:i A') ?? 'N/A' }}
+            by <span class="font-medium">{{ $saleInvoice->updated_by->name ?? 'System' }}</span>
+        </p>
+    </div>
+</div>
 
     </div>
 
