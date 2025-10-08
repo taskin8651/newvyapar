@@ -140,7 +140,7 @@ class PurchaseBillController extends Controller
         'main_cost_center_id' => 'required|exists:main_cost_centers,id',
         'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
     ]);
-
+    
     // Handle attachment
     $attachmentPath = $request->hasFile('attachment') 
         ? $request->file('attachment')->store('attachments', 'public') 
@@ -179,6 +179,7 @@ class PurchaseBillController extends Controller
     // Loop through items
     foreach ($request->items as $itemData) {
         $item = \App\Models\AddItem::find($itemData['id']);
+        
         if (!$item) continue;
 
         $pivotData = [
@@ -207,7 +208,13 @@ class PurchaseBillController extends Controller
             // Purchase Log
             \App\Models\PurchaseLog::create([
                 'purchase_bill_id' => $invoice->id,
-                
+                'party_id' => $request->select_customer_id,
+                'main_cost_center_id' => $request->main_cost_center_id,
+                'sub_cost_center_id' => $request->sub_cost_center_id,
+                'payment_type_id' => $request->payment_type_id,
+                'json_data' => json_encode($request->all()),
+                'purchase_bill_id' => $invoice->id,
+
                 'stock_id' => $stock->id,
                 'previous_qty' => $previousQty,
                 'purchased_qty' => $itemData['qty'],
@@ -215,9 +222,9 @@ class PurchaseBillController extends Controller
                 'purchased_amount' => $itemData['amount'] ?? 0,
                 'purchased_to_user_id' => $request->select_customer_id,
                 'created_by_id' => auth()->id(),
-                'json_data_add_purchase_sale_invoice' => json_encode($itemData),
+                'json_data_purchase_invoice' => json_encode($itemData),
                 'json_data_current_stock' => json_encode($stock->toArray()),
-                'json_data_purchase_invoice' => json_encode($invoice->toArray()),
+                'json_data_add_item_purchase_invoice' => json_encode($invoice->toArray()),
             ]);
         } else {
             // Service → attach normally
@@ -225,14 +232,22 @@ class PurchaseBillController extends Controller
 
             \App\Models\PurchaseLog::create([
                 'purchase_bill_id' => $invoice->id,
-                'item_id' => $item->id,
-                'item_type' => 'service',
-                'purchased_qty' => $itemData['qty'],
+                'party_id' => $request->select_customer_id,
+                'main_cost_center_id' => $request->main_cost_center_id,
+                'sub_cost_center_id' => $request->sub_cost_center_id,
+                'payment_type_id' => $request->payment_type_id,
+                'json_data' => json_encode($request->all()),
+                'purchase_bill_id' => $invoice->id,
                
+                'purchased_qty' => $itemData['qty'],
                 'price' => $itemData['price'],
+                'purchased_amount' => $itemData['amount'] ?? 0,
                 'purchased_to_user_id' => $request->select_customer_id,
-                'json_data_sale_invoice' => json_encode($invoice->toArray()),
-                'json_data_add_item_sale_invoice' => json_encode($itemData),
+                'created_by_id' => auth()->id(),
+                'json_data_purchase_invoice' => json_encode($itemData),
+              
+                'json_data_add_item_purchase_invoice' => json_encode($invoice->toArray()),
+
             ]);
         }
     }

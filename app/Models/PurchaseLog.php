@@ -11,20 +11,22 @@ class PurchaseLog extends Model
 
     protected $fillable = [
         'purchase_bill_id',
-        'customer_id',
-        'item_id',
-        'item_type',
+        'party_id',
+        'main_cost_center_id',
+        'sub_cost_center_id',
+        'payment_type_id',
+        'json_data',
+        'purchase_bill_id',
         'stock_id',
         'previous_qty',
-        'sold_qty',
-        'previous_amount',
-        'sold_amount',
+        'purchased_qty',
         'price',
-        'sold_to_user_id',
+        'purchased_amount',
+        'purchased_to_user_id',
         'created_by_id',
-        'json_data_add_item_sale_invoice',  
+        'json_data_purchase_invoice',
         'json_data_current_stock',
-        'json_data_sale_invoice',
+        'json_data_add_item_purchase_invoice',
         
     ];
 
