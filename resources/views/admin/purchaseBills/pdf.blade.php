@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Purchase Bill - {{ $purchaseBill->purchase_bill_no }}</title>
+    <title>Purchase Bill - {{ $purchaseBill->purchase_invoice_number }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -36,7 +36,7 @@
         <!-- Invoice Container -->
         <div class="invoice-container bg-white rounded-xl overflow-hidden text-xs">
 
-            <!-- Header -->
+            <!-- Header Gradient -->
             <div class="header-gradient text-white p-4 text-xs">
                 <div class="flex justify-between items-start">
                     <div>
@@ -69,7 +69,7 @@
                                     {{ $purchaseBill->select_customer->party_name ?? '-' }}
                                 </h4>
                                 <p class="text-blue-700">
-                                    {{ html_entity_decode(strip_tags($purchaseBill->billing_address ?? '-')) }}
+                                    {!! nl2br(e($purchaseBill->billing_address ?? '-')) !!}
                                 </p>
                                 <p class="text-blue-700">Phone: {{ $purchaseBill->phone_number ?? '-' }}</p>
                                 <p class="text-blue-700">State: {{ $purchaseBill->select_customer->state ?? '-' }}</p>
@@ -92,7 +92,7 @@
                             <tbody>
                                 <tr>
                                     <td class="font-medium py-1 px-2">Bill No.:</td>
-                                    <td class="text-right px-2">{{ $purchaseBill->purchase_bill_no ?? '-' }}</td>
+                                    <td class="text-right px-2">{{ $purchaseBill->purchase_invoice_number ?? '-' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="font-medium py-1 px-2">Date:</td>
@@ -122,36 +122,47 @@
                             <th class="p-1 text-left">Amount</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @php $total = 0; @endphp
-                        @forelse($purchaseBill->items as $key => $item)
-                            @php
-                                $qty = $item->pivot->qty ?? 1;
-                                $price = $item->sale_price ?? 0;
-                                $amount = $qty * $price;
-                                $total += $amount;
-                            @endphp
-                            <tr class="border-b">
-                                <td class="p-1">{{ $key+1 }}</td>
-                                <td class="p-1">{{ $item->item_name }}</td>
-                                <td class="p-1">{{ $item->item_hsn ?? '-' }}</td>
-                                <td class="p-1">{{ $qty }}</td>
-                                <td class="p-1">{{ $item->select_unit->name ?? 'pcs' }}</td>
-                                <td class="p-1">Rs {{ number_format($price,2) }}</td>
-                                <td class="p-1 font-semibold">Rs {{ number_format($amount,2) }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center p-1 italic text-gray-500">No items found</td>
-                            </tr>
-                        @endforelse
-                        <tr class="bg-blue-50 font-semibold">
-                            <td class="p-1" colspan="3">Total</td>
-                            <td class="p-1">{{ $purchaseBill->items->sum(fn($i) => $i->pivot->qty ?? 1) }}</td>
-                            <td class="p-1" colspan="2"></td>
-                            <td class="p-1 text-green-600">Rs {{ number_format($total,2) }}</td>
-                        </tr>
-                    </tbody>
+                 <tbody>
+    @php $total = 0; @endphp
+
+    @forelse($purchaseBill->items as $key => $item)
+        @php
+            $qty = $item->pivot->qty ?? 1;
+            $rate = $item->pivot->rate ?? ($item->sale_price ?? 0);
+            $amount = $qty * $rate;
+            $total += $amount;
+        @endphp
+
+        <tr class="border-b">
+            <td class="p-1 text-center">{{ $key + 1 }}</td>
+            <td class="p-1">{{ $item->item_name ?? '-' }}</td>
+            <td class="p-1">{{ $item->item_hsn ?? '-' }}</td>
+            <td class="p-1 text-center">{{ $qty }}</td>
+            <td class="p-1 text-center">{{ $item->select_unit->name ?? 'pcs' }}</td>
+            <td class="p-1 text-right">₹ {{ number_format($rate, 2) }}</td>
+            <td class="p-1 text-right font-semibold">₹ {{ number_format($amount, 2) }}</td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="7" class="text-center p-2 italic text-gray-500">
+                No items found
+            </td>
+        </tr>
+    @endforelse
+
+    {{-- Total Row --}}
+    <tr class="bg-blue-50 font-semibold">
+        <td colspan="3" class="p-1 text-right">Total</td>
+        <td class="p-1 text-center">
+            {{ $purchaseBill->items->sum(fn($i) => $i->pivot->qty ?? 0) }}
+        </td>
+        <td colspan="2" class="p-1"></td>
+        <td class="p-1 text-right text-green-600">
+            ₹ {{ number_format($total, 2) }}
+        </td>
+    </tr>
+</tbody>
+
                 </table>
             </div>
 
@@ -190,27 +201,19 @@
                                 <tbody>
                                     <tr class="bg-blue-100">
                                         <td class="font-medium py-1 px-2">Subtotal</td>
-                                        <td class="text-right font-medium py-1 px-2">
-                                            Rs {{ number_format($total, 2) }}
-                                        </td>
+                                        <td class="text-right font-medium py-1 px-2">Rs {{ number_format($total, 2) }}</td>
                                     </tr>
                                     <tr>
                                         <td class="font-medium py-1 px-2">Discount</td>
-                                        <td class="text-right py-1 px-2">
-                                            Rs {{ number_format($purchaseBill->discount ?? 0, 2) }}
-                                        </td>
+                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->discount ?? 0, 2) }}</td>
                                     </tr>
                                     <tr>
                                         <td class="font-medium py-1 px-2">Tax</td>
-                                        <td class="text-right py-1 px-2">
-                                            Rs {{ number_format($purchaseBill->tax ?? 0, 2) }}
-                                        </td>
+                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->tax ?? 0, 2) }}</td>
                                     </tr>
                                     <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
                                         <td class="py-1 px-2">Grand Total</td>
-                                        <td class="text-right py-1 px-2">
-                                            Rs {{ number_format($purchaseBill->total ?? $total, 2) }}
-                                        </td>
+                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->total ?? $total, 2) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -258,13 +261,15 @@
                                 <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
                                     <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
                                 </h3>
-                                @foreach($terms as $term)
+                                @forelse($terms as $term)
                                     <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
                                     <div class="bg-yellow-50 p-2 rounded border text-xs mb-1">
                                         <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
                                         <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
                                     </div>
-                                @endforeach
+                                @empty
+                                    <p class="italic text-gray-500">No terms available</p>
+                                @endforelse
                             </td>
 
                             <!-- Authorized Signatory -->

@@ -140,7 +140,6 @@ class PurchaseBillController extends Controller
         'main_cost_center_id' => 'required|exists:main_cost_centers,id',
         'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
     ]);
-    
     // Handle attachment
     $attachmentPath = $request->hasFile('attachment') 
         ? $request->file('attachment')->store('attachments', 'public') 
@@ -199,6 +198,7 @@ class PurchaseBillController extends Controller
             'created_by_id' => auth()->id(),
             'json_data' => json_encode($itemData),
         ];
+        // dd($pivotData);
 
         if ($item->item_type === 'product') {
             $stock = \App\Models\CurrentStock::firstOrCreate(['item_id' => $item->id], ['qty' => 0]);
@@ -207,8 +207,7 @@ class PurchaseBillController extends Controller
             $stock->save();
 
             // Attach using CurrentStock ID for clarity
-            $invoice->items()->attach($stock->id, $pivotData);
-
+            $invoice->items()->attach($item->id, $pivotData);
             // Purchase Log
             \App\Models\PurchaseLog::create([
                 'purchase_bill_id' => $invoice->id,
@@ -526,12 +525,21 @@ public function update(Request $request, PurchaseBill $purchaseBill)
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
 
-    public function pdf(PurchaseBill $purchaseBill)
-    {
-        $bankDetails = BankAccount::all();
-        $terms = TermAndCondition::where('status', 'active')->get();
-
-        $purchaseBill->load('select_customer', 'items', 'payment_type', 'created_by', 'main_cost_center', 'sub_cost_center');
+  public function pdf(PurchaseBill $purchaseBill)
+{
+    $bankDetails = BankAccount::all();
+    $terms = TermAndCondition::where('status', 'active')->get();
+    
+    $purchaseBill->load([
+        'select_customer',
+        'items',          // pivot ke through current_stocks fetch hoga
+        'payment_type',
+        'created_by',
+        'main_cost_center',
+        'sub_cost_center'
+    ]);
     return view('admin.purchaseBills.pdf', compact('purchaseBill', 'bankDetails', 'terms'));
-    }
+}
+
+
 }
