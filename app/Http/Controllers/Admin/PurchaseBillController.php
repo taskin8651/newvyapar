@@ -129,7 +129,7 @@ class PurchaseBillController extends Controller
     $request->validate([
         'select_customer_id' => 'required|exists:party_details,id',
         'po_no' => 'required|string',
-        'ref_no' => 'required|string',
+        'reference_no' => 'required|string',
         'due_date' => 'required|date',
         'po_date' => 'required|date',
         'docket_no' => 'nullable|string',
