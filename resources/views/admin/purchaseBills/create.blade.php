@@ -133,75 +133,207 @@
                 </div>
             </div>
 
-            <!-- Items Table -->
-            <div class="mb-6">
-                <hr class="border-dashed border-gray-300 mb-4">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">ITEMS</h2>
+<div class="mb-6">
+    <hr class="border-dashed border-gray-300 mb-4">
+    <h2 class="text-xl font-semibold text-gray-700 mb-4">ITEMS</h2>
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-2 py-2">Item</th>
-                                <th class="px-2 py-2">Description</th>
-                                <th class="px-2 py-2">QTY</th>
-                                <th class="px-2 py-2">Unit</th>
-                                <th class="px-2 py-2">Price/Unit</th>
-                                <th class="px-2 py-2">Discount</th>
-                                <th class="px-2 py-2">Tax</th>
-                                <th class="px-2 py-2">Amount</th>
-                                <th class="px-2 py-2">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="px-1 py-1">
-                                    <select name="items[0][add_item_id]" class="form-select item-select select2">
-                                        <option value="">-- Select Item --</option>
-                                        @foreach($items as $item)
-                                            <option value="{{ $item->id }}"
-                                                data-sale-price="{{ $item->sale_price }}"
-                                                data-unit="{{ $item->select_unit->unit_name ?? '' }}"
-                                                data-hsn="{{ $item->item_hsn }}"
-                                                data-code="{{ $item->item_code }}"
-                                                data-stock="{{ $item->item_type === 'product' ? $item->stock_qty : '' }}">
-                                                {{ $item->item_name }} ({{ ucfirst($item->item_type) }})
-                                                @if($item->item_type === 'product' && $item->stock_qty !== null)
-                                                    - Stock: {{ $item->stock_qty }}
-                                                @endif
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td class="px-1 py-1 description"></td>
-                                <td class="px-1 py-1"><input type="number" name="items[0][qty]" class="qty w-full border px-2 py-1" min="1" value="1"></td>
-                                <td class="px-1 py-1 unit"></td>
-                                <td class="px-1 py-1"><input type="number" name="items[0][price]" class="price w-full border px-2 py-1" step="0.01"></td>
-                                <td class="px-1 py-1">
-                                    <select name="items[0][discount_type]" class="discount_type w-full select2">
-                                        <option value="value">Value</option>
-                                        <option value="percentage">Percentage</option>
-                                    </select>
-                                    <input type="number" name="items[0][discount]" class="discount w-full mt-1 border px-2 py-1" value="0" step="0.01">
-                                </td>
-                                <td class="px-1 py-1">
-                                    <select name="items[0][tax_type]" class="tax_type w-full select2">
-                                        <option value="without">Without Tax</option>
-                                        <option value="with">With Tax</option>
-                                    </select>
-                                    <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
-                                </td>
-                                <td class="px-1 py-1"><input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly></td>
-                                <td class="px-1 py-1 text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200" id="itemsTable">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-2 py-2">Item</th>
+                    <th class="px-2 py-2">Description</th>
+                    <th class="px-2 py-2">QTY</th>
+                    <th class="px-2 py-2">Unit</th>
+                    <th class="px-2 py-2">Price/Unit</th>
+                    <th class="px-2 py-2">Discount</th>
+                    <th class="px-2 py-2">Tax</th>
+                    <th class="px-2 py-2">Amount</th>
+                    <th class="px-2 py-2">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="px-1 py-1">
+                        <select name="items[0][id]" class="form-select item-select select2">
+                            <option value="">-- Select Item --</option>
+                            @foreach($items as $item)
+                                <option value="{{ $item->id }}"
+                                    data-purchase-price="{{ $item->purchase_price }}"
+                                    data-unit="{{ $item->select_unit->base_unit ?? '' }}"
+                                    data-hsn="{{ $item->item_hsn }}"
+                                    data-code="{{ $item->item_code }}"
+                                    data-stock="{{ $item->item_type === 'product' ? $item->stock_qty : '' }}"
+                                    data-type="{{ $item->item_type }}">
+                                    {{ $item->item_name }} ({{ ucfirst($item->item_type) }})
+                                    @if($item->item_type === 'product' && $item->stock_qty !== null)
+                                        - Stock: {{ $item->stock_qty }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
 
-                <div class="flex space-x-2 mt-4">
-                    <button type="button" id="addRow" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Add Row</button>
-                </div>
-            </div>
+                    </td>
+                    <td class="px-1 py-1 description"></td>
+                    <td class="px-1 py-1"><input type="number" name="items[0][qty]" class="qty w-full border px-2 py-1" min="1" value="1"></td>
+                    <td class="px-1 py-1 unit"></td>
+                    <td class="px-1 py-1"><input type="number" name="items[0][price]" class="price w-full border px-2 py-1" step="0.01"></td>
+                    <td class="px-1 py-1">
+                        <select name="items[0][discount_type]" class="discount_type w-full select2">
+                            <option value="value">Value</option>
+                            <option value="percentage">Percentage</option>
+                        </select>
+                        <input type="number" name="items[0][discount]" class="discount w-full mt-1 border px-2 py-1" value="0" step="0.01">
+                    </td>
+                    <td class="px-1 py-1">
+                        <select name="items[0][tax_type]" class="tax_type w-full select2">
+                            <option value="without">Without Tax</option>
+                            <option value="with">With Tax</option>
+                        </select>
+                        <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                    </td>
+                    <td class="px-1 py-1"><input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly></td>
+                    <td class="px-1 py-1 text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex space-x-2 mt-4">
+        <button type="button" id="addRow" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Add Row</button>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('.select2').select2({ width: '100%' });
+
+    function calculateRow(row){
+        let qty = parseFloat(row.find('.qty').val()) || 0;
+        let price = parseFloat(row.find('.price').val()) || 0;
+        let discount = parseFloat(row.find('.discount').val()) || 0;
+        let discountType = row.find('.discount_type').val();
+        let taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
+        let taxType = row.find('.tax_type').val();
+
+        if(discountType==='percentage'){ discount = price * qty * (discount/100); }
+        let amount = (price * qty) - discount;
+        if(taxType==='with'){ amount += amount * (taxRate/100); }
+
+        row.find('.amount').val(amount.toFixed(2));
+    }
+
+    function calculateTotals(){
+        let subtotal=0, discountTotal=0, taxTotal=0;
+        $('#itemsTable tbody tr').each(function(){
+            let row = $(this);
+            let amount = parseFloat(row.find('.amount').val()) || 0;
+            subtotal += amount;
+
+            let discount = parseFloat(row.find('.discount').val()) || 0;
+            if(row.find('.discount_type').val()==='percentage'){
+                discount = parseFloat(row.find('.price').val())*parseFloat(row.find('.qty').val())*(discount/100);
+            }
+            discountTotal += discount;
+
+            if(row.find('.tax_type').val()==='with'){ taxTotal += amount*(parseFloat(row.find('.tax_rate').val())||0)/100; }
+        });
+
+        let overallDiscount = parseFloat($('#overall_discount').val()) || 0;
+        let total = subtotal + taxTotal - overallDiscount;
+
+        $('#subtotal_display').text(subtotal.toFixed(2));
+        $('#tax_display').text(taxTotal.toFixed(2));
+        $('#discount_display').text((discountTotal + overallDiscount).toFixed(2));
+        $('#total_display').text(total.toFixed(2));
+
+        $('#subtotal').val(subtotal.toFixed(2));
+        $('#tax_input').val(taxTotal.toFixed(2));
+        $('#discount_input').val((discountTotal + overallDiscount).toFixed(2));
+        $('#total_input').val(total.toFixed(2));
+    }
+
+    $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function(){
+        let row = $(this).closest('tr');
+
+        // Prevent quantity exceeding stock
+        let maxQty = parseFloat(row.find('.qty').attr('max'));
+        if(maxQty && parseFloat(row.find('.qty').val())>maxQty){
+            row.find('.qty').val(maxQty);
+        }
+
+        if(row.find('.tax_type').val()==='with'){ row.find('.tax_rate').show(); } else { row.find('.tax_rate').hide().val(0); }
+
+        calculateRow(row); calculateTotals();
+    });
+
+    $(document).on('change', '.item-select', function(){
+        let row = $(this).closest('tr');
+        let selected = $(this).find(':selected');
+        if(selected.val()==='') return;
+
+        // Description with HSN & Code
+        row.find('.description').html(
+            `<div class="text-sm text-gray-700 bg-gray-100 p-1 rounded">${selected.data('hsn')} | ${selected.data('code')}</div>`
+        );
+
+        // Set price to purchase_price
+        row.find('.price').val(selected.data('purchase-price'));
+
+        // Set unit
+        row.find('.unit').text(selected.data('unit'));
+
+
+
+        calculateRow(row); calculateTotals();
+
+        // Remove selected option from other rows
+        $('.item-select').not(this).each(function(){
+            if($(this).find('option[value="'+selected.val()+'"]').length){
+                $(this).find('option[value="'+selected.val()+'"]').remove();
+                $(this).trigger('change.select2');
+            }
+        });
+    });
+
+    $('#addRow').click(function(){
+        let tbody = $('#itemsTable tbody');
+        let newRow = tbody.find('tr:first').clone();
+        let rowCount = tbody.find('tr').length;
+
+        newRow.find('input, select').each(function(){
+            let name = $(this).attr('name');
+            if(name){ $(this).attr('name', name.replace(/\d+/, rowCount)); }
+            if($(this).is('input')){ 
+                $(this).val($(this).hasClass('qty') ? 1 : ($(this).hasClass('amount') ? 0 : 0)); 
+            }
+        });
+        newRow.find('.description, .unit, .amount').text('');
+
+        // Remove already selected items from dropdown
+        let selectedItems = [];
+        $('.item-select').each(function(){
+            let val = $(this).val();
+            if(val) selectedItems.push(val);
+        });
+        newRow.find('option').each(function(){
+            if(selectedItems.includes($(this).val())) $(this).remove();
+        });
+
+        tbody.append(newRow);
+        newRow.find('select.select2').select2({ width: '100%' });
+    });
+
+    $(document).on('click', '.removeRow', function(){
+        let tbody = $('#itemsTable tbody');
+        if(tbody.find('tr').length>1){
+            $(this).closest('tr').remove();
+            calculateTotals();
+        } else { alert('At least one row is required'); }
+    });
+});
+</script>
+
 
             <!-- Totals & Overall Discount -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -476,116 +608,7 @@ $(document).ready(function() {
         } else { $('#customerDetailsCard').addClass('hidden'); }
     });
 
-    function calculateRow(row){
-        let qty = parseFloat(row.find('.qty').val()) || 0;
-        let price = parseFloat(row.find('.price').val()) || 0;
-        let discount = parseFloat(row.find('.discount').val()) || 0;
-        let discountType = row.find('.discount_type').val();
-        let taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
-        let taxType = row.find('.tax_type').val();
-
-        if(discountType==='percentage'){ discount = price * qty * (discount/100); }
-        let amount = (price * qty) - discount;
-        if(taxType==='with'){ amount += amount * (taxRate/100); }
-
-        row.find('.amount').val(amount.toFixed(2));
-    }
-
-    function calculateTotals(){
-        let subtotal=0, discountTotal=0, taxTotal=0;
-        $('#itemsTable tbody tr').each(function(){
-            let row = $(this);
-            let amount = parseFloat(row.find('.amount').val()) || 0;
-            subtotal += amount;
-
-            let discount = parseFloat(row.find('.discount').val()) || 0;
-            if(row.find('.discount_type').val()==='percentage'){
-                discount = parseFloat(row.find('.price').val())*parseFloat(row.find('.qty').val())*(discount/100);
-            }
-            discountTotal += discount;
-
-            if(row.find('.tax_type').val()==='with'){ taxTotal += amount*(parseFloat(row.find('.tax_rate').val())||0)/100; }
-        });
-
-        let overallDiscount = parseFloat($('#overall_discount').val()) || 0;
-        let total = subtotal + taxTotal - overallDiscount;
-
-        $('#subtotal_display').text(subtotal.toFixed(2));
-        $('#tax_display').text(taxTotal.toFixed(2));
-        $('#discount_display').text((discountTotal + overallDiscount).toFixed(2));
-        $('#total_display').text(total.toFixed(2));
-
-        // Update hidden inputs to send to server
-        $('#subtotal').val(subtotal.toFixed(2));
-        $('#tax_input').val(taxTotal.toFixed(2));
-        $('#discount_input').val((discountTotal + overallDiscount).toFixed(2));
-        $('#total_input').val(total.toFixed(2));
-    }
-
-    $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function(){
-        let row = $(this).closest('tr');
-        let maxQty = parseFloat(row.find('.qty').attr('max'));
-        if(parseFloat(row.find('.qty').val())>maxQty){ row.find('.qty').val(maxQty); }
-        if(row.find('.tax_type').val()==='with'){ row.find('.tax_rate').show(); } else { row.find('.tax_rate').hide().val(0); }
-        calculateRow(row); calculateTotals();
-    });
-
-    $(document).on('change', '.item-select', function(){
-        let row = $(this).closest('tr');
-        let selected = $(this).find(':selected');
-        if(selected.val()==='') return;
-
-        row.find('.description').html(
-            `<div class="text-sm text-gray-700 bg-gray-100 p-1 rounded">${selected.data('hsn')} | ${selected.data('code')}</div>`
-        );
-        row.find('.price').val(selected.data('sale-price'));
-        row.find('.unit').text(selected.data('unit'));
-        row.find('.qty').attr('max', selected.data('stock')).val(1);
-
-        calculateRow(row); calculateTotals();
-
-        $('.item-select').not(this).each(function(){
-            if($(this).find('option[value="'+selected.val()+'"]').length){
-                $(this).find('option[value="'+selected.val()+'"]').remove();
-                $(this).trigger('change.select2');
-            }
-        });
-    });
-
-    $('#addRow').click(function(){
-        let tbody = $('#itemsTable tbody');
-        let newRow = tbody.find('tr:first').clone();
-        let rowCount = tbody.find('tr').length;
-
-        newRow.find('input, select').each(function(){
-            let name = $(this).attr('name');
-            if(name){ $(this).attr('name', name.replace(/\d+/, rowCount)); }
-            if($(this).is('input')){ 
-                $(this).val($(this).hasClass('qty') ? 1 : ($(this).hasClass('amount') ? 0 : 0)); 
-            }
-        });
-        newRow.find('.description, .unit, .amount').text('');
-
-        let selectedItems = [];
-        $('.item-select').each(function(){
-            let val = $(this).val();
-            if(val) selectedItems.push(val);
-        });
-        newRow.find('option').each(function(){
-            if(selectedItems.includes($(this).val())) $(this).remove();
-        });
-
-        tbody.append(newRow);
-        newRow.find('select.select2').select2({ width: '100%' });
-    });
-
-    $(document).on('click', '.removeRow', function(){
-        let tbody = $('#itemsTable tbody');
-        if(tbody.find('tr').length>1){
-            $(this).closest('tr').remove();
-            calculateTotals();
-        } else { alert('At least one row is required'); }
-    });
+    
 });
 </script>
 @endsection

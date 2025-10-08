@@ -37,27 +37,30 @@ class PurchaseBill extends Model implements HasMedia
 
 
     protected $fillable = [
-        'select_customer_id',
-        'billing_name',
-        'phone_number',
+        'select_customer_id',                 // Customer
+        'po_no',                    // Invoice/PO Number
+        'docket_no',
+        'po_date',
+        'due_date',
         'e_way_bill_no',
+        'phone_number',
         'billing_address',
         'shipping_address',
-        'po_no',
-        'po_date',
-        'qty',
-        'description',
-        'created_at',
-        'payment_type_id',
-        'reference_no',
-        'updated_at',
-        'deleted_at',
+        'notes',
+        'terms',
+        'overall_discount',
+        'subtotal',
+        'tax',
+        'discount',
+        'total',
+        'attachment',               // File path
         'created_by_id',
-        'main_cost_center_id',
-        'sub_cost_center_id',   
-        'purchase_bill_no',
-        'note',
         'json_data',
+        'payment_type',
+        'status',
+        'sale_invoice_number',
+        'main_cost_center_id',
+        'sub_cost_center_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -91,11 +94,23 @@ class PurchaseBill extends Model implements HasMedia
     }
 
 
- public function items()
-{
-    return $this->belongsToMany(AddItem::class, 'add_item_purchase_bill', 'purchase_bill_id', 'add_item_id')
-        ->withPivot('qty');
-}
+    public function items()
+    {
+        return $this->belongsToMany(\App\Models\AddItem::class, 'add_item_purchase_bill', 'purchase_bill_id', 'add_item_id')
+            ->withPivot([
+                'description', 
+                'qty', 
+                'unit', 
+                'price', 
+                'discount_type', 
+                'discount', 
+                'tax_type', 
+                'tax', 
+                'amount',
+                'created_by_id',
+                'json_data'
+            ])->withTimestamps();
+    }
 
 
 

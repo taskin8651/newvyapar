@@ -124,70 +124,121 @@ class PurchaseBillController extends Controller
 
 
 
-public function store(StorePurchaseBillRequest $request)
+ public function store(Request $request)
 {
-    dd( $request->all());
-    $purchaseBillNo = 'ET' . mt_rand(1000000000, 9999999999);
-    while (PurchaseBill::where('purchase_bill_no', $purchaseBillNo)->exists()) {
-        $purchaseBillNo = 'ET' . mt_rand(1000000000, 9999999999);
-    }
-
-    $fullData = $request->all();
-    $fullData['purchase_bill_no'] = $purchaseBillNo;
-    $fullData['user_id'] = auth()->id();
-
-    $purchaseBill = PurchaseBill::create(array_merge($fullData, [
-        'json_data' => json_encode($fullData),
-    ]));
-
-    if ($request->has('items')) {
-        $syncData = [];
-        foreach ($request->items as $item) {
-            $addItem = \App\Models\AddItem::find($item['id']);
-            if (!$addItem) continue;
-
-            if ($addItem->item_type === 'product') {
-                // Product → link via CurrentStock
-                $stock = \App\Models\CurrentStock::where('item_id', $addItem->id)->first();
-                if ($stock) {
-                    $syncData[$stock->id] = ['qty' => $item['qty']];
-                    $stock->qty += $item['qty'];
-                    $stock->save();
-                }
-            } else {
-                // Service → link directly to AddItem
-                $syncData[$addItem->id] = ['qty' => $item['qty']];
-            }
-        }
-
-        $purchaseBill->items()->sync($syncData);
-    }
-
-    \App\Models\PurchaseLog::create([
-        'user_id' => auth()->id(),
-        'party_id' => $request->select_customer_id,
-        'main_cost_center_id' => $request->main_cost_center_id,
-        'sub_cost_center_id' => $request->sub_cost_center_id,
-        'payment_type_id' => $request->payment_type_id,
-        'items' => $request->items,
-        'extra_data' => $fullData,
+    $request->validate([
+        'select_customer_id' => 'required|exists:party_details,id',
+        'po_no' => 'required|string',
+        'ref_no' => 'required|string',
+        'due_date' => 'required|date',
+        'po_date' => 'required|date',
+        'docket_no' => 'nullable|string',
+        'billing_address_invoice' => 'nullable|string',
+        'items' => 'required|array|min:1',
+        'items.*.id' => 'required|exists:add_items,id',
+        'items.*.qty' => 'required|numeric|min:1',
+        'main_cost_center_id' => 'required|exists:main_cost_centers,id',
+        'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
     ]);
 
-    if ($request->hasFile('image')) {
-        $purchaseBill->addMedia($request->file('image'))->toMediaCollection('image');
-    }
+    // Handle attachment
+    $attachmentPath = $request->hasFile('attachment') 
+        ? $request->file('attachment')->store('attachments', 'public') 
+        : null;
 
-    if ($request->hasFile('document')) {
-        $purchaseBill->addMedia($request->file('document'))->toMediaCollection('document');
-    }
+    // Generate purchase invoice number
+    $purchase_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100,999);
 
-    if ($media = $request->input('ck-media', false)) {
-        \Spatie\MediaLibrary\MediaCollections\Models\Media::whereIn('id', $media)
-            ->update(['model_id' => $purchaseBill->id]);
+    // Create PurchaseBill
+    $invoice = PurchaseBill::create([
+        'purchase_invoice_number' => $purchase_invoice_number,
+        'select_customer_id' => $request->select_customer_id,
+        'po_no' => $request->po_no,
+        'docket_no' => $request->docket_no,
+        'po_date' => $request->po_date,
+        'due_date' => $request->due_date,
+        'e_way_bill_no' => $request->e_way_bill_no,
+        'phone_number' => $request->customer_phone_invoice,
+        'billing_address' => $request->billing_address_invoice,
+        'shipping_address' => $request->shipping_address_invoice,
+        'notes' => $request->notes,
+        'terms' => $request->terms,
+        'overall_discount' => $request->overall_discount ?? 0,
+        'subtotal' => $request->subtotal ?? 0,
+        'tax' => $request->tax ?? 0,
+        'discount' => $request->discount ?? 0,
+        'total' => $request->total ?? 0,
+        'attachment' => $attachmentPath,
+        'created_by_id' => auth()->id(),
+        'json_data' => json_encode($request->all()),
+        'status' => 'pending',
+        'main_cost_center_id' => $request->main_cost_center_id,
+        'sub_cost_center_id'  => $request->sub_cost_center_id,
+    ]);
+
+    // Loop through items
+    foreach ($request->items as $itemData) {
+        $item = \App\Models\AddItem::find($itemData['id']);
+        if (!$item) continue;
+
+        $pivotData = [
+            'description' => $itemData['description'] ?? null,
+            'qty' => $itemData['qty'],
+            'unit' => $itemData['unit'] ?? null,
+            'price' => $itemData['price'] ?? 0,
+            'discount_type' => $itemData['discount_type'] ?? 'value',
+            'discount' => $itemData['discount'] ?? 0,
+            'tax_type' => $itemData['tax_type'] ?? 'without',
+            'tax' => $itemData['tax'] ?? 0,
+            'amount' => $itemData['amount'] ?? 0,
+            'created_by_id' => auth()->id(),
+            'json_data' => json_encode($itemData),
+        ];
+
+        if ($item->item_type === 'product') {
+            $stock = \App\Models\CurrentStock::firstOrCreate(['item_id' => $item->id], ['qty' => 0]);
+            $previousQty = $stock->qty;
+            $stock->qty += $itemData['qty']; // increment stock
+            $stock->save();
+
+            // Attach using CurrentStock ID for clarity
+            $invoice->items()->attach($stock->id, $pivotData);
+
+            // Purchase Log
+            \App\Models\PurchaseLog::create([
+                'purchase_bill_id' => $invoice->id,
+                
+                'stock_id' => $stock->id,
+                'previous_qty' => $previousQty,
+                'purchased_qty' => $itemData['qty'],
+                'price' => $itemData['price'],
+                'purchased_amount' => $itemData['amount'] ?? 0,
+                'purchased_to_user_id' => $request->select_customer_id,
+                'created_by_id' => auth()->id(),
+                'json_data_add_purchase_sale_invoice' => json_encode($itemData),
+                'json_data_current_stock' => json_encode($stock->toArray()),
+                'json_data_purchase_invoice' => json_encode($invoice->toArray()),
+            ]);
+        } else {
+            // Service → attach normally
+            $invoice->items()->attach($item->id, $pivotData);
+
+            \App\Models\PurchaseLog::create([
+                'purchase_bill_id' => $invoice->id,
+                'item_id' => $item->id,
+                'item_type' => 'service',
+                'purchased_qty' => $itemData['qty'],
+               
+                'price' => $itemData['price'],
+                'purchased_to_user_id' => $request->select_customer_id,
+                'json_data_sale_invoice' => json_encode($invoice->toArray()),
+                'json_data_add_item_sale_invoice' => json_encode($itemData),
+            ]);
+        }
     }
 
     return redirect()->route('admin.purchase-bills.index')
-                     ->with('success', 'Purchase bill created successfully.');
+                     ->with('success', 'Sale Invoice Created Successfully.');
 }
 
 

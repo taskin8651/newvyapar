@@ -2,32 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseLog extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'user_id',
-        'party_id',
-        'main_cost_center_id',
-        'sub_cost_center_id',
-        'payment_type_id',
-        'items',
-        'extra_data',
+        'purchase_bill_id',
+        'customer_id',
+        'item_id',
+        'item_type',
+        'stock_id',
+        'previous_qty',
+        'sold_qty',
+        'previous_amount',
+        'sold_amount',
+        'price',
+        'sold_to_user_id',
+        'created_by_id',
+        'json_data_add_item_sale_invoice',  
+        'json_data_current_stock',
+        'json_data_sale_invoice',
+        
     ];
 
-    protected $casts = [
-        'items' => 'array',
-        'extra_data' => 'array',
-    ];
-
-    public function user()
+    public function invoice()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(PurchaseBill::class, 'sale_invoice_id');
     }
 
-    public function party()
+    public function item()
     {
-        return $this->belongsTo(PartyDetail::class, 'party_id');
+        return $this->belongsTo(AddItem::class, 'item_id');
     }
+
 }

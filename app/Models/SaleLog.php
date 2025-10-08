@@ -34,6 +34,6 @@ class SaleLog extends Model
 
     public function item()
     {
-        return $this->belongsTo(Item::class, 'item_id');
+        return $this->belongsTo(AddItem::class, 'item_id');
     }
 }
