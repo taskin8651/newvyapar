@@ -233,7 +233,7 @@ class PurchaseBillController extends Controller
             $stock->save();
 
             // Attach using CurrentStock ID for clarity
-            $invoice->items()->attach($stock->id, $pivotData);
+            $invoice->items()->attach($item->id, $pivotData);
 
             // Purchase Log
             \App\Models\PurchaseLog::create([
