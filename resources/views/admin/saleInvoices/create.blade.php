@@ -32,10 +32,7 @@
                         @foreach($select_customers as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
                         @endforeach
-
-                        
                     </select>
-                    
 
                     <div id="customerDetailsCard" class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-white border-4 border-blue-300 rounded-xl shadow-xl hidden">
                         <div class="overflow-x-auto">
