@@ -141,7 +141,7 @@
     <aside class="w-72 bg-gradient-to-b from-white to-primary-50 shadow-xl border-r border-gray-100 min-h-screen hidden md:block">
         <div class="p-5 border-b border-gray-200 flex items-center">
             <div class="bg-primary-600 p-2 rounded-lg mr-3">
-                <i class="fas fa-rocket text-white text-sm"></i>
+              
             </div>
             <h1 class="text-xl font-bold text-primary-800">{{ trans('panel.site_title') }}</h1>
         </div>
