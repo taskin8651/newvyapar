@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'site_title' => 'vaypar',
+    'site_title' => 'ET-ACCOUNT',
 
 ];
