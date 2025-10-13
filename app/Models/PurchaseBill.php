@@ -67,6 +67,7 @@ class PurchaseBill extends Model implements HasMedia
         'payment_type_id',
         'purchase_bill_no',
         'purchase_bill_no',
+        'updated_by_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -145,6 +146,10 @@ class PurchaseBill extends Model implements HasMedia
     public function created_by()
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+    public function updated_by()
+    {
+        return $this->belongsTo(User::class, 'updated_by_id');
     }
     public function main_cost_center()
     {

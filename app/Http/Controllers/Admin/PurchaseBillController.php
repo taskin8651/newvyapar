@@ -479,7 +479,7 @@ public function update(Request $request, PurchaseBill $purchaseBill)
     $purchaseBill->update([
         'select_customer_id' => $request->select_customer_id,
         'po_no' => $request->po_no,
-        'reference_no' => $request->reference_no,
+        'ref_no' => $request->ref_no,
         'docket_no' => $request->docket_no,
         'po_date' => $request->po_date,
         'due_date' => $request->due_date,
@@ -496,12 +496,12 @@ public function update(Request $request, PurchaseBill $purchaseBill)
         'sub_cost_center_id'  => $request->sub_cost_center_id,
         'payment_type_id' => $request->payment_type_id,
         'json_data' => json_encode($request->all()),
+         'updated_by_id' => auth()->id(),
     ]);
 
     // ===== Sync / update items =====
     $existingItems = $purchaseBill->items()->pluck('add_item_purchase_bill.qty','add_item_purchase_bill.add_item_id')->toArray();
     $purchaseBill->items()->detach();
-
     foreach ($request->items as $itemData) {
         $item = \App\Models\AddItem::find($itemData['id']);
         if (!$item) continue;
