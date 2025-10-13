@@ -11,7 +11,7 @@
 
             <!-- Header -->
             <div class="bg-gradient-to-r from-blue-600 to-blue-400 text-white p-6 rounded-lg mb-6">
-                <h1 class="text-3xl font-bold">PURCHASE INVOICE (EDIT)</h1>
+                <h1 class="text-3xl font-bold">EDIT PURCHASE INVOICE</h1>
             </div>
 
             <!-- Customer Info & Invoice Details -->
@@ -21,15 +21,12 @@
                     <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
                     <select name="select_customer_id" id="customer_id" class="form-select select2 w-full" required>
                         <option value="">-- Select Customer --</option>
-                        @foreach($select_customers as $customer)
-                            <option value="{{ $customer }}" {{ $purchaseBill->select_customer_id == $customer ? 'selected' : '' }}>
-                                {{ $customer }}
+                        @foreach($select_customers as $id => $name)
+                            <option value="{{ $id }}" {{ $purchaseBill->select_customer_id == $id ? 'selected' : '' }}>
+                                {{ $name }}
                             </option>
                         @endforeach
-
-
                     </select>
-
 
                     <div id="customerDetailsCard" class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-white border-4 border-blue-300 rounded-xl shadow-xl {{ $purchaseBill->select_customer_id ? '' : 'hidden' }}">
                         <div class="overflow-x-auto">
@@ -75,9 +72,7 @@
                         <select name="main_cost_center_id" id="main_cost_center_id" class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                             <option value="">-- Select Main Cost Center --</option>
                             @foreach($cost as $id => $name)
-                                <option value="{{ $id }}" {{ $purchaseBill->main_cost_center_id == $id ? 'selected' : '' }}>
-                                    {{ $name }}
-                                </option>
+                                <option value="{{ $id }}" {{ $purchaseBill->main_cost_center_id == $id ? 'selected' : '' }}>{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -87,9 +82,7 @@
                         <select name="sub_cost_center_id" id="sub_cost_center_id" class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                             <option value="">-- Select Sub Cost Center --</option>
                             @foreach($sub_cost as $id => $name)
-                                <option value="{{ $id }}" {{ $purchaseBill->sub_cost_center_id == $id ? 'selected' : '' }}>
-                                    {{ $name }}
-                                </option>
+                                <option value="{{ $id }}" {{ $purchaseBill->sub_cost_center_id == $id ? 'selected' : '' }}>{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -109,7 +102,6 @@
                         <label for="due_date">Purchase Bill Date</label>
                         <input type="date" name="due_date" class="w-full rounded-md border px-3 py-2" value="{{ old('due_date', $purchaseBill->due_date) }}">
                     </div>
-
 
                     <input type="text" name="e_way_bill_no" value="{{ old('e_way_bill_no', $purchaseBill->e_way_bill_no) }}" placeholder="E-Way Bill No." class="w-full rounded-md border px-3 py-2 mt-2">
                     <textarea name="billing_address_invoice" rows="2" class="w-full rounded-md border px-3 py-2 mt-2" placeholder="Billing Address">{{ old('billing_address_invoice', $purchaseBill->billing_address_invoice) }}</textarea>
@@ -183,7 +175,7 @@
                 </div>
                 <div>
                     <label class="block text-gray-700 font-semibold mb-1">Grand Total</label>
-                    <input type="text" id="grand_total" name="grand_total" class="w-full border px-2 py-1 rounded" readonly value="{{ $purchaseBill->grand_total }}">
+                    <input type="text" id="grand_total" name="grand_total" class="w-full border px-2 py-1 rounded" readonly value="{{ $purchaseBill->total }}">
                 </div>
             </div>
 

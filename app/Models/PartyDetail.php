@@ -84,6 +84,8 @@ class PartyDetail extends Model implements HasMedia
         'updated_at',
         'deleted_at',
         'created_by_id',
+        'current_balance',
+        'current_balance_type',
     ];
 
     protected function serializeDate(DateTimeInterface $date)

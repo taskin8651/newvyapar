@@ -78,14 +78,20 @@
                                             <span id="customer_payment_terms" class="bg-green-100 text-green-800 px-2 rounded-full font-semibold text-xs"></span>
                                         </td>
                                     </tr>
-                                    <tr>
+                                    <tr class="bg-gray-50">
                                         <td class="px-3 py-2 font-semibold text-gray-700">Opening Balance</td>
-                                        <td class="px-3 py-2">
-                                            <span id="customer_opening_balance" class="text-blue-700 font-medium text-xs"></span>
-                                            <span id="opening_balance_type" class="text-blue-700 font-medium text-xs"></span>
+                                        <td class="px-3 py-2 space-y-1">
+                                            
+                                            <div id="opening_balance_type" class="text-sm"></div>
+                                            <div id="opening_balance_date" class="text-gray-500 text-xs italic"></div>
                                         </td>
+
                                         <td class="px-3 py-2 font-semibold text-gray-700">Current Balance</td>
-                                        <td class="px-3 py-2 text-red-600 font-medium text-xs" id="customer_current_balance"></td>
+                                        <td class="px-3 py-2 space-y-1">
+                                           
+                                            <div id="current_balance_type" class="text-sm"></div>
+                                            <div id="current_balance_date" class="text-gray-500 text-xs italic"></div>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -131,9 +137,19 @@
                     <input type="text" name="docket_no" placeholder="Docket Number" class="w-full rounded-md border px-3 py-2 mt-2">
 
                     <div class="grid grid-cols-2 gap-4 mt-2">
-                        <input type="date" name="po_date" class="w-full rounded-md border px-3 py-2">
-                        <input type="date" name="due_date" class="w-full rounded-md border px-3 py-2">
+                        <div class="flex flex-col">
+                            <label for="po_date" class="mb-1 font-semibold">Billing Date</label>
+                            <input type="date" id="po_date" name="po_date" 
+                            class="w-full rounded-md border px-3 py-2"
+                            value="{{ date('Y-m-d') }}">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="due_date" class="mb-1 font-semibold"> Bill Date</label>
+                            <input type="date" id="due_date" name="due_date" class="w-full rounded-md border px-3 py-2">
+                        </div>
                     </div>
+
                     <input type="text" name="e_way_bill_no" placeholder="E-Way Bill No." class="w-full rounded-md border px-3 py-2 mt-2">
                     <input type="text" name="customer_phone_invoice" id="invoice_customer_phone" placeholder="Customer Phone" class="w-full rounded-md border px-3 py-2 mt-2">
                     <textarea name="billing_address_invoice" id="invoice_billing_address" rows="2" class="w-full rounded-md border px-3 py-2 mt-2" placeholder="Billing Address"></textarea>
@@ -266,37 +282,72 @@ $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
 
     $('#customer_id').on('change', function() {
-        let customerId = $(this).val();
-        if(customerId){
-            $.get("{{ route('admin.saleInvoice.getCustomerDetails', '') }}/"+customerId, function(data){
-                function stripTags(input){ return $('<div>').html(input).text(); }
-                $('#customer_name').text(stripTags(data.party_name));
-                $('#customer_gstin').text(stripTags(data.gstin));
-                $('#customer_phone').text(stripTags(data.phone_number));
-                $('#customer_pan').text(stripTags(data.pan_number));
-                $('#customer_billing_address').text(stripTags(data.billing_address));
-                $('#customer_shipping_address').text(stripTags(data.shipping_address));
-                $('#customer_shipping_address2').text(stripTags(data.shipping_address));
-                $('#customer_state').text(stripTags(data.state));
-                $('#customer_city').text(stripTags(data.city));
-                $('#customer_pincode').text(stripTags(data.pincode));
-                $('#customer_email').text(stripTags(data.email));
-                $('#customer_credit_limit').text(stripTags(data.credit_limit));
-                $('#customer_payment_terms').text(stripTags(data.payment_terms));
-                $('#customer_opening_balance').text(stripTags(data.opening_balance) + ' (' + stripTags(data.opening_balance_date) + ')');
-                let balanceType = stripTags(data.opening_balance_type);
-                if(balanceType==='Debit'){
-                    $('#opening_balance_type').text(balanceType + ' (Receivable)').removeClass('text-green-700').addClass('text-red-600 font-bold');
-                } else {
-                    $('#opening_balance_type').text(balanceType + ' (Payable)').removeClass('text-red-600').addClass('text-green-700 font-bold');
-                }
-                $('#customer_current_balance').text(data.current_balance ?? '0.00');
-                $('#invoice_customer_phone').val(stripTags(data.phone_number));
-                $('#invoice_billing_address').val(stripTags(data.billing_address));
-                $('#customerDetailsCard').removeClass('hidden');
-            });
-        } else { $('#customerDetailsCard').addClass('hidden'); }
+    let customerId = $(this).val();
+
+    if (!customerId) {
+        $('#customerDetailsCard').addClass('hidden');
+        return;
+    }
+
+    $.get("{{ route('admin.saleInvoice.getCustomerDetails', '') }}/" + customerId, function(data) {
+        function stripTags(input) {
+            return $('<div>').html(input).text();
+        }
+
+        // Basic Info
+        $('#customer_name').text(stripTags(data.party_name));
+        $('#customer_gstin').text(stripTags(data.gstin));
+        $('#customer_phone').text(stripTags(data.phone_number));
+        $('#customer_pan').text(stripTags(data.pan_number));
+        $('#customer_billing_address').text(stripTags(data.billing_address));
+        $('#customer_shipping_address').text(stripTags(data.shipping_address));
+        $('#customer_shipping_address2').text(stripTags(data.shipping_address));
+        $('#customer_state').text(stripTags(data.state));
+        $('#customer_city').text(stripTags(data.city));
+        $('#customer_pincode').text(stripTags(data.pincode));
+        $('#customer_email').text(stripTags(data.email));
+        $('#customer_credit_limit').text(stripTags(data.credit_limit));
+        $('#customer_payment_terms').text(stripTags(data.payment_terms));
+
+        // Helper function to format balance display
+        function formatBalance(balance, type) {
+            balance = parseFloat(balance) || 0;
+            type = type || 'Debit'; // default to Debit if null
+            let label = type === 'Debit' ? 'Payable' : 'Receivable';
+            let arrow = type === 'Debit' ? '↑' : '↓';
+            let colorClass = type === 'Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold';
+            return {
+                text: `${balance.toFixed(2)} (${type}) (${label}) ${arrow}`,
+                class: colorClass
+            };
+        }
+
+        // Opening Balance
+        let opening = formatBalance(data.opening_balance, data.opening_balance_type);
+        $('#customer_opening_balance').text(data.opening_balance ?? '0.00' + ' (' + (data.opening_balance_date || '-') + ')');
+        $('#opening_balance_type')
+            .text(opening.text)
+            .removeClass('text-red-600 text-green-700 font-bold')
+            .addClass(opening.class);
+
+        // Current Balance
+        let current = formatBalance(data.current_balance, data.current_balance_type);
+        $('#customer_current_balance').text(current.text);
+        $('#current_balance_type')
+            .text(current.text)
+            .removeClass('text-red-600 text-green-700 font-bold')
+            .addClass(current.class);
+
+        $('#current_balance_date').text(data.updated_at || '-');
+
+        // Autofill invoice form
+        $('#invoice_customer_phone').val(stripTags(data.phone_number));
+        $('#invoice_billing_address').val(stripTags(data.billing_address));
+
+        $('#customerDetailsCard').removeClass('hidden');
     });
+    });
+
 
     function calculateRow(row){
         let qty = parseFloat(row.find('.qty').val()) || 0;

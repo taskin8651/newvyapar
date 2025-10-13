@@ -37,8 +37,9 @@ class PartyDetailsController extends Controller
     }
 
 
-public function store(StorePartyDetailRequest $request)
+public function store(Request $request)
 {
+   
     // Logged-in user ka ID lete hain
     $data = $request->all();
     $data['created_by_id'] = Auth::id(); // Yaha set kar rahe hain

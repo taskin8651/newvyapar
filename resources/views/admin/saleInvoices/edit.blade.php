@@ -259,13 +259,36 @@ $(document).ready(function() {
                 $('#customer_credit_limit').text(stripTags(data.credit_limit));
                 $('#customer_payment_terms').text(stripTags(data.payment_terms));
                 $('#customer_opening_balance').text(stripTags(data.opening_balance)+' ('+stripTags(data.opening_balance_date)+')');
-                let balanceType = stripTags(data.opening_balance_type);
-                if(balanceType==='Debit'){
-                    $('#opening_balance_type').text(balanceType + ' (Receivable)').removeClass('text-green-700').addClass('text-red-600 font-bold');
-                } else {
-                    $('#opening_balance_type').text(balanceType + ' (Payable)').removeClass('text-red-600').addClass('text-green-700 font-bold');
-                }
-                $('#customer_current_balance').text(data.current_balance ?? '0.00');
+                        // Helper function to format balance display
+                function formatBalance(balance, type) {
+                    balance = parseFloat(balance) || 0;
+                    type = type || 'Debit'; // default to Debit if null
+                    let label = type === 'Debit' ? 'Payable' : 'Receivable';
+                    let arrow = type === 'Debit' ? '↑' : '↓';
+                    let colorClass = type === 'Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold';
+                    return {
+                        text: `${balance.toFixed(2)} (${type}) (${label}) ${arrow}`,
+                        class: colorClass
+                    };
+                }    
+                // Opening Balance
+                let opening = formatBalance(data.opening_balance, data.opening_balance_type);
+                $('#customer_opening_balance').text(data.opening_balance ?? '0.00' + ' (' + (data.opening_balance_date || '-') + ')');
+                $('#opening_balance_type')
+                    .text(opening.text)
+                    .removeClass('text-red-600 text-green-700 font-bold')
+                    .addClass(opening.class);
+
+                // Current Balance
+                let current = formatBalance(data.current_balance, data.current_balance_type);
+                $('#customer_current_balance').text(current.text);
+                $('#current_balance_type')
+                    .text(current.text)
+                    .removeClass('text-red-600 text-green-700 font-bold')
+                    .addClass(current.class);
+
+                $('#current_balance_date').text(data.updated_at || '-');
+
                 $('#invoice_customer_phone').val(stripTags(data.phone_number));
                 $('#invoice_billing_address').val(stripTags(data.billing_address));
                 $('#customerDetailsCard').removeClass('hidden');

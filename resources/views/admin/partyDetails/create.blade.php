@@ -262,8 +262,8 @@
                                 <select name="opening_balance_type" x-model="opening_balance_type"
                                         class="w-full rounded-md border border-gray-300 px-4 py-3 shadow-sm focus:border-indigo-500 
                                                focus:ring focus:ring-indigo-200 focus:ring-opacity-50 mt-1">
-                                    <option value="Debit">Debit (Receivable)</option>
-                                    <option value="Credit">Credit (Payable)</option>
+                                    <option value="Debit">Debit (Payable)</option>
+                                    <option value="Credit">Credit (Receivable)</option>
                                 </select>
                             </div>
                         </div>
@@ -365,6 +365,38 @@
                                     <p class="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
                                 </div>
                             </div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Upload Documents</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                                <!-- Document Inputs -->
+                                <template x-for="i in 4" :key="i">
+                                    <div class="flex items-center space-x-4">
+                                        <!-- File input -->
+                                        <div class="flex-1">
+                                            <label :for="'Documents' + i" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none px-4 py-2 border border-gray-300 block text-center">
+                                                <span x-text="'Document ' + i"></span>
+                                                <input :id="'Documents' + i" :name="'Documents' + i" type="file" class="sr-only" @change="previewFile($event, i)">
+                                            </label>
+                                        </div>
+
+                                        <!-- Preview -->
+                                        <div class="w-32 h-32 border rounded flex items-center justify-center bg-gray-50 overflow-hidden">
+                                            <template x-if="previews[i]">
+                                                <template x-if="previews[i].type.startsWith('image/')">
+                                                    <img :src="previews[i].url" class="w-full h-full object-cover">
+                                                </template>
+                                                <template x-if="previews[i].type === 'application/pdf'">
+                                                    <embed :src="previews[i].url" type="application/pdf" class="w-full h-full">
+                                                </template>
+                                            </template>
+                                            <template x-if="!previews[i]">
+                                                <span class="text-gray-400 text-sm">Preview</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">PNG, JPG, PDF up to 10MB</p>
                         </div>
                     </div>
                 </div>

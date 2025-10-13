@@ -42,35 +42,48 @@ public function create()
     abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     // Customers dropdown
-  $select_customers = \App\Models\PartyDetail::select('id', 'party_name', 'opening_balance', 'opening_balance_type')
-    ->get()
-    ->mapWithKeys(function($customer) {
-        $balance = number_format($customer->opening_balance, 2);
-        $type = $customer->opening_balance_type === 'Debit' ? 'Dr' : 'Cr';
-        return [$customer->id => "{$customer->party_name} (₹{$balance} {$type})"];
-    });
+    $select_customers = \App\Models\PartyDetail::select(
+            'id', 
+            'party_name', 
+            'opening_balance', 
+            'opening_balance_type', 
+            'current_balance', 
+            'current_balance_type'
+        )
+        ->get()
+        ->mapWithKeys(function($customer) {
+            // Use current_balance if exists, else opening_balance
+            $balance = $customer->current_balance !== null ? $customer->current_balance : $customer->opening_balance;
+            $type = $customer->current_balance_type ?? $customer->opening_balance_type;
 
+            $balanceFormatted = number_format($balance, 2);
 
+            // Add arrow HTML and color class
+            if ($type === 'Debit') {
+                $display = "₹{$balanceFormatted} Dr - Payable ↑";
+            } else {
+                $display = "₹{$balanceFormatted} Cr - Receivable ↓";
+            }
 
+            return [$customer->id => "{$customer->party_name} ({$display})"];
+        });
 
     // Fetch all items (products + services)
     $items = AddItem::whereIn('item_type', ['product', 'service'])
         ->select('id', 'item_name', 'sale_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
-        ->with('select_unit') // for unit name
+        ->with('select_unit')
         ->get()
         ->map(function ($item) {
             if ($item->item_type === 'product') {
-                // Get total quantity from current_stocks
                 $item->stock_qty = CurrentStock::whereHas('addItems', function ($q) use ($item) {
                     $q->where('add_item_id', $item->id);
                 })->sum('qty');
             } else {
-                // Services don't have stock
                 $item->stock_qty = null;
             }
             return $item;
         });
-       
+
     // Cost centers
     $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
@@ -123,127 +136,176 @@ public function getCustomerDetails($id)
         return response()->json($subCostCenters);
     }
 
-    public function store(Request $request)
-    {
-        // dd($request->all());
-        $request->validate([
-            'select_customer_id' => 'required|exists:party_details,id',
-            'po_no' => 'required|string',
-            'po_date' => 'required|date',
-            'docket_no' => 'nullable|string',
-            'billing_address_invoice' => 'nullable|string',
-            'items' => 'required|array',
-            'items.*.add_item_id' => 'required|exists:add_items,id',
-            'items.*.qty' => 'required|numeric|min:1',
-        ]);
-       
-        // Handle attachment
-        $attachmentPath = null;
-        if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')->store('attachments', 'public');
+public function store(Request $request)
+{
+    $request->validate([
+        'select_customer_id' => 'required|exists:party_details,id',
+        'po_no' => 'required|string',
+        'po_date' => 'required|date',
+        'docket_no' => 'nullable|string',
+        'billing_address_invoice' => 'nullable|string',
+        'items' => 'required|array',
+        'items.*.add_item_id' => 'required|exists:add_items,id',
+        'items.*.qty' => 'required|numeric|min:1',
+        'attachment' => 'nullable|file|max:10240', // max 10MB
+    ]);
+
+    // Generate sale invoice number
+    $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
+
+    // Save invoice
+    $invoice = SaleInvoice::create([
+        'sale_invoice_number' => $sale_invoice_number,
+        'payment_type' => $request->payment_type,
+        'select_customer_id' => $request->select_customer_id,
+        'po_no' => $request->po_no,
+        'docket_no' => $request->docket_no,
+        'po_date' => $request->po_date,
+        'due_date' => $request->due_date,
+        'e_way_bill_no' => $request->e_way_bill_no,
+        'phone_number' => $request->customer_phone_invoice,
+        'billing_address' => $request->billing_address_invoice,
+        'shipping_address' => $request->shipping_address_invoice,
+        'notes' => $request->notes,
+        'terms' => $request->terms,
+        'overall_discount' => $request->overall_discount ?? 0,
+        'subtotal' => $request->subtotal ?? 0,
+        'tax' => $request->tax ?? 0,
+        'discount' => $request->discount ?? 0,
+        'total' => $request->total ?? 0,
+        'created_by_id' => auth()->id(),
+        'json_data' => json_encode($request->all()),
+        'status' => 'pending',
+        'main_cost_center_id' => $request->main_cost_center_id,
+        'sub_cost_center_id' => $request->sub_cost_center_id,
+    ]);
+
+    // Attach uploaded file to media table
+    if ($request->hasFile('attachment')) {
+        $invoice->addMediaFromRequest('attachment')->toMediaCollection('document');
+    }
+
+    // Fetch customer
+    $customer = \App\Models\PartyDetail::find($request->select_customer_id);
+
+    // --- Calculate balances ---
+    $baseBalance = $customer->current_balance ?? $customer->opening_balance ?? 0;
+    $baseType = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
+
+    $totalSaleAmount = $request->total ?? 0;
+    $closingBalance = $baseBalance;
+    $closingType = $baseType;
+
+    if ($baseType === 'Debit') {
+        $closingBalance -= $totalSaleAmount;
+        if ($closingBalance < 0) {
+            $closingBalance = abs($closingBalance);
+            $closingType = 'Credit';
+        } else {
+            $closingType = 'Debit';
         }
+    } else {
+        $closingBalance += $totalSaleAmount;
+        $closingType = 'Credit';
+    }
 
-        // Generate random sale invoice number
-        $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100,999);
-      
-        // Save invoice
-        $invoice = SaleInvoice::create([
-            'sale_invoice_number' => $sale_invoice_number,
-            'payment_type' => $request->payment_type,
-            'select_customer_id' => $request->select_customer_id,
-            'po_no' => $request->po_no,
-            'docket_no' => $request->docket_no,
-            'po_date' => $request->po_date,
-            'due_date' => $request->due_date,
-            'e_way_bill_no' => $request->e_way_bill_no,
-            'phone_number' => $request->customer_phone_invoice,
-            'billing_address' => $request->billing_address_invoice,
-            'shipping_address' => $request->shipping_address_invoice,
-            'notes' => $request->notes,
-            'terms' => $request->terms,
-            'overall_discount' => $request->overall_discount ?? 0,
-            'subtotal' => $request->subtotal ?? 0,
-            'tax' => $request->tax ?? 0,
-            'discount' => $request->discount ?? 0,
-            'total' => $request->total ?? 0,
-            'attachment' => $attachmentPath,
+    // Update customer's current balance
+    $customer->current_balance = $closingBalance;
+    $customer->current_balance_type = $closingType;
+    $customer->save();
+
+    // --- Save transaction ---
+    \App\Models\Transaction::create([
+        'sale_invoice_id' => $invoice->id,
+        'select_customer_id' => $customer->id,
+        'payment_type_id' => $request->payment_type_id ?? null,
+        'main_cost_center_id' => $request->main_cost_center_id,
+        'sub_cost_center_id' => $request->sub_cost_center_id,
+        'sale_amount' => $totalSaleAmount,
+        'opening_balance' => $baseBalance,
+        'closing_balance' => $closingBalance,
+        'transaction_type' => 'sale',
+        'transaction_id' => strtoupper('TXN' . rand(1000000000, 9999999999)),
+        'created_by_id' => auth()->id(),
+        'json_data' => json_encode([
+            'request' => $request->all(),
+            'invoice' => $invoice->toArray(),
+            'customer_before' => [
+                'balance' => $baseBalance,
+                'type' => $baseType,
+            ],
+            'customer_after' => [
+                'balance' => $closingBalance,
+                'type' => $closingType,
+            ],
+        ]),
+    ]);
+
+    // --- Attach items and update stock ---
+    foreach ($request->items as $itemData) {
+        $item = \App\Models\AddItem::find($itemData['add_item_id']);
+
+        // Attach item to invoice pivot
+        $invoice->items()->attach($item->id, [
+            'description' => $itemData['description'] ?? null,
+            'qty' => $itemData['qty'],
+            'unit' => $itemData['unit'] ?? null,
+            'price' => $itemData['price'] ?? 0,
+            'discount_type' => $itemData['discount_type'] ?? 'value',
+            'discount' => $itemData['discount'] ?? 0,
+            'tax_type' => $itemData['tax_type'] ?? 'without',
+            'tax' => $itemData['tax'] ?? 0,
+            'amount' => $itemData['amount'] ?? 0,
             'created_by_id' => auth()->id(),
-            'json_data' => json_encode($request->all()),
-            'status' => 'pending',
-            'main_cost_center_id' => $request->main_cost_center_id,
-             'sub_cost_center_id'  => $request->sub_cost_center_id,
-
+            'json_data' => json_encode($itemData),
         ]);
-        // dd($invoice);
 
-        foreach ($request->items as $itemData) {
-            $item = \App\Models\AddItem::find($itemData['add_item_id']);
+        if ($item->item_type === 'product') {
+            $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
+            if ($stock) {
+                $previousQty = $stock->qty;
+                $previousAmount = $previousQty * $itemData['price'];
 
-            // Attach item to invoice pivot
-            $invoice->items()->attach($item->id, [
-                'description' => $itemData['description'] ?? null,
-                'qty' => $itemData['qty'],
-                'unit' => $itemData['unit'] ?? null,
-                'price' => $itemData['price'] ?? 0,
-                'discount_type' => $itemData['discount_type'] ?? 'value',
-                'discount' => $itemData['discount'] ?? 0,
-                'tax_type' => $itemData['tax_type'] ?? 'without',
-                'tax' => $itemData['tax'] ?? 0,
-                'amount' => $itemData['amount'] ?? 0,
-                'created_by_id' => auth()->id(),
-                'json_data' => json_encode($itemData),
-            ]);
+                $stock->qty -= $itemData['qty'];
+                $stock->save();
 
-            if ($item->item_type === 'product') {
-                // Fetch current stock by item_id
-                $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
-               
-                if ($stock) {
-                    $previousQty = $stock->qty; // or quantity_available if using that column
-                    $previousAmount = $previousQty * $itemData['price'];
-
-                    // Deduct sold quantity
-                    $stock->qty -= $itemData['qty'];
-                    $stock->save();
-
-                    // Create Sale Log
-                    \App\Models\SaleLog::create([
-                        'sale_invoice_id' => $invoice->id,
-                        'item_id' => $item->id,
-                        'item_type' => 'product',
-                        'stock_id' => $stock->id,
-                        'previous_qty' => $previousQty,
-                        'sold_qty' => $itemData['qty'],
-                        'previous_amount' => $previousAmount,
-                        'sold_amount' => $itemData['amount'] ?? 0,
-                        'price' => $itemData['price'],
-                        'sold_to_user_id' => $request->select_customer_id,
-                        'created_by_id' => auth()->id(),
-                        'json_data_add_item_sale_invoice' => json_encode($itemData),
-                        'json_data_current_stock' => json_encode($stock),
-                        'json_data_sale_invoice' => json_encode($invoice),
-                    ]);
-                }
-            }
-            else {
-                // For service, just log sale
                 \App\Models\SaleLog::create([
                     'sale_invoice_id' => $invoice->id,
                     'item_id' => $item->id,
-                    'item_type' => 'service',
+                    'item_type' => 'product',
+                    'stock_id' => $stock->id,
+                    'previous_qty' => $previousQty,
                     'sold_qty' => $itemData['qty'],
+                    'previous_amount' => $previousAmount,
                     'sold_amount' => $itemData['amount'] ?? 0,
                     'price' => $itemData['price'],
                     'sold_to_user_id' => $request->select_customer_id,
-                    'json_data_sale_invoice' => json_encode($invoice),
+                    'created_by_id' => auth()->id(),
                     'json_data_add_item_sale_invoice' => json_encode($itemData),
-
+                    'json_data_current_stock' => json_encode($stock),
+                    'json_data_sale_invoice' => json_encode($invoice),
                 ]);
             }
+        } else {
+            \App\Models\SaleLog::create([
+                'sale_invoice_id' => $invoice->id,
+                'item_id' => $item->id,
+                'item_type' => 'service',
+                'sold_qty' => $itemData['qty'],
+                'sold_amount' => $itemData['amount'] ?? 0,
+                'price' => $itemData['price'],
+                'sold_to_user_id' => $request->select_customer_id,
+                'json_data_sale_invoice' => json_encode($invoice),
+                'json_data_add_item_sale_invoice' => json_encode($itemData),
+            ]);
         }
-
-        return redirect()->route('admin.sale-invoices.index')->with('success', 'Sale Invoice Created Successfully.');
     }
+
+    return redirect()->route('admin.sale-invoices.index')
+                     ->with('success', 'Sale Invoice Created Successfully.');
+}
+
+
 
 
 
@@ -251,21 +313,39 @@ public function edit(SaleInvoice $saleInvoice)
 {
     abort_if(Gate::denies('sale_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    // Customers dropdown
-    $select_customers = PartyDetail::pluck('party_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
+    // Customers dropdown with balance display
+    $select_customers = \App\Models\PartyDetail::select(
+            'id', 
+            'party_name', 
+            'opening_balance', 
+            'opening_balance_type', 
+            'current_balance', 
+            'current_balance_type'
+        )
+        ->get()
+        ->mapWithKeys(function($customer) {
+            $balance = $customer->current_balance ?? $customer->opening_balance;
+            $type = $customer->current_balance_type ?? $customer->opening_balance_type;
+            $balanceFormatted = number_format($balance, 2);
 
-    // Fetch all items (products + services) with stock qty
+            if ($type === 'Debit') {
+                $display = "₹{$balanceFormatted} Dr - Payable ↑";
+            } else {
+                $display = "₹{$balanceFormatted} Cr - Receivable ↓";
+            }
+
+            return [$customer->id => "{$customer->party_name} ({$display})"];
+        });
+
+    // Fetch all items with stock qty
     $items = AddItem::whereIn('item_type', ['product', 'service'])
         ->select('id', 'item_name', 'sale_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
         ->with('select_unit')
         ->get()
         ->map(function ($item) {
-            if ($item->item_type === 'product') {
-                $item->stock_qty = CurrentStock::where('item_id', $item->id)->sum('qty');
-            } else {
-                $item->stock_qty = null;
-            }
+            $item->stock_qty = $item->item_type === 'product'
+                ? CurrentStock::where('item_id', $item->id)->sum('qty')
+                : null;
             return $item;
         });
 
@@ -292,11 +372,13 @@ public function update(Request $request, SaleInvoice $saleInvoice)
         'items' => 'required|array',
         'items.*.add_item_id' => 'required|exists:add_items,id',
         'items.*.qty' => 'required|numeric|min:1',
+        'attachment' => 'nullable|file|max:10240', // max 10MB
     ]);
 
     // Handle attachment
     if ($request->hasFile('attachment')) {
-        $saleInvoice->attachment = $request->file('attachment')->store('attachments', 'public');
+        $saleInvoice->clearMediaCollection('document'); // remove old attachment
+        $saleInvoice->addMediaFromRequest('attachment')->toMediaCollection('document');
     }
 
     // Update invoice details
@@ -321,14 +403,96 @@ public function update(Request $request, SaleInvoice $saleInvoice)
         'json_data' => json_encode($request->all()),
     ]);
 
-    // Detach old items
+    // --- Detach old items ---
     $saleInvoice->items()->detach();
 
-    // Loop through new items
-    foreach ($request->items as $itemData) {
-        $item = AddItem::find($itemData['add_item_id']);
+    // Fetch customer
+    $customer = \App\Models\PartyDetail::find($request->select_customer_id);
 
-        // Attach item to pivot
+    // --- Recalculate customer balances ---
+    $baseBalance = $customer->current_balance ?? $customer->opening_balance ?? 0;
+    $baseType = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
+
+    $totalSaleAmount = $request->total ?? 0;
+    $closingBalance = $baseBalance;
+    $closingType = $baseType;
+
+    if ($baseType === 'Debit') {
+        $closingBalance -= $totalSaleAmount;
+        if ($closingBalance < 0) {
+            $closingBalance = abs($closingBalance);
+            $closingType = 'Credit';
+        } else {
+            $closingType = 'Debit';
+        }
+    } else {
+        $closingBalance += $totalSaleAmount;
+        $closingType = 'Credit';
+    }
+
+    // Update customer's current balance
+    $customer->current_balance = $closingBalance;
+    $customer->current_balance_type = $closingType;
+    $customer->save();
+
+    // --- Update Transaction ---
+    $transaction = \App\Models\Transaction::where('sale_invoice_id', $saleInvoice->id)->first();
+
+    if ($transaction) {
+        $transaction->update([
+            'select_customer_id' => $customer->id,
+            'payment_type_id' => $request->payment_type_id ?? $transaction->payment_type_id,
+            'main_cost_center_id' => $request->main_cost_center_id,
+            'sub_cost_center_id' => $request->sub_cost_center_id,
+            'sale_amount' => $totalSaleAmount,
+            'opening_balance' => $baseBalance,
+            'closing_balance' => $closingBalance,
+            'json_data' => json_encode([
+                'request' => $request->all(),
+                'invoice' => $saleInvoice->toArray(),
+                'customer_before' => [
+                    'balance' => $baseBalance,
+                    'type' => $baseType,
+                ],
+                'customer_after' => [
+                    'balance' => $closingBalance,
+                    'type' => $closingType,
+                ],
+            ]),
+        ]);
+    } else {
+        \App\Models\Transaction::create([
+            'sale_invoice_id' => $saleInvoice->id,
+            'select_customer_id' => $customer->id,
+            'payment_type_id' => $request->payment_type_id ?? null,
+            'main_cost_center_id' => $request->main_cost_center_id,
+            'sub_cost_center_id' => $request->sub_cost_center_id,
+            'sale_amount' => $totalSaleAmount,
+            'opening_balance' => $baseBalance,
+            'closing_balance' => $closingBalance,
+            'transaction_type' => 'sale',
+            'transaction_id' => strtoupper('TXN' . rand(1000000000, 9999999999)),
+            'created_by_id' => auth()->id(),
+            'json_data' => json_encode([
+                'request' => $request->all(),
+                'invoice' => $saleInvoice->toArray(),
+                'customer_before' => [
+                    'balance' => $baseBalance,
+                    'type' => $baseType,
+                ],
+                'customer_after' => [
+                    'balance' => $closingBalance,
+                    'type' => $closingType,
+                ],
+            ]),
+        ]);
+    }
+
+    // --- Attach new items and update stock ---
+    foreach ($request->items as $itemData) {
+        $item = \App\Models\AddItem::find($itemData['add_item_id']);
+
+        // Attach item to invoice pivot
         $saleInvoice->items()->attach($item->id, [
             'description' => $itemData['description'] ?? null,
             'qty' => $itemData['qty'],
@@ -344,17 +508,14 @@ public function update(Request $request, SaleInvoice $saleInvoice)
         ]);
 
         if ($item->item_type === 'product') {
-            // Fetch current stock by item_id
-            $stock = CurrentStock::where('item_id', $item->id)->first();
+            $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
             if ($stock) {
                 $previousQty = $stock->qty;
                 $previousAmount = $previousQty * $itemData['price'];
 
-                // Deduct sold quantity
                 $stock->qty -= $itemData['qty'];
                 $stock->save();
 
-                // Create Sale Log
                 \App\Models\SaleLog::create([
                     'sale_invoice_id' => $saleInvoice->id,
                     'item_id' => $item->id,
@@ -373,7 +534,6 @@ public function update(Request $request, SaleInvoice $saleInvoice)
                 ]);
             }
         } else {
-            // For service, just log sale
             \App\Models\SaleLog::create([
                 'sale_invoice_id' => $saleInvoice->id,
                 'item_id' => $item->id,
@@ -388,8 +548,10 @@ public function update(Request $request, SaleInvoice $saleInvoice)
         }
     }
 
-    return redirect()->route('admin.sale-invoices.index')->with('success', 'Sale Invoice Updated Successfully.');
+    return redirect()->route('admin.sale-invoices.index')
+                     ->with('success', 'Sale Invoice Updated Successfully.');
 }
+
 
     public function show(SaleInvoice $saleInvoice)
     {

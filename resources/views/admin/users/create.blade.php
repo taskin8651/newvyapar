@@ -52,22 +52,44 @@
                     <label for="select_companies" class="block text-sm font-semibold text-gray-700 mb-1">
                         {{ trans('cruds.user.fields.select_companies') }}
                     </label>
-                    <div class="flex gap-2 mb-2">
-                        <span class="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded cursor-pointer select-all-companies">
-                            {{ trans('global.select_all') }}
-                        </span>
-                        <span class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded cursor-pointer deselect-all-companies">
-                            {{ trans('global.deselect_all') }}
-                        </span>
-                    </div>
-                    <select name="select_companies[]" id="select_companies" multiple
+
+                    @if(!$readonly_company)
+                        <!-- Super Admin view (can select multiple companies) -->
+                        <div class="flex gap-2 mb-2">
+                            <span class="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded cursor-pointer select-all-companies">
+                                {{ trans('global.select_all') }}
+                            </span>
+                            <span class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded cursor-pointer deselect-all-companies">
+                                {{ trans('global.deselect_all') }}
+                            </span>
+                        </div>
+
+                        <select name="select_companies[]" id="select_companies" multiple
                             class="w-full select2 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        @foreach($select_companies as $id => $select_company)
-                            <option value="{{ $id }}" {{ in_array($id, old('select_companies', [])) ? 'selected' : '' }}>
-                                {{ $select_company }}
-                            </option>
-                        @endforeach
-                    </select>
+                            @foreach($select_companies as $id => $select_company)
+                                <option value="{{ $id }}"
+                                    {{ in_array($id, old('select_companies', isset($selected_company) ? (array) $selected_company : [])) ? 'selected' : '' }}>
+                                    {{ $select_company }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                    @else
+                        <!-- Company or Admin view (readonly) -->
+                        <select name="select_companies[]" id="select_companies" multiple disabled
+                            class="w-full rounded-lg border-gray-300 bg-gray-100 shadow-sm sm:text-sm cursor-not-allowed">
+                            @foreach($select_companies as $id => $select_company)
+                                <option value="{{ $id }}"
+                                    {{ $selected_company == $id ? 'selected' : '' }}>
+                                    {{ $select_company }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <!-- hidden field to submit selected company -->
+                        <input type="hidden" name="select_companies[]" value="{{ $selected_company }}">
+                    @endif
+
                     @error('select_companies')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror

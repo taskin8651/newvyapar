@@ -25,7 +25,7 @@ class StorePartyDetailRequest extends FormRequest
                 'string',
                 'min:15',
                 'max:15',
-                'required',
+                
                 'unique:party_details',
             ],
             'phone_number' => [
@@ -50,7 +50,7 @@ class StorePartyDetailRequest extends FormRequest
                 'min:6',
                 'max:6',
                 'required',
-                'unique:party_details',
+               
             ],
             'state' => [
                 'string',

@@ -60,7 +60,7 @@ class PurchaseBillController extends Controller
 
 
 
- public function create()
+public function create()
 {
     abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
@@ -68,52 +68,60 @@ class PurchaseBillController extends Controller
     $select_customers = PartyDetail::all();
 
     // 2️⃣ Prepare array for dropdown + JS
-    $select_customers_details = $select_customers->map(function($c){
-    $opening_balance_date = $c->opening_balance_date ? Carbon::parse($c->opening_balance_date)->format('d-m-Y') : '-';
-    
-    $balance_type = $c->opening_balance_type ?? 'Debit'; // Default Debit
-    if($balance_type === 'Debit'){
-        $icon = '↓';
-        $color = 'red';
-        $label = 'Receivable';
-    } else {
-        $icon = '↑';
-        $color = 'green';
-        $label = 'Payable';
-    }
+    $select_customers_details = $select_customers->map(function ($c) {
 
-    $opening_balance_text = "<span style='color: $color; font-weight:bold;'>"
-                            . $c->opening_balance . " ($opening_balance_date) $balance_type ($label) $icon</span>";
+        // 🔹 Choose balance type (current > opening)
+        $balance = !is_null($c->current_balance) ? $c->current_balance : ($c->opening_balance ?? 0);
+        $balance_type = !is_null($c->current_balance_type) ? $c->current_balance_type : ($c->opening_balance_type ?? 'Debit');
+        $balance_date = $c->updated_at ? $c->updated_at->format('d-m-Y') : ($c->created_at->format('d-m-Y') ?? '-');
 
-    return [
-        'id' => $c->id,
-        'name' => $c->party_name . ' - ' . $opening_balance_text, // HTML included
-        'party_name' => $c->party_name,
-        'gstin' => $c->gstin,
-        'phone' => $c->phone_number,
-        'pan' => $c->pan_number,
-        'billing_address' => $c->billing_address,
-        'shipping_address' => $c->shipping_address,
-        'state' => $c->state,
-        'city' => $c->city,
-        'pincode' => $c->pincode,
-        'email' => $c->email,
-        'credit_limit' => $c->credit_limit,
-        'payment_terms' => $c->payment_terms,
-        'opening_balance' => $c->opening_balance,
-        'opening_balance_date' => $opening_balance_date,
-        'opening_balance_type' => $c->opening_balance_type,
-        'current_balance' => $c->current_balance,
-    ];
-});
+        // 🔹 Color + Label based on type
+        if ($balance_type === 'Debit') {
+            $icon = '↑';
+            $color = 'red';
+            $label = 'Payable';
+        } else {
+            $icon = '↓';
+            $color = 'green';
+            $label = 'Receivable';
+        }
 
-    // 3️⃣ Fetch products, units, cost centers, payment types, tax rates (same as before)
+        $balance_text = "<span style='color: $color; font-weight:bold;'>"
+            . $balance . " ($balance_date) $balance_type ($label) $icon</span>";
+
+        return [
+            'id' => $c->id,
+            'name' => $c->party_name . ' - ' . $balance_text, // HTML included
+            'party_name' => $c->party_name,
+            'gstin' => $c->gstin,
+            'phone' => $c->phone_number,
+            'pan' => $c->pan_number,
+            'billing_address' => $c->billing_address,
+            'shipping_address' => $c->shipping_address,
+            'state' => $c->state,
+            'city' => $c->city,
+            'pincode' => $c->pincode,
+            'email' => $c->email,
+            'credit_limit' => $c->credit_limit,
+            'payment_terms' => $c->payment_terms,
+            'opening_balance' => $c->opening_balance,
+            'opening_balance_type' => $c->opening_balance_type,
+            'current_balance' => $c->current_balance,
+            'current_balance_type' => $c->current_balance_type,
+            'balance_used' => $balance,
+            'balance_type_used' => $balance_type,
+        ];
+    });
+
+    // 3️⃣ Fetch other related data
     $items = AddItem::whereIn('item_type', ['product', 'service'])
         ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
         ->with('select_unit')
         ->get()
         ->map(function ($item) {
-            $item->stock_qty = ($item->item_type === 'product') ? CurrentStock::where('item_id', $item->id)->sum('qty') : null;
+            $item->stock_qty = ($item->item_type === 'product')
+                ? CurrentStock::where('item_id', $item->id)->sum('qty')
+                : null;
             return $item;
         });
 
@@ -130,13 +138,14 @@ class PurchaseBillController extends Controller
         'product_ids',
         'payment_types',
         'select_customers',
-        'select_customers_details', // 🔹 pass extra details for JS
+        'select_customers_details',
         'cost',
         'sub_cost',
         'units',
         'tax_rates'
     ));
 }
+
 
 
 
@@ -150,141 +159,190 @@ class PurchaseBillController extends Controller
 
 
 
- public function store(Request $request)
-{
-    $request->validate([
-        'select_customer_id' => 'required|exists:party_details,id',
-        'po_no' => 'required|string',
-        'reference_no' => 'required|string',
-        'due_date' => 'required|date',
-        'po_date' => 'required|date',
-        'docket_no' => 'nullable|string',
-        'billing_address_invoice' => 'nullable|string',
-        'items' => 'required|array|min:1',
-        'items.*.id' => 'required|exists:add_items,id',
-        'items.*.qty' => 'required|numeric|min:1',
-        'main_cost_center_id' => 'required|exists:main_cost_centers,id',
-        'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
-    ]);
-    // Handle attachment
-    $attachmentPath = $request->hasFile('attachment') 
-        ? $request->file('attachment')->store('attachments', 'public') 
-        : null;
+    public function store(Request $request)
+    {
+        $request->validate([
+            'select_customer_id' => 'required|exists:party_details,id',
+            'po_no' => 'required|string',
+            'reference_no' => 'required|string',
+            'due_date' => 'required|date',
+            'po_date' => 'required|date',
+            'docket_no' => 'nullable|string',
+            'billing_address_invoice' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:add_items,id',
+            'items.*.qty' => 'required|numeric|min:1',
+            'main_cost_center_id' => 'required|exists:main_cost_centers,id',
+            'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png',
+            'document' => 'nullable|file|mimes:pdf,doc,docx',
+        ]);
 
-    // Generate purchase invoice number
-    $purchase_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100,999);
+        // Generate unique purchase invoice number
+        $purchase_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
 
-    // Create PurchaseBill
-    $invoice = PurchaseBill::create([
-        'purchase_invoice_number' => $purchase_invoice_number,
-        'select_customer_id' => $request->select_customer_id,
-        'po_no' => $request->po_no,
-        'docket_no' => $request->docket_no,
-        'po_date' => $request->po_date,
-        'due_date' => $request->due_date,
-        'e_way_bill_no' => $request->e_way_bill_no,
-        'phone_number' => $request->customer_phone_invoice,
-        'billing_address' => $request->billing_address_invoice,
-        'shipping_address' => $request->shipping_address_invoice,
-        'notes' => $request->notes,
-        'terms' => $request->terms,
-        'overall_discount' => $request->overall_discount ?? 0,
-        'subtotal' => $request->subtotal ?? 0,
-        'tax' => $request->tax ?? 0,
-        'discount' => $request->discount ?? 0,
-        'total' => $request->total ?? 0,
-        'attachment' => $attachmentPath,
-        'created_by_id' => auth()->id(),
-        'json_data' => json_encode($request->all()),
-        'status' => 'pending',
-        'main_cost_center_id' => $request->main_cost_center_id,
-        'sub_cost_center_id'  => $request->sub_cost_center_id,
-        'reference_no' => $request->reference_no,
-        'ddescription' => $request->ddescription,
-        'created_by_id' => auth()->id(),
-        'payment_type_id' => $request->payment_type_id,
-    ]);
-
-    // Loop through items
-    foreach ($request->items as $itemData) {
-        $item = \App\Models\AddItem::find($itemData['id']);
-        
-        if (!$item) continue;
-
-        $pivotData = [
-            'description' => $itemData['description'] ?? null,
-            'qty' => $itemData['qty'],
-            'unit' => $itemData['unit'] ?? null,
-            'price' => $itemData['price'] ?? 0,
-            'discount_type' => $itemData['discount_type'] ?? 'value',
-            'discount' => $itemData['discount'] ?? 0,
-            'tax_type' => $itemData['tax_type'] ?? 'without',
-            'tax' => $itemData['tax'] ?? 0,
-            'amount' => $itemData['amount'] ?? 0,
+        // Create PurchaseBill
+        $invoice = \App\Models\PurchaseBill::create([
+            'purchase_invoice_number' => $purchase_invoice_number,
+            'select_customer_id' => $request->select_customer_id,
+            'po_no' => $request->po_no,
+            'reference_no' => $request->reference_no,
+            'docket_no' => $request->docket_no,
+            'po_date' => $request->po_date,
+            'due_date' => $request->due_date,
+            'e_way_bill_no' => $request->e_way_bill_no,
+            'phone_number' => $request->customer_phone_invoice,
+            'billing_address' => $request->billing_address_invoice,
+            'shipping_address' => $request->shipping_address_invoice,
+            'notes' => $request->notes,
+            'terms' => $request->terms,
+            'overall_discount' => $request->overall_discount ?? 0,
+            'subtotal' => $request->subtotal ?? 0,
+            'tax' => $request->tax ?? 0,
+            'discount' => $request->discount ?? 0,
+            'total' => $request->total ?? 0,
+            'status' => 'pending',
+            'main_cost_center_id' => $request->main_cost_center_id,
+            'sub_cost_center_id' => $request->sub_cost_center_id,
+            'ddescription' => $request->ddescription,
+            'payment_type_id' => $request->payment_type_id,
             'created_by_id' => auth()->id(),
-            'json_data' => json_encode($itemData),
-        ];
-        // dd($pivotData);
+            'json_data' => json_encode($request->all()),
+        ]);
 
-        if ($item->item_type === 'product') {
-            $stock = \App\Models\CurrentStock::firstOrCreate(['item_id' => $item->id], ['qty' => 0]);
-            $previousQty = $stock->qty;
-            $stock->qty += $itemData['qty']; // increment stock
-            $stock->save();
+        // ===== Handle media uploads =====
+        if ($request->hasFile('image')) {
+            $invoice->addMedia($request->file('image'))->toMediaCollection('image');
+        }
 
-            // Attach using CurrentStock ID for clarity
-            $invoice->items()->attach($item->id, $pivotData);
+        if ($request->hasFile('document')) {
+            $invoice->addMedia($request->file('document'))->toMediaCollection('document');
+        }
 
-            // Purchase Log
-            \App\Models\PurchaseLog::create([
-                'purchase_bill_id' => $invoice->id,
-                'party_id' => $request->select_customer_id,
-                'main_cost_center_id' => $request->main_cost_center_id,
-                'sub_cost_center_id' => $request->sub_cost_center_id,
-                'payment_type_id' => $request->payment_type_id,
-                'json_data' => json_encode($request->all()),
-                'purchase_bill_id' => $invoice->id,
+        // ===== LOOP THROUGH ITEMS =====
+        foreach ($request->items as $itemData) {
+            $item = \App\Models\AddItem::find($itemData['id']);
+            if (!$item) continue;
 
-                'stock_id' => $stock->id,
-                'previous_qty' => $previousQty,
-                'purchased_qty' => $itemData['qty'],
-                'price' => $itemData['price'],
-                'purchased_amount' => $itemData['amount'] ?? 0,
-                'purchased_to_user_id' => $request->select_customer_id,
+            $pivotData = [
+                'description' => $itemData['description'] ?? null,
+                'qty' => $itemData['qty'],
+                'unit' => $itemData['unit'] ?? null,
+                'price' => $itemData['price'] ?? 0,
+                'discount_type' => $itemData['discount_type'] ?? 'value',
+                'discount' => $itemData['discount'] ?? 0,
+                'tax_type' => $itemData['tax_type'] ?? 'without',
+                'tax' => $itemData['tax'] ?? 0,
+                'amount' => $itemData['amount'] ?? 0,
                 'created_by_id' => auth()->id(),
-                'json_data_purchase_invoice' => json_encode($itemData),
-                'json_data_current_stock' => json_encode($stock->toArray()),
-                'json_data_add_item_purchase_invoice' => json_encode($invoice->toArray()),
+                'json_data' => json_encode($itemData),
+            ];
+
+            if ($item->item_type === 'product') {
+                $stock = \App\Models\CurrentStock::firstOrCreate(['item_id' => $item->id], ['qty' => 0]);
+                $previousQty = $stock->qty;
+                $stock->qty += $itemData['qty'];
+                $stock->save();
+                $invoice->items()->attach($item->id, $pivotData);
+
+                \App\Models\PurchaseLog::create([
+                    'purchase_bill_id' => $invoice->id,
+                    'party_id' => $request->select_customer_id,
+                    'main_cost_center_id' => $request->main_cost_center_id,
+                    'sub_cost_center_id' => $request->sub_cost_center_id,
+                    'payment_type_id' => $request->payment_type_id,
+                    'stock_id' => $stock->id,
+                    'previous_qty' => $previousQty,
+                    'purchased_qty' => $itemData['qty'],
+                    'price' => $itemData['price'],
+                    'purchased_amount' => $itemData['amount'] ?? 0,
+                    'purchased_to_user_id' => $request->select_customer_id,
+                    'created_by_id' => auth()->id(),
+                    'json_data' => json_encode($request->all()),
+                    'json_data_purchase_invoice' => json_encode($itemData),
+                    'json_data_current_stock' => json_encode($stock->toArray()),
+                    'json_data_add_item_purchase_invoice' => json_encode($invoice->toArray()),
+                ]);
+            } else {
+                $invoice->items()->attach($item->id, $pivotData);
+
+                \App\Models\PurchaseLog::create([
+                    'purchase_bill_id' => $invoice->id,
+                    'party_id' => $request->select_customer_id,
+                    'main_cost_center_id' => $request->main_cost_center_id,
+                    'sub_cost_center_id' => $request->sub_cost_center_id,
+                    'payment_type_id' => $request->payment_type_id,
+                    'purchased_qty' => $itemData['qty'],
+                    'price' => $itemData['price'],
+                    'purchased_amount' => $itemData['amount'] ?? 0,
+                    'purchased_to_user_id' => $request->select_customer_id,
+                    'created_by_id' => auth()->id(),
+                    'json_data' => json_encode($request->all()),
+                    'json_data_purchase_invoice' => json_encode($itemData),
+                    'json_data_add_item_purchase_invoice' => json_encode($invoice->toArray()),
+                ]);
+            }
+        }
+
+        // ===== CUSTOMER BALANCE & TRANSACTION =====
+        $customer = \App\Models\PartyDetail::find($request->select_customer_id);
+
+        if ($customer) {
+            $baseBalance = !is_null($customer->current_balance) ? floatval($customer->current_balance) : floatval($customer->opening_balance ?? 0);
+            $baseType = !is_null($customer->current_balance_type) ? $customer->current_balance_type : ($customer->opening_balance_type ?? 'Debit');
+
+            $purchaseAmount = floatval($request->total ?? 0);
+            $closingBalance = $baseBalance;
+            $closingType = $baseType;
+
+            if ($baseType === 'Debit') {
+                $closingBalance = $baseBalance + $purchaseAmount;
+                $closingType = 'Debit';
+            } elseif ($baseType === 'Credit') {
+                if ($purchaseAmount > $baseBalance) {
+                    $closingBalance = $purchaseAmount - $baseBalance;
+                    $closingType = 'Debit';
+                } else {
+                    $closingBalance = $baseBalance - $purchaseAmount;
+                    $closingType = 'Credit';
+                }
+            }
+
+            $customer->update([
+                'current_balance' => $closingBalance,
+                'current_balance_type' => $closingType,
             ]);
-        } else {
-            // Service → attach normally
-            $invoice->items()->attach($item->id, $pivotData);
 
-            \App\Models\PurchaseLog::create([
+            \App\Models\Transaction::create([
                 'purchase_bill_id' => $invoice->id,
-                'party_id' => $request->select_customer_id,
+                'select_customer_id' => $customer->id,
+                'payment_type_id' => $request->payment_type_id,
                 'main_cost_center_id' => $request->main_cost_center_id,
                 'sub_cost_center_id' => $request->sub_cost_center_id,
-                'payment_type_id' => $request->payment_type_id,
-                'json_data' => json_encode($request->all()),
-                'purchase_bill_id' => $invoice->id,
-               
-                'purchased_qty' => $itemData['qty'],
-                'price' => $itemData['price'],
-                'purchased_amount' => $itemData['amount'] ?? 0,
-                'purchased_to_user_id' => $request->select_customer_id,
+                'purchase_amount' => $purchaseAmount,
+                'opening_balance' => $baseBalance,
+                'closing_balance' => $closingBalance,
+                'transaction_type' => 'purchase',
+                'transaction_id' => strtoupper('TXN' . rand(1000000000, 9999999999)),
                 'created_by_id' => auth()->id(),
-                'json_data_purchase_invoice' => json_encode($itemData),
-              
-                'json_data_add_item_purchase_invoice' => json_encode($invoice->toArray()),
-
+                'json_data' => json_encode([
+                    'request' => $request->all(),
+                    'invoice' => $invoice->toArray(),
+                    'customer_before' => [
+                        'balance' => $baseBalance,
+                        'type' => $baseType,
+                    ],
+                    'customer_after' => [
+                        'balance' => $closingBalance,
+                        'type' => $closingType,
+                    ],
+                ]),
             ]);
         }
-    }
 
-    return redirect()->route('admin.purchase-bills.index')
-                     ->with('success', 'Sale Invoice Created Successfully.');
-}
+        return redirect()->route('admin.purchase-bills.index')
+                        ->with('success', 'Purchase Invoice Created Successfully.');
+    }
 
 
 
@@ -398,7 +456,7 @@ public function update(Request $request, PurchaseBill $purchaseBill)
     $request->validate([
         'select_customer_id' => 'required|exists:party_details,id',
         'po_no' => 'required|string',
-        'ref_no' => 'required|string',
+        'reference_no' => 'required|string',
         'due_date' => 'required|date',
         'po_date' => 'required|date',
         'items' => 'required|array|min:1',
@@ -408,16 +466,20 @@ public function update(Request $request, PurchaseBill $purchaseBill)
         'sub_cost_center_id' => 'required|exists:sub_cost_centers,id',
     ]);
 
-    // Handle new attachment
-    $attachmentPath = $request->hasFile('attachment') 
-        ? $request->file('attachment')->store('attachments', 'public') 
-        : $purchaseBill->attachment;
+    // ===== Handle media uploads =====
+    if ($request->hasFile('image')) {
+        $purchaseBill->addMedia($request->file('image'))->toMediaCollection('image');
+    }
 
-    // Update PurchaseBill
+    if ($request->hasFile('document')) {
+        $purchaseBill->addMedia($request->file('document'))->toMediaCollection('document');
+    }
+
+    // ===== Update main purchase bill fields =====
     $purchaseBill->update([
         'select_customer_id' => $request->select_customer_id,
         'po_no' => $request->po_no,
-        'ref_no' => $request->ref_no,
+        'reference_no' => $request->reference_no,
         'docket_no' => $request->docket_no,
         'po_date' => $request->po_date,
         'due_date' => $request->due_date,
@@ -430,22 +492,26 @@ public function update(Request $request, PurchaseBill $purchaseBill)
         'tax' => $request->tax ?? 0,
         'discount' => $request->discount ?? 0,
         'total' => $request->total ?? 0,
-        'attachment' => $attachmentPath,
         'main_cost_center_id' => $request->main_cost_center_id,
         'sub_cost_center_id'  => $request->sub_cost_center_id,
+        'payment_type_id' => $request->payment_type_id,
         'json_data' => json_encode($request->all()),
     ]);
 
-    // Sync / update items
+    // ===== Sync / update items =====
+    $existingItems = $purchaseBill->items()->pluck('add_item_purchase_bill.qty','add_item_purchase_bill.add_item_id')->toArray();
     $purchaseBill->items()->detach();
 
     foreach ($request->items as $itemData) {
         $item = \App\Models\AddItem::find($itemData['id']);
         if (!$item) continue;
 
+        $oldQty = $existingItems[$item->id] ?? 0;
+        $newQty = $itemData['qty'];
+
         $pivotData = [
             'description' => $itemData['description'] ?? null,
-            'qty' => $itemData['qty'],
+            'qty' => $newQty,
             'unit' => $itemData['unit'] ?? null,
             'price' => $itemData['price'] ?? 0,
             'discount_type' => $itemData['discount_type'] ?? 'value',
@@ -459,11 +525,10 @@ public function update(Request $request, PurchaseBill $purchaseBill)
 
         if ($item->item_type === 'product') {
             $stock = \App\Models\CurrentStock::firstOrCreate(['item_id' => $item->id], ['qty' => 0]);
-            $oldQty = $stock->qty;
-            $stock->qty = $oldQty + ($itemData['qty'] ?? 0);
+            $stock->qty = $stock->qty - $oldQty + $newQty;
             $stock->save();
 
-            $purchaseBill->items()->attach($stock->id, $pivotData);
+            $purchaseBill->items()->attach($item->id, $pivotData);
 
             \App\Models\PurchaseLog::create([
                 'purchase_bill_id' => $purchaseBill->id,
@@ -471,14 +536,14 @@ public function update(Request $request, PurchaseBill $purchaseBill)
                 'main_cost_center_id' => $request->main_cost_center_id,
                 'sub_cost_center_id' => $request->sub_cost_center_id,
                 'payment_type_id' => $request->payment_type_id,
-                'json_data' => json_encode($request->all()),
                 'stock_id' => $stock->id,
                 'previous_qty' => $oldQty,
-                'purchased_qty' => $itemData['qty'],
+                'purchased_qty' => $newQty,
                 'price' => $itemData['price'],
                 'purchased_amount' => $itemData['amount'] ?? 0,
                 'purchased_to_user_id' => $request->select_customer_id,
                 'created_by_id' => auth()->id(),
+                'json_data' => json_encode($request->all()),
                 'json_data_purchase_invoice' => json_encode($itemData),
                 'json_data_current_stock' => json_encode($stock->toArray()),
                 'json_data_add_item_purchase_invoice' => json_encode($purchaseBill->toArray()),
@@ -492,20 +557,69 @@ public function update(Request $request, PurchaseBill $purchaseBill)
                 'main_cost_center_id' => $request->main_cost_center_id,
                 'sub_cost_center_id' => $request->sub_cost_center_id,
                 'payment_type_id' => $request->payment_type_id,
-                'json_data' => json_encode($request->all()),
-                'purchased_qty' => $itemData['qty'],
+                'purchased_qty' => $newQty,
                 'price' => $itemData['price'],
                 'purchased_amount' => $itemData['amount'] ?? 0,
                 'purchased_to_user_id' => $request->select_customer_id,
                 'created_by_id' => auth()->id(),
+                'json_data' => json_encode($request->all()),
                 'json_data_purchase_invoice' => json_encode($itemData),
                 'json_data_add_item_purchase_invoice' => json_encode($purchaseBill->toArray()),
             ]);
         }
     }
 
+    // ===== Update customer balance & transaction =====
+    $customer = \App\Models\PartyDetail::find($request->select_customer_id);
+    if ($customer) {
+        $baseBalance = !is_null($customer->current_balance) ? floatval($customer->current_balance) : floatval($customer->opening_balance ?? 0);
+        $baseType = !is_null($customer->current_balance_type) ? $customer->current_balance_type : ($customer->opening_balance_type ?? 'Debit');
+
+        $purchaseAmount = floatval($request->total ?? 0);
+        $closingBalance = $baseBalance;
+        $closingType = $baseType;
+
+        if ($baseType === 'Debit') {
+            $closingBalance = $baseBalance + $purchaseAmount;
+            $closingType = 'Debit';
+        } elseif ($baseType === 'Credit') {
+            if ($purchaseAmount > $baseBalance) {
+                $closingBalance = $purchaseAmount - $baseBalance;
+                $closingType = 'Debit';
+            } else {
+                $closingBalance = $baseBalance - $purchaseAmount;
+                $closingType = 'Credit';
+            }
+        }
+
+        $customer->update([
+            'current_balance' => $closingBalance,
+            'current_balance_type' => $closingType,
+        ]);
+
+        \App\Models\Transaction::create([
+            'purchase_bill_id' => $purchaseBill->id,
+            'select_customer_id' => $customer->id,
+            'payment_type_id' => $request->payment_type_id,
+            'main_cost_center_id' => $request->main_cost_center_id,
+            'sub_cost_center_id' => $request->sub_cost_center_id,
+            'purchase_amount' => $purchaseAmount,
+            'opening_balance' => $baseBalance,
+            'closing_balance' => $closingBalance,
+            'transaction_type' => 'purchase',
+            'transaction_id' => strtoupper('TXN' . rand(1000000000, 9999999999)),
+            'created_by_id' => auth()->id(),
+            'json_data' => json_encode([
+                'request' => $request->all(),
+                'invoice' => $purchaseBill->toArray(),
+                'customer_before' => ['balance' => $baseBalance, 'type' => $baseType],
+                'customer_after' => ['balance' => $closingBalance, 'type' => $closingType],
+            ]),
+        ]);
+    }
+
     return redirect()->route('admin.purchase-bills.index')
-                     ->with('success', 'Purchase Bill Updated Successfully.');
+                     ->with('success', 'Purchase Invoice Updated Successfully.');
 }
 
 

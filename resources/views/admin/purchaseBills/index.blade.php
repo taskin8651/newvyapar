@@ -37,7 +37,6 @@
             </div>
         </div>
 
-
         <!-- Table -->
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 datatable datatable-PurchaseBill">
@@ -45,11 +44,11 @@
                     <tr>
                         <th class="px-4 py-3 w-10"></th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.billing_name') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.select_customer') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.gstin') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.phone_number') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.pan_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.billing_name') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.phone_number') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.e_way_bill_no') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.po_no') }}</th>
@@ -63,24 +62,42 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($purchaseBills as $purchaseBill)
+                        @php
+                            $itemCount = $purchaseBill->items->count();
+                        @endphp
                         <tr data-entry-id="{{ $purchaseBill->id }}" class="hover:bg-gray-50">
                             <td class="px-4 py-3"></td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->id ?? '' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->purchase_invoice_number ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->party_name ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->gstin ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->phone_number ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->pan_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->billing_name ?? '' }}</td>
+                            
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->phone_number ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->e_way_bill_no ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->po_no ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->po_date ?? '' }}</td>
+
+                            <!-- Items -->
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 @foreach($purchaseBill->items as $item)
-                                    <span class="inline-block bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded">{{ $item->item_name }}</span>
+                                    <span class="inline-block bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded mb-1">
+                                        {{ $item->item_name }}
+                                    </span>
                                 @endforeach
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->qty ?? '' }}</td>
+
+                            <!-- Qty -->
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                @foreach($purchaseBill->items as $item)
+                                    <span class="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded mb-1">
+                                        {{ $item->pivot->qty }}
+                                    </span>
+                                @endforeach
+                            </td>
+
+                            <!-- Image -->
                             <td class="px-4 py-3">
                                 @if($purchaseBill->image)
                                     <a href="{{ $purchaseBill->image->getUrl() }}" target="_blank" class="inline-block">
@@ -88,6 +105,8 @@
                                     </a>
                                 @endif
                             </td>
+
+                            <!-- Document -->
                             <td class="px-4 py-3">
                                 @if($purchaseBill->document)
                                     <a href="{{ $purchaseBill->document->getUrl() }}" target="_blank" class="text-blue-600 hover:underline">
@@ -95,61 +114,60 @@
                                     </a>
                                 @endif
                             </td>
-                           <td class="px-4 py-3 text-center relative"
-    x-data="{ open: false }"
-    @mouseenter="open = true"
-    @mouseleave="open = false">
 
-    <!-- Ellipsis icon -->
-    <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
-        <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
-    </button>
+                            <!-- Actions -->
+                            <td class="px-4 py-3 text-center relative"
+                                x-data="{ open: false }"
+                                @mouseenter="open = true"
+                                @mouseleave="open = false">
 
-    <!-- Dropdown menu -->
-    <div x-show="open"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 transform translate-y-1"
-         x-transition:enter-end="opacity-100 transform translate-y-0"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100 transform translate-y-0"
-         x-transition:leave-end="opacity-0 transform translate-y-1"
-         class="absolute top-full left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-         style="display: none;">
+                                <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
+                                    <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+                                </button>
 
-        @can('purchase_bill_show')
-            <a href="{{ route('admin.purchase-bills.show', $purchaseBill->id) }}"
-               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors">
-                <i class="fas fa-eye mr-2"></i> {{ trans('global.view') }}
-            </a>
-        @endcan
+                                <div x-show="open"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0 transform translate-y-1"
+                                     x-transition:enter-end="opacity-100 transform translate-y-0"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100 transform translate-y-0"
+                                     x-transition:leave-end="opacity-0 transform translate-y-1"
+                                     class="absolute top-full left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                     style="display: none;">
 
-        @can('purchase_bill_edit')
-            <a href="{{ route('admin.purchase-bills.edit', $purchaseBill->id) }}"
-               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-colors">
-                <i class="fas fa-edit mr-2"></i> {{ trans('global.edit') }}
-            </a>
-        @endcan
+                                    @can('purchase_bill_show')
+                                        <a href="{{ route('admin.purchase-bills.show', $purchaseBill->id) }}"
+                                           class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors">
+                                            <i class="fas fa-eye mr-2"></i> {{ trans('global.view') }}
+                                        </a>
+                                    @endcan
 
-        @can('purchase_bill_delete')
-            <form action="{{ route('admin.purchase-bills.destroy', $purchaseBill->id) }}"
-                  method="POST"
-                  onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
-                @method('DELETE')
-                @csrf
-                <button type="submit"
-                        class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors">
-                    <i class="fas fa-trash mr-2"></i> {{ trans('global.delete') }}
-                </button>
-            </form>
-        @endcan
+                                    @can('purchase_bill_edit')
+                                        <a href="{{ route('admin.purchase-bills.edit', $purchaseBill->id) }}"
+                                           class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-colors">
+                                            <i class="fas fa-edit mr-2"></i> {{ trans('global.edit') }}
+                                        </a>
+                                    @endcan
 
-        <a href="{{ route('admin.purchase-bills.pdf', $purchaseBill->id) }}" target="_blank"
-           class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">
-            <i class="fas fa-file-pdf mr-2"></i> Print
-        </a>
-    </div>
-</td>
+                                    @can('purchase_bill_delete')
+                                        <form action="{{ route('admin.purchase-bills.destroy', $purchaseBill->id) }}"
+                                              method="POST"
+                                              onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
+                                            @method('DELETE')
+                                            @csrf
+                                            <button type="submit"
+                                                    class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors">
+                                                <i class="fas fa-trash mr-2"></i> {{ trans('global.delete') }}
+                                            </button>
+                                        </form>
+                                    @endcan
 
+                                    <a href="{{ route('admin.purchase-bills.pdf', $purchaseBill->id) }}" target="_blank"
+                                       class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">
+                                        <i class="fas fa-file-pdf mr-2"></i> Print
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -160,8 +178,6 @@
 </div>
 @endsection
 
-@section('scripts')
-@parent
 @section('scripts')
 @parent
 <script>
@@ -197,30 +213,24 @@
         dtButtons.push(deleteButton)
         @endcan
 
-        // Default config extend
         $.extend(true, $.fn.dataTable.defaults, {
             orderCellsTop: true,
             order: [[1, 'desc']],
             pageLength: 25,
-            dom: 'Brtip', // 👈 'f' hata diya (default search box disable karne ke liye)
+            dom: 'Brtip',
         });
 
-        // Initialize datatable
         let table = $('.datatable-PurchaseBill:not(.ajaxTable)').DataTable({
             buttons: dtButtons
         });
 
-        // Custom search bar
         $('#purchaseSearch').on('keyup change clear', function () {
             table.search(this.value).draw();
         });
 
-        // Tab adjust fix
         $('a[data-toggle="tab"]').on('shown.bs.tab click', function(){
             $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
         });
     })
 </script>
-@endsection
-
 @endsection

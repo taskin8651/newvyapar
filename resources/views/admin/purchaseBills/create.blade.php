@@ -30,36 +30,42 @@
                         <div class="overflow-x-auto">
                             <table class="min-w-full table-auto text-sm">
                                 <tbody class="divide-y divide-gray-200">
+
                                     <tr>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Name</td>
                                         <td class="px-3 py-2 text-gray-900" id="customer_name"></td>
                                         <td class="px-3 py-2 font-semibold text-gray-700">GSTIN</td>
                                         <td class="px-3 py-2 text-green-700 font-medium" id="customer_gstin"></td>
                                     </tr>
+
                                     <tr>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Phone</td>
                                         <td class="px-3 py-2 text-gray-900" id="customer_phone"></td>
                                         <td class="px-3 py-2 font-semibold text-gray-700">PAN</td>
                                         <td class="px-3 py-2 text-gray-900" id="customer_pan"></td>
                                     </tr>
+
                                     <tr>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Billing Address</td>
                                         <td class="px-3 py-2 text-gray-800" id="customer_billing_address"></td>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Shipping Address</td>
                                         <td class="px-3 py-2 text-gray-800" id="customer_shipping_address"></td>
                                     </tr>
+
                                     <tr>
                                         <td class="px-3 py-2 font-semibold text-gray-700">State</td>
                                         <td class="px-3 py-2 text-indigo-700 font-medium" id="customer_state"></td>
                                         <td class="px-3 py-2 font-semibold text-gray-700">City</td>
                                         <td class="px-3 py-2 text-indigo-700 font-medium" id="customer_city"></td>
                                     </tr>
+
                                     <tr>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Pincode</td>
                                         <td class="px-3 py-2 text-gray-900" id="customer_pincode"></td>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Email</td>
                                         <td class="px-3 py-2 text-gray-900" id="customer_email"></td>
                                     </tr>
+
                                     <tr>
                                         <td class="px-3 py-2 font-semibold text-gray-700">Credit Limit</td>
                                         <td class="px-3 py-2">
@@ -70,20 +76,28 @@
                                             <span id="customer_payment_terms" class="bg-green-100 text-green-800 px-2 rounded-full font-semibold text-xs"></span>
                                         </td>
                                     </tr>
-                                    <tr>
+
+                                    <tr class="bg-gray-50">
                                         <td class="px-3 py-2 font-semibold text-gray-700">Opening Balance</td>
-                                        <td class="px-3 py-2">
-                                            <span id="customer_opening_balance" class="text-blue-700 font-medium text-xs"></span>
-                                            <span id="opening_balance_type" class="text-blue-700 font-medium text-xs"></span>
+                                        <td class="px-3 py-2 space-y-1">
+                                            <div id="customer_opening_balance" class="text-blue-700 font-medium text-sm"></div>
+                                            <div id="opening_balance_type" class="text-sm"></div>
+                                            <div id="opening_balance_date" class="text-gray-500 text-xs italic"></div>
                                         </td>
+
                                         <td class="px-3 py-2 font-semibold text-gray-700">Current Balance</td>
-                                        <td class="px-3 py-2 text-red-600 font-medium text-xs" id="customer_current_balance"></td>
+                                        <td class="px-3 py-2 space-y-1">
+                                            <div id="customer_current_balance" class="text-red-600 font-medium text-sm"></div>
+                                            <div id="current_balance_type" class="text-sm"></div>
+                                            <div id="current_balance_date" class="text-gray-500 text-xs italic"></div>
+                                        </td>
                                     </tr>
+
                                 </tbody>
                             </table>
-                            
                         </div>
                     </div>
+
                     <div>
                     <label class="block text-sm font-medium text-gray-700">Select Main Cost Center</label>
                         <select name="main_cost_center_id" id="main_cost_center_id"
@@ -580,19 +594,19 @@ $(document).ready(function() {
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
 $(document).ready(function() {
     // Prepare customer data
-    let customerData = @json($select_customers_details); // Array of objects with id, name, opening_balance, date, type
+    let customerData = @json($select_customers_details); // Array of customer objects
 
     function formatCustomer(customer) {
         if (!customer.id) return customer.text; // placeholder
-        let balanceText = customer.opening_balance + ' (' + customer.date + ') ' + customer.type + ' ' + (customer.type === 'Debit' ? '↓' : '↑');
+        let balanceText = customer.opening_balance + ' (' + customer.date + ') ' + customer.type + ' ' + (customer.type === 'Debit' ? '↑' : '↓');
         let color = customer.type === 'Debit' ? 'red' : 'green';
         return $('<span style="color:' + color + '">' + customer.text + ' - ' + balanceText + '</span>');
     }
 
+    // Initialize Select2
     $('#customer_id').select2({
         width: '100%',
         data: customerData.map(c => ({
@@ -602,41 +616,73 @@ $(document).ready(function() {
             date: c.opening_balance_date,
             type: c.opening_balance_type
         })),
-        templateResult: formatCustomer,  // for dropdown list
-        templateSelection: formatCustomer // for selected value
+        templateResult: formatCustomer,
+        templateSelection: formatCustomer
     });
 
     $('#customer_id').on('change', function() {
-        let customerId = $(this).val();
-        if(customerId){
-            let data = customerData.find(c => c.id == customerId);
+    let customerId = $(this).val();
 
-            // Fill card details
-            $('#customer_name').text(data.name);
-            $('#customer_gstin').text(data.gstin);
-            $('#customer_phone').text(data.phone);
-            $('#customer_pan').text(data.pan);
-            $('#customer_billing_address').text(data.billing_address);
-            $('#customer_shipping_address').text(data.shipping_address);
-            $('#customer_shipping_address2').text(data.shipping_address);
-            $('#customer_state').text(data.state);
-            $('#customer_city').text(data.city);
-            $('#customer_pincode').text(data.pincode);
-            $('#customer_email').text(data.email);
-            $('#customer_credit_limit').text(data.credit_limit);
-            $('#customer_payment_terms').text(data.payment_terms);
-            $('#customer_opening_balance').text(data.opening_balance + ' (' + data.opening_balance_date + ')');
-            $('#opening_balance_type').text(data.opening_balance_type + ' (' + (data.opening_balance_type==='Debit' ? 'Receivable' : 'Payable') + ') ' + (data.opening_balance_type==='Debit' ? '↓' : '↑'))
-                .removeClass('text-red-600 text-green-700 font-bold')
-                .addClass(data.opening_balance_type==='Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold');
-            $('#customer_current_balance').text(data.current_balance ?? '0.00');
-            $('#invoice_customer_phone').val(data.phone);
-            $('#invoice_billing_address').val(data.billing_address);
-            $('#customerDetailsCard').removeClass('hidden');
-        } else { 
-            $('#customerDetailsCard').addClass('hidden'); 
+    if (customerId) {
+        let data = customerData.find(c => c.id == customerId);
+        if (!data) return;
+
+        // 🧹 Helper: remove HTML tags
+        function stripTags(str) {
+            return str ? str.replace(/<\/?[^>]+(>|$)/g, "") : "";
         }
-    });
+
+        // 🧩 Use stripTags() for anything coming from data.name
+        $('#customer_name').text(stripTags(data.party_name || data.name || ''));
+        $('#customer_gstin').text(data.gstin || '');
+        $('#customer_phone').text(data.phone || '');
+        $('#customer_pan').text(data.pan || '');
+        $('#customer_billing_address').text(stripTags(data.billing_address || ''));
+        $('#customer_shipping_address').text(stripTags(data.shipping_address || ''));
+        $('#customer_shipping_address2').text(stripTags(data.shipping_address || ''));
+        $('#customer_state').text(stripTags(data.state || ''));
+        $('#customer_city').text(stripTags(data.city || ''));
+        $('#customer_pincode').text(stripTags(data.pincode || ''));
+        $('#customer_email').text(stripTags(data.email || ''));
+        $('#customer_credit_limit').text(stripTags(data.credit_limit || ''));
+        $('#customer_payment_terms').text(stripTags(data.payment_terms || ''));
+
+        // Opening Balance
+        $('#customer_opening_balance').text((data.opening_balance || 0) + ' (' + (data.opening_balance_date || '-') + ')');
+        $('#opening_balance_type')
+            .text(
+                (data.opening_balance_type || '') +
+                ' (' + (data.opening_balance_type === 'Debit' ? 'Payable' : 'Receivable') + ') ' +
+                (data.opening_balance_type === 'Debit' ? '↑' : '↓')
+            )
+            .removeClass('text-red-600 text-green-700 font-bold')
+            .addClass(data.opening_balance_type === 'Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold');
+
+        // Current Balance
+        $('#customer_current_balance').text(
+            (data.current_balance ?? '0.00') + ' (' + (data.current_balance_type ?? '-') + ')'
+        );
+        $('#current_balance_type')
+            .text(
+                (data.current_balance_type || '') +
+                ' (' + (data.current_balance_type === 'Debit' ? 'Payable' : 'Receivable') + ') ' +
+                (data.current_balance_type === 'Debit' ? '↑' : '↓')
+            )
+            .removeClass('text-red-600 text-green-700 font-bold')
+            .addClass(data.current_balance_type === 'Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold');
+
+        $('#current_balance_date').text(data.current_balance_date || '-');
+
+        // Invoice section
+        $('#invoice_customer_phone').val(data.phone || '');
+        $('#invoice_billing_address').val(stripTags(data.billing_address || ''));
+
+        $('#customerDetailsCard').removeClass('hidden');
+    } else {
+        $('#customerDetailsCard').addClass('hidden');
+    }
+});
+
 });
 </script>
 

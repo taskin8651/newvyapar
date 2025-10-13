@@ -103,4 +103,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Role::class);
     }
+    public function created_by()
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+
 }

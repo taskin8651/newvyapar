@@ -81,7 +81,13 @@
                                     <span class="inline-block bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded">{{ $item->item_name }}</span>
                                 @endforeach
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->qty ?? '' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                @foreach($saleInvoice->items as $item)
+                                    <span class="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded mb-1">
+                                        {{ $item->pivot->qty }}
+                                    </span>
+                                @endforeach
+                            </td>
                             <td class="px-4 py-3">
                                 @if($saleInvoice->image)
                                     <a href="{{ $saleInvoice->image->getUrl() }}" target="_blank" class="inline-block">
