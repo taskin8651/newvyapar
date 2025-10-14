@@ -58,18 +58,21 @@ public function index()
         return view('admin.subCostCenters.create', compact('main_cost_centers'));
     }
 
-    public function store(StoreSubCostCenterRequest $request)
-    {
-         $data = $request->all();
-        $data['created_by_id'] = auth()->id(); // logged-in user ka ID
-        $subCostCenter = SubCostCenter::create($request->all());
+   public function store(StoreSubCostCenterRequest $request)
+{
+    $data = $request->all();
+    $data['created_by_id'] = auth()->id(); // logged-in user ka ID
 
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $subCostCenter->id]);
-        }
+    // Fix: $data->all() => $data
+    $subCostCenter = SubCostCenter::create($data);
 
-        return redirect()->route('admin.sub-cost-centers.index');
+    if ($media = $request->input('ck-media', false)) {
+        Media::whereIn('id', $media)->update(['model_id' => $subCostCenter->id]);
     }
+
+    return redirect()->route('admin.sub-cost-centers.index');
+}
+
 
     public function edit(SubCostCenter $subCostCenter)
     {
