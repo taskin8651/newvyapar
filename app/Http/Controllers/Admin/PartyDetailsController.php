@@ -20,14 +20,28 @@ class PartyDetailsController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('party_detail_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('party_detail_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $partyDetails = PartyDetail::with(['created_by'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.partyDetails.index', compact('partyDetails'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ko saara data dikhe, global scopes ignore karke
+        $partyDetails = PartyDetail::withoutGlobalScopes()
+            ->with(['created_by'])
+            ->get();
+    } else {
+        // Baaki users ke liye filter lagayein (example: user ke own created entries)
+        $partyDetails = PartyDetail::with(['created_by'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.partyDetails.index', compact('partyDetails'));
+}
+
 
     public function create()
     {

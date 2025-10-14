@@ -28,14 +28,42 @@ class PurchaseBillController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('purchase_bill_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('purchase_bill_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $purchaseBills = PurchaseBill::with(['select_customer', 'items', 'payment_type', 'created_by', 'media','main_cost_center', 'sub_cost_center'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.purchaseBills.index', compact('purchaseBills'));
-    }
+    if ($userRole === 'Super Admin') {
+    $purchaseBills = PurchaseBill::withoutGlobalScopes()
+        ->with([
+            'select_customer' => function ($query) {
+                $query->withoutGlobalScopes(); // PartyDetail pe bhi global scopes ignore
+            },
+            'items',
+            'payment_type',
+            'created_by',
+            'media',
+            'main_cost_center',
+            'sub_cost_center'
+        ])->get();
+        } else {
+            $purchaseBills = PurchaseBill::with([
+                'select_customer',
+                'items',
+                'payment_type',
+                'created_by',
+                'media',
+                'main_cost_center',
+                'sub_cost_center'
+            ])->where('created_by_id', $user->id)->get();
+        }
+
+
+    return view('admin.purchaseBills.index', compact('purchaseBills'));
+}
+
 
 
     public function getCustomerDetails($id)
