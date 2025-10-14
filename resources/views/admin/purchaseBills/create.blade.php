@@ -392,96 +392,91 @@ $(document).ready(function() {
                             <input type="hidden" name="total" id="total_input" value="0.00">
                         </div>
                     </div>
-                     <!-- Payment Details -->
-                    <div class="space-y-4 py-6 px-6">
-                        <h2 class="text-xl font-semibold text-gray-700">Payment Details</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                </div> <!-- end right column -->
+            </div> <!-- end totals grid -->
 
+            <div class="row">
+            <!-- Payment Details (full-width) -->
+            <div class="col-6 mb-6 bg-white rounded-lg border p-6">
+                <h2 class="text-xl font-semibold text-gray-700">Payment Details</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Payment Type</label>
+                        <select name="payment_type_id" class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                            <option value="">-- Select Payment Type --</option>
+                            @foreach($payment_types as $id => $name)
+                                <option value="{{ $id }}" {{ old('payment_type_id') == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('payment_type_id')
+                            <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Payment Type</label>
-                                <select name="payment_type_id" class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                                    <option value="">-- Select Payment Type --</option>
-                                    @foreach($payment_types as $id => $name)
-                                        <option value="{{ $id }}" {{ old('payment_type_id') == $id ? 'selected' : '' }}>
-                                            {{ $name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('payment_type_id')
-                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Reference No</label>
+                        <input type="text" name="reference_no" value="{{ old('reference_no') }}"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                        @error('reference_no')
+                            <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
 
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Reference No</label>
-                                <input type="text" name="reference_no" value="{{ old('reference_no') }}"
-                                    class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
-                                @error('reference_no')
-                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+                <!-- Upload Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                    <!-- Image Upload -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Image</h2>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition">
+                            <label for="image" class="cursor-pointer flex flex-col items-center">
+                                <i class="fas fa-cloud-upload-alt text-indigo-500 text-4xl mb-2"></i>
+                                <span class="text-gray-600">Click to upload or drag & drop</span>
+                                <span class="text-sm text-gray-500 mt-1">(JPEG, PNG, GIF up to 20MB)</span>
+                                <input type="file" name="image" id="image" accept="image/*" class="hidden">
+                            </label>
+                        </div>
+                        <div id="imagePreview" class="mt-3 hidden">
+                            <img class="h-20 w-20 object-cover rounded-md mx-auto mb-2" />
+                            <p class="text-sm text-gray-600 text-center" id="imageFileName"></p>
                         </div>
                     </div>
 
-
-                    <!-- Upload Section -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 px-6 pb-6">
-                        <!-- Image Upload -->
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Image</h2>
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition">
-                                <label for="image" class="cursor-pointer flex flex-col items-center">
-                                    <i class="fas fa-cloud-upload-alt text-indigo-500 text-4xl mb-2"></i>
-                                    <span class="text-gray-600">Click to upload or drag & drop</span>
-                                    <span class="text-sm text-gray-500 mt-1">(JPEG, PNG, GIF up to 20MB)</span>
-                                    <input type="file" name="image" id="image" accept="image/*" class="hidden">
-                                </label>
-                            </div>
-                            <div id="imagePreview" class="mt-3 hidden">
-                                <img class="h-20 w-20 object-cover rounded-md mx-auto mb-2" />
-                                <p class="text-sm text-gray-600 text-center" id="imageFileName"></p>
-                            </div>
+                    <!-- Document Upload -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Document</h2>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition">
+                            <label for="document" class="cursor-pointer flex flex-col items-center">
+                                <i class="fas fa-file-upload text-green-500 text-4xl mb-2"></i>
+                                <span class="text-gray-600">Click to upload or drag & drop</span>
+                                <span class="text-sm text-gray-500 mt-1">(PDF, DOC, XLS up to 20MB)</span>
+                                <input type="file" name="document" id="document" accept=".pdf,.doc,.docx,.xls,.xlsx" class="hidden">
+                            </label>
                         </div>
-
-
-                        <!-- Document Upload -->
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-700 mb-3">Upload Document</h2>
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition">
-                                <label for="document" class="cursor-pointer flex flex-col items-center">
-                                    <i class="fas fa-file-upload text-green-500 text-4xl mb-2"></i>
-                                    <span class="text-gray-600">Click to upload or drag & drop</span>
-                                    <span class="text-sm text-gray-500 mt-1">(PDF, DOC, XLS up to 20MB)</span>
-                                    <input type="file" name="document" id="document" accept=".pdf,.doc,.docx,.xls,.xlsx" class="hidden">
-                                </label>
-                            </div>
-                            <div id="documentPreview" class="mt-3 hidden text-center">
-                                <i class="fas fa-file text-gray-500 text-3xl mb-1"></i>
-                                <p class="text-sm text-gray-600" id="documentFileName"></p>
-                            </div>
+                        <div id="documentPreview" class="mt-3 hidden text-center">
+                            <i class="fas fa-file text-gray-500 text-3xl mb-1"></i>
+                            <p class="text-sm text-gray-600" id="documentFileName"></p>
                         </div>
                     </div>
+                </div>
 
+                <!-- Notes -->
+                <div class="mt-6">
+                    <h2 class="text-xl font-semibold text-gray-700">Notes</h2>
+                    <textarea name="notes" rows="3" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('notes') }}</textarea>
+                </div>
 
-                    <!-- Notes -->
-                    <div class="px-6 pb-6">
-                        <h2 class="text-xl font-semibold text-gray-700">Notes</h2>
-                        <textarea name="notes" rows="3"
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">{{ old('notes') }}</textarea>
-                    </div>
-
-
-                    <!-- Save Button -->
-                    <div class="px-6 pb-6">
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md flex items-center justify-center">
-                            <i class="fas fa-save mr-2"></i> SAVE PURCHASE BILL
-                        </button>
-                    </div>
-                </form>
+                <!-- Save Button -->
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md flex items-center justify-center">
+                        <i class="fas fa-save mr-2"></i> SAVE PURCHASE BILL
+                    </button>
+                </div>
             </div>
-        </div>
+        </form>
+    
 
 
         <script>
@@ -589,8 +584,7 @@ $(document).ready(function() {
                 </div>
             </div>
         </form>
-    </div>
-</div>
+    
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
