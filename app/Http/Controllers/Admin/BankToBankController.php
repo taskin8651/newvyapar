@@ -19,14 +19,39 @@ class BankToBankController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('bank_to_bank_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('bank_to_bank_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $bankToBanks = BankToBank::with(['from', 'to', 'created_by', 'media'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.bankToBanks.index', compact('bankToBanks'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $bankToBanks = BankToBank::withoutGlobalScopes()
+            ->with([
+                'from' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'to' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'media' // media relation generally safe
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $bankToBanks = BankToBank::with(['from', 'to', 'created_by', 'media'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.bankToBanks.index', compact('bankToBanks'));
+}
+
 
     public function create()
     {

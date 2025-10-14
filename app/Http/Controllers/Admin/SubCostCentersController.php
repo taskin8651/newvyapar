@@ -19,14 +19,35 @@ class SubCostCentersController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('sub_cost_center_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('sub_cost_center_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $subCostCenters = SubCostCenter::with(['main_cost_center', 'created_by'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.subCostCenters.index', compact('subCostCenters'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $subCostCenters = SubCostCenter::withoutGlobalScopes()
+            ->with([
+                'main_cost_center' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $subCostCenters = SubCostCenter::with(['main_cost_center', 'created_by'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.subCostCenters.index', compact('subCostCenters'));
+}
+
 
     public function create()
     {
@@ -39,6 +60,8 @@ class SubCostCentersController extends Controller
 
     public function store(StoreSubCostCenterRequest $request)
     {
+         $data = $request->all();
+        $data['created_by_id'] = auth()->id(); // logged-in user ka ID
         $subCostCenter = SubCostCenter::create($request->all());
 
         if ($media = $request->input('ck-media', false)) {
@@ -61,6 +84,9 @@ class SubCostCentersController extends Controller
 
     public function update(UpdateSubCostCenterRequest $request, SubCostCenter $subCostCenter)
     {
+            // Request data me updated_by_id add karo
+        $data = $request->all();
+        $data['updated_by_id'] = auth()->id(); // logged-in user ka ID
         $subCostCenter->update($request->all());
 
         return redirect()->route('admin.sub-cost-centers.index');

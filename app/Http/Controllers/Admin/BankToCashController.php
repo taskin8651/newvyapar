@@ -19,14 +19,36 @@ class BankToCashController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('bank_to_cash_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('bank_to_cash_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $bankToCashes = BankToCash::with(['from', 'created_by', 'media'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.bankToCashes.index', compact('bankToCashes'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $bankToCashes = BankToCash::withoutGlobalScopes()
+            ->with([
+                'from' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'media' // media relation generally safe
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $bankToCashes = BankToCash::with(['from', 'created_by', 'media'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.bankToCashes.index', compact('bankToCashes'));
+}
+
 
     public function create()
     {

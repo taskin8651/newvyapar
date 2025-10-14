@@ -19,14 +19,36 @@ class AdjustBankBalanceController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('adjust_bank_balance_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('adjust_bank_balance_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $adjustBankBalances = AdjustBankBalance::with(['from', 'created_by', 'media'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.adjustBankBalances.index', compact('adjustBankBalances'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $adjustBankBalances = AdjustBankBalance::withoutGlobalScopes()
+            ->with([
+                'from' => function ($query) {
+                    $query->withoutGlobalScopes(); // related from relation ke liye bhi
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes(); // created_by relation ke liye
+                },
+                'media' // media relation generally safe
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $adjustBankBalances = AdjustBankBalance::with(['from', 'created_by', 'media'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.adjustBankBalances.index', compact('adjustBankBalances'));
+}
+
 
     public function create()
     {

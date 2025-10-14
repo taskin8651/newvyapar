@@ -16,14 +16,31 @@ class UnitController extends Controller
 {
     use CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('unit_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('unit_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $units = Unit::with(['created_by'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.units.index', compact('units'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $units = Unit::withoutGlobalScopes()
+            ->with([
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                }
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $units = Unit::with(['created_by'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.units.index', compact('units'));
+}
 
     public function create()
     {

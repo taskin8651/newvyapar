@@ -12,12 +12,36 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ExpenseCategoryReportController extends Controller
 {
-    public function index()
-    {
-        abort_if(Gate::denies('expense_category_report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('expense_category_report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        return view('admin.expenseCategoryReports.index');
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $expenseCategoryReports = ExpenseCategoryReport::withoutGlobalScopes()
+            ->with([
+                'expense_category' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'media'
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $expenseCategoryReports = ExpenseCategoryReport::with(['expense_category', 'created_by', 'media'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.expenseCategoryReports.index', compact('expenseCategoryReports'));
+}
+
 
     public function create()
     {

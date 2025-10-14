@@ -20,14 +20,37 @@ class EstimateQuotationController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('estimate_quotation_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('estimate_quotation_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $estimateQuotations = EstimateQuotation::with(['select_customer', 'items', 'created_by', 'media'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.estimateQuotations.index', compact('estimateQuotations'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $estimateQuotations = EstimateQuotation::withoutGlobalScopes()
+            ->with([
+                'select_customer' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'items',
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'media'
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $estimateQuotations = EstimateQuotation::with(['select_customer', 'items', 'created_by', 'media'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.estimateQuotations.index', compact('estimateQuotations'));
+}
+
 
     public function create()
     {

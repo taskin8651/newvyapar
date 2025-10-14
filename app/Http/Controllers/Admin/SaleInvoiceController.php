@@ -28,14 +28,42 @@ class SaleInvoiceController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('sale_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('sale_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $saleInvoices = SaleInvoice::with(['select_customer', 'items', 'created_by', 'media'])->latest()->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.saleInvoices.index', compact('saleInvoices'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ko saara data dikhe, global scopes ignore karke
+        $saleInvoices = SaleInvoice::withoutGlobalScopes()
+            ->with([
+                'select_customer' => function ($query) {
+                    $query->withoutGlobalScopes(); // PartyDetail ko bhi global scope ignore karenge
+                },
+                'items',
+                'created_by',
+                'media'
+            ])
+            ->latest()
+            ->get();
+    } else {
+        // Baaki users ke liye filter lagayein (example: user ke own created entries)
+        $saleInvoices = SaleInvoice::with([
+                'select_customer',
+                'items',
+                'created_by',
+                'media'
+            ])
+            ->where('created_by_id', $user->id)
+            ->latest()
+            ->get();
     }
+
+    return view('admin.saleInvoices.index', compact('saleInvoices'));
+}
+
 
 public function create()
 {

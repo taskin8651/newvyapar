@@ -25,7 +25,7 @@ class UpdatePartyDetailRequest extends FormRequest
                 'string',
                 'min:15',
                 'max:15',
-                'required',
+                'nullable',
                 'unique:party_details,gstin,' . request()->route('party_detail')->id,
             ],
             'phone_number' => [

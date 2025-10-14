@@ -19,15 +19,38 @@ class CurrentStocksController extends Controller
 {
     use CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('current_stock_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('current_stock_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $currentStocks = CurrentStock::with(['items', 'user', 'created_by'])->get();
-       
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.currentStocks.index', compact('currentStocks'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ko saara data dikhe aur global scopes ignore ho
+        $currentStocks = CurrentStock::withoutGlobalScopes()
+            ->with([
+                'items' => function ($query) {
+                    $query->withoutGlobalScopes(); // items ke liye bhi scope ignore
+                },
+                'user' => function ($query) {
+                    $query->withoutGlobalScopes(); // user ke liye bhi
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes(); // created_by ke liye bhi
+                }
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter lagayein (example: user ke current stocks)
+        $currentStocks = CurrentStock::with(['items', 'user', 'created_by'])
+            ->where('user_id', $user->id)
+            ->get();
     }
+
+    return view('admin.currentStocks.index', compact('currentStocks'));
+}
+
 
     public function create()
     {

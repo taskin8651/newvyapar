@@ -18,14 +18,32 @@ class CashInHandController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('cash_in_hand_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('cash_in_hand_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $cashInHands = CashInHand::with(['created_by'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.cashInHands.index', compact('cashInHands'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $cashInHands = CashInHand::withoutGlobalScopes()
+            ->with([
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes(); // created_by relation ke liye bhi
+                }
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (sirf apne created records)
+        $cashInHands = CashInHand::with(['created_by'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.cashInHands.index', compact('cashInHands'));
+}
+
 
     public function create()
     {

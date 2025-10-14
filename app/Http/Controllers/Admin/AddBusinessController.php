@@ -18,14 +18,33 @@ class AddBusinessController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('add_business_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('add_business_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $addBusinesses = AddBusiness::with(['created_by', 'media'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.addBusinesses.index', compact('addBusinesses'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $addBusinesses = AddBusiness::withoutGlobalScopes()
+            ->with([
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes(); // created_by relation ke liye bhi
+                },
+                'media' // media relation generally safe
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (sirf apne created records)
+        $addBusinesses = AddBusiness::with(['created_by', 'media'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.addBusinesses.index', compact('addBusinesses'));
+}
+
 
     public function create()
     {

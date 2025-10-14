@@ -62,7 +62,7 @@ class PartyDetail extends Model implements HasMedia
         'place_of_supply',
         'type_of_supply',
         'gst_type',
-        'pincode',
+        'pin_code',
         'state',
         'city',
         'billing_address',

@@ -21,14 +21,38 @@ class MainCostCenterController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('main_cost_center_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('main_cost_center_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $mainCostCenters = MainCostCenter::with(['link_with_company', 'responsible_manager', 'created_by'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.mainCostCenters.index', compact('mainCostCenters'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ke liye saara data, global scopes ignore karke
+        $mainCostCenters = MainCostCenter::withoutGlobalScopes()
+            ->with([
+                'link_with_company' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'responsible_manager' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+                'created_by' => function ($query) {
+                    $query->withoutGlobalScopes();
+                },
+            ])
+            ->get();
+    } else {
+        // Baaki users ke liye filter (apne created records)
+        $mainCostCenters = MainCostCenter::with(['link_with_company', 'responsible_manager', 'created_by'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.mainCostCenters.index', compact('mainCostCenters'));
+}
+
 
     public function create()
     {
@@ -41,16 +65,20 @@ class MainCostCenterController extends Controller
         return view('admin.mainCostCenters.create', compact('link_with_companies', 'responsible_managers'));
     }
 
-    public function store(StoreMainCostCenterRequest $request)
-    {
-        $mainCostCenter = MainCostCenter::create($request->all());
+public function store(StoreMainCostCenterRequest $request)
+{
+    // Request ke data me created_by_id add karo
+    $data = $request->all();
+    $data['created_by_id'] = auth()->id(); // logged-in user ka ID
 
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $mainCostCenter->id]);
-        }
+    $mainCostCenter = MainCostCenter::create($data);
 
-        return redirect()->route('admin.main-cost-centers.index');
+    if ($media = $request->input('ck-media', false)) {
+        Media::whereIn('id', $media)->update(['model_id' => $mainCostCenter->id]);
     }
+
+    return redirect()->route('admin.main-cost-centers.index');
+}
 
     public function edit(MainCostCenter $mainCostCenter)
     {
@@ -65,12 +93,17 @@ class MainCostCenterController extends Controller
         return view('admin.mainCostCenters.edit', compact('link_with_companies', 'mainCostCenter', 'responsible_managers'));
     }
 
-    public function update(UpdateMainCostCenterRequest $request, MainCostCenter $mainCostCenter)
-    {
-        $mainCostCenter->update($request->all());
+public function update(UpdateMainCostCenterRequest $request, MainCostCenter $mainCostCenter)
+{
+    // Request data me updated_by_id add karo
+    $data = $request->all();
+    $data['updated_by_id'] = auth()->id(); // logged-in user ka ID
 
-        return redirect()->route('admin.main-cost-centers.index');
-    }
+    $mainCostCenter->update($data);
+
+    return redirect()->route('admin.main-cost-centers.index');
+}
+
 
     public function show(MainCostCenter $mainCostCenter)
     {

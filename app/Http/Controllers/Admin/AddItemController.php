@@ -21,14 +21,28 @@ class AddItemController extends Controller
 {
     use CsvImportTrait;
 
-    public function index()
-    {
-        abort_if(Gate::denies('add_item_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('add_item_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $addItems = AddItem::with(['select_unit', 'select_categories', 'select_tax', 'created_by'])->get();
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
-        return view('admin.addItems.index', compact('addItems'));
+    if ($userRole === 'Super Admin') {
+        // Super Admin ko saara data dikhe, global scopes ignore karke
+        $addItems = AddItem::withoutGlobalScopes()
+            ->with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
+            ->get();
+    } else {
+        // Baaki users ke liye filter lagayein (example: user ke own created entries)
+        $addItems = AddItem::with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
+            ->where('created_by_id', $user->id)
+            ->get();
     }
+
+    return view('admin.addItems.index', compact('addItems'));
+}
+
 
     public function create()
     {
