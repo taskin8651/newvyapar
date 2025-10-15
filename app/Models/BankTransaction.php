@@ -24,7 +24,9 @@ class BankTransaction extends Model
         'created_by_id',
         'updated_by_id',
         'description',
-        'json'
+        'json',
+        'payment_out_id',
+        'payment_in_id',
     ];
 
     protected $dates = [
@@ -53,4 +55,13 @@ class BankTransaction extends Model
     {
         return $this->belongsTo(User::class, 'updated_by_id');
     }
+    public function paymentOut()
+{
+    return $this->belongsTo(PaymentOut::class, 'payment_out_id');
+}
+    public function paymentIn()
+{
+    return $this->belongsTo(PaymentIn::class, 'payment_in_id');
+
+}
 }

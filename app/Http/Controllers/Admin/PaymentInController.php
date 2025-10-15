@@ -37,7 +37,7 @@ class PaymentInController extends Controller
 }
 
 
- public function store(StorePaymentInRequest $request)
+public function store(StorePaymentInRequest $request)
 {
     // Step 1️⃣: Request data me created_by aur updated_by add karo
     $requestData = $request->all();
@@ -53,18 +53,19 @@ class PaymentInController extends Controller
                   ->toMediaCollection('attechment');
     }
 
-    // CKEditor media handle
+    // Step 4️⃣: CKEditor media handle
     if ($media = $request->input('ck-media', false)) {
         Media::whereIn('id', $media)->update(['model_id' => $paymentIn->id]);
     }
 
-    // Step 4️⃣: Related data fetch karo
-    $party = $paymentIn->parties; // PartyDetail relation
-    $bank  = $paymentIn->payment_type; // BankAccount relation
+    // Step 5️⃣: Related data fetch karo
+    $party = $paymentIn->parties;
+    $bank  = $paymentIn->payment_type;
 
-    // Step 5️⃣: BankTransaction me insert karo
+    // Step 6️⃣: BankTransaction me insert karo
     if ($party && $bank) {
         $transactionData = [
+            'payment_in_id'         => $paymentIn->id, // ✅ NEW FIELD
             'party_id'              => $party->id,
             'party_name'            => $party->party_name,
             'opening_balance_type'  => $bank->opening_balance_type ?? null,
@@ -76,7 +77,7 @@ class PaymentInController extends Controller
             'created_by_id'         => auth()->id(),
             'updated_by_id'         => auth()->id(),
             'description'           => $paymentIn->description,
-            'json'                  => json_encode([
+            'json' => json_encode([
                 'payment_in' => $paymentIn->toArray(),
                 'party'      => $party->toArray(),
                 'bank'       => $bank->toArray(),
@@ -87,13 +88,13 @@ class PaymentInController extends Controller
         BankTransaction::create($transactionData);
     }
 
-    // Step 6️⃣: Bank balance update karo (PaymentIn me +)
+    // Step 7️⃣: Bank balance update karo (PaymentIn me +)
     if ($bank) {
         $bank->opening_balance = $bank->opening_balance + $paymentIn->amount;
         $bank->save();
     }
 
-    // Step 7️⃣: Party current balance update karo
+    // Step 8️⃣: Party current balance update karo
     if ($party) {
         if ($party->current_balance_type == 'debit') {
             $party->current_balance += $paymentIn->amount;
@@ -104,16 +105,18 @@ class PaymentInController extends Controller
         // Auto balance type adjust
         if ($party->current_balance < 0) {
             $party->current_balance = abs($party->current_balance);
-            $party->current_balance_type = $party->current_balance_type == 'debit' ? 'credit' : 'debit';
+            $party->current_balance_type = 
+                $party->current_balance_type == 'debit' ? 'credit' : 'debit';
         }
 
         $party->save();
     }
 
-    // Step 8️⃣: Redirect
+    // Step 9️⃣: Redirect
     return redirect()->route('admin.payment-ins.index')
-                     ->with('success', 'Payment In successfully recorded, balances updated, and JSON log saved.');
+                     ->with('success', '✅ Payment In successfully recorded, linked to BankTransaction, and balances updated.');
 }
+
 
 
 
