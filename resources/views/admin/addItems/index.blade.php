@@ -47,13 +47,13 @@
                             <td class="px-4 py-3">{{ App\Models\AddItem::ITEM_TYPE_SELECT[$addItem->item_type] ?? '' }}</td>
 
                             {{-- Item Name with Modal --}}
-                            <td class="px-4 py-3" x-data="{ open: false }">
+                            <td class="px-4 py-3" x-data="{ open: false }" x-init="$watch('open', value => value ? $nextTick(() => initModal({{ $addItem->id }})) : '')">
                                 <span @click="open = true" class="text-blue-600 cursor-pointer hover:underline">
                                     {{ $addItem->item_name ?? '' }}
                                 </span>
 
                                 {{-- Modal --}}
-                                <div x-show="open"
+                                <div x-show="open" x-cloak
                                      x-transition
                                      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-auto">
                                     <div @click.away="open = false"
@@ -62,39 +62,39 @@
                                         <h3 class="text-lg font-semibold mb-4">Details for {{ $addItem->item_name }}</h3>
 
                                         {{-- Modal Table --}}
-                                        <table id="modalTable-{{ $addItem->id }}"
-                       class="min-w-full text-left text-gray-700 border border-gray-200 table-auto">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-4 py-2 border-b">Type</th>
-                            <th class="px-4 py-2 border-b">Key / Name</th>
-                            <th class="px-4 py-2 border-b">Value / Qty</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php $json = json_decode($addItem->json_data, true); @endphp
+                                        <table id="modalTable-{{ $addItem->id }}" class="min-w-full text-left text-gray-700 border border-gray-200 table-auto">
+                                            <thead class="bg-gray-100">
+                                                <tr>
+                                                    <th class="px-4 py-2 border-b">Type</th>
+                                                    <th class="px-4 py-2 border-b">Key / Name</th>
+                                                    <th class="px-4 py-2 border-b">Value / Qty</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php $json = json_decode($addItem->json_data, true); @endphp
 
-                        {{-- JSON Data --}}
-                        @if(is_array($json))
-                            @foreach($json as $key => $value)
-                                <tr>
-                                    <td class="px-4 py-2 border-b font-medium">JSON</td>
-                                    <td class="px-4 py-2 border-b">{{ $key }}</td>
-                                    <td class="px-4 py-2 border-b">{{ is_array($value) ? json_encode($value) : $value }}</td>
-                                </tr>
-                            @endforeach
-                        @endif
+                                                {{-- JSON Data --}}
+                                                @if(is_array($json))
+                                                    @foreach($json as $key => $value)
+                                                        <tr>
+                                                            <td class="px-4 py-2 border-b font-medium">JSON</td>
+                                                            <td class="px-4 py-2 border-b">{{ $key }}</td>
+                                                            <td class="px-4 py-2 border-b">{{ is_array($value) ? json_encode($value) : $value }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endif
 
-                        {{-- Raw Materials --}}
-                        @foreach($addItem->rawMaterials as $rm)
-                            <tr>
-                                <td class="px-4 py-2 border-b font-medium">Raw Material</td>
-                                <td class="px-4 py-2 border-b">{{ $rm->item_name }}</td>
-                                <td class="px-4 py-2 border-b">{{ $rm->pivot->qty ?? 0 }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                                {{-- Raw Materials --}}
+                                                @foreach($addItem->rawMaterials as $rm)
+                                                    <tr>
+                                                        <td class="px-4 py-2 border-b font-medium">Raw Material</td>
+                                                        <td class="px-4 py-2 border-b">{{ $rm->item_name }}</td>
+                                                        <td class="px-4 py-2 border-b">{{ $rm->pivot->qty ?? 0 }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+
                                         <button @click="open = false"
                                                 class="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded">
                                             Close
@@ -135,6 +135,11 @@
 
 @section('scripts')
 @parent
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.tailwind.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.tailwind.min.js"></script>
+
 <script>
 $(function () {
     // Main DataTable
@@ -172,29 +177,22 @@ $(function () {
         pageLength: 25,
     });
 
-    $('.datatable-AddItem:not(.ajaxTable)').DataTable({ buttons: dtButtons })
-
-    // Modal DataTable init on open
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('modalTable', () => ({
-            init(id) {
-                let tableId = '#modalTable-' + id;
-                if (! $.fn.DataTable.isDataTable(tableId)) {
-                    $(tableId).DataTable({
-                        pageLength: 10,
-                        lengthMenu: [10, 25, 50, 100, 250, 500],
-                        searching: true,
-                        ordering: true,
-                        autoWidth: false,
-                        scrollX: true,
-                        scrollY: "400px",
-                        scrollCollapse: true,
-                        responsive: true
-                    });
-                }
-            }
-        }))
-    });
+    $('.datatable-AddItem:not(.ajaxTable)').DataTable({ buttons: dtButtons });
 });
+
+// Modal table init function
+function initModal(id) {
+    let tableId = '#modalTable-' + id;
+    if (!$.fn.DataTable.isDataTable(tableId)) {
+        $(tableId).DataTable({
+            pageLength: 25,
+            lengthMenu: [25, 50, 100, 500, -1],
+            scrollY: "400px",
+            scrollCollapse: true,
+            responsive: true,
+            autoWidth: false,
+        });
+    }
+}
 </script>
 @endsection
