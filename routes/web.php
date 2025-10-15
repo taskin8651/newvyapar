@@ -356,7 +356,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
     // Optional: CSV import (if needed)
     Route::post('payment-ins/parseCsvImport', [PaymentInController::class, 'parseCsvImport'])->name('payment-ins.parseCsvImport');
-
+ Route::resource('bank-transactions', App\Http\Controllers\Admin\BankTransactionController::class);
 
 });
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
