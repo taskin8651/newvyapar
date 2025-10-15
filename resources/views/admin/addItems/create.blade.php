@@ -1,4 +1,3 @@
-
 @extends('layouts.admin')
 
 @section('content')
@@ -23,6 +22,17 @@
                     <!-- Hidden field -->
                     <input type="hidden" id="itemTypeHidden" name="item_type" value="{{ old('item_type', 'product') }}">
                 </div>
+            </div>
+
+            <!-- Product Type -->
+            <div class="px-6 pt-4" id="productTypeSection" style="display: none;">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                <select id="productType" name="product_type" class="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm">
+                    <option value="">-- Select Product Type --</option>
+                    <option value="ready_made" {{ old('product_type') == 'ready_made' ? 'selected' : '' }}>Ready Made</option>
+                    <option value="finished_goods" {{ old('product_type') == 'finished_goods' ? 'selected' : '' }}>Finished Goods</option>
+                    <option value="raw_material" {{ old('product_type') == 'raw_material' ? 'selected' : '' }}>Raw Material</option>
+                </select>
             </div>
 
             <!-- Top Fields -->
@@ -62,9 +72,6 @@
                         @endforeach
                     </select>
                     <p class="text-xs text-gray-500 mt-1">Hold <strong>CTRL</strong> or <strong>CMD</strong> to select multiple categories.</p>
-                    @error('select_category')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
@@ -93,11 +100,11 @@
                     <button type="button" @click="tab = 'purchase'" :class="tab === 'purchase' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Purchase</button>
                     <button type="button" @click="tab = 'stock'" :class="tab === 'stock' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Stock</button>
                     <button type="button" @click="tab = 'online'" :class="tab === 'online' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Online Store</button>
+                    <button type="button" id="rawMaterialTab" style="display:none;" @click="tab = 'select_raw_material'" :class="tab === 'select_raw_material' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-3 px-1 border-b-2 font-medium text-sm">Select Raw Material</button>
                 </nav>
 
                 <!-- Pricing Section -->
                 <div x-show="tab === 'pricing'" class="bg-gray-50 rounded-lg p-4 mb-6 space-y-6">
-                    <!-- Sale Price -->
                     <div>
                         <h3 class="text-md font-semibold text-gray-700 mb-3">Sale Price</h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -114,7 +121,6 @@
                             </select>
                         </div>
                     </div>
-                    <!-- Tax -->
                     <div>
                         <h3 class="text-md font-semibold text-gray-700 mb-3">Tax Rate</h3>
                         <select name="select_tax_id" class="w-full rounded-md border border-gray-300 px-4 py-2">
@@ -173,6 +179,31 @@
                         <input type="file" name="online_store_image" class="w-full rounded-md border border-gray-300 px-4 py-2">
                     </div>
                 </div>
+
+                <!-- Select Raw Material -->
+                <div x-show="tab === 'select_raw_material'" id="rawMaterialSection" style="display:none;" class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Select Raw Materials</h3>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        @forelse($raw_materials as $material)
+                            <label class="flex items-center space-x-2 bg-white p-3 rounded-md border shadow-sm hover:bg-blue-50 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    name="select_raw_materials[]" 
+                                    value="{{ $material['id'] }}" 
+                                    class="form-checkbox h-5 w-5 text-blue-600"
+                                >
+                                <div>
+                                    <p class="text-gray-800 font-medium">{{ $material['name'] }}</p>
+                                    <p class="text-xs text-gray-500">Available Qty: {{ $material['qty'] }}</p>
+                                </div>
+                            </label>
+                        @empty
+                            <p class="text-gray-500 text-sm">No raw materials available in current stock.</p>
+                        @endforelse
+                    </div>
+                </div>
+
             </div>
 
             <!-- json_data -->
@@ -193,58 +224,62 @@
 
 <!-- Scripts -->
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const itemTypeSwitch = document.getElementById('switchType');
+    const hiddenType = document.getElementById('itemTypeHidden');
+    const productTypeSection = document.getElementById('productTypeSection');
+    const productTypeDropdown = document.getElementById('productType');
+    const rawMaterialTab = document.getElementById('rawMaterialTab');
+    const rawMaterialSection = document.getElementById('rawMaterialSection');
+
+    function updateVisibility() {
+        if (hiddenType.value === 'product') {
+            productTypeSection.style.display = 'block';
+        } else {
+            productTypeSection.style.display = 'none';
+            rawMaterialTab.style.display = 'none';
+            rawMaterialSection.style.display = 'none';
+        }
+    }
+
+    function updateRawMaterialTab() {
+        if (productTypeDropdown.value === 'finished_goods') {
+            rawMaterialTab.style.display = 'inline-block';
+            rawMaterialSection.style.display = 'block';
+        } else {
+            rawMaterialTab.style.display = 'none';
+            rawMaterialSection.style.display = 'none';
+        }
+    }
+
+    // Initialize state
+    itemTypeSwitch.checked = hiddenType.value === 'service';
+    updateVisibility();
+    updateRawMaterialTab();
+
+    // Event listeners
+    itemTypeSwitch.addEventListener('change', () => {
+        hiddenType.value = itemTypeSwitch.checked ? 'service' : 'product';
+        updateVisibility();
+    });
+
+    productTypeDropdown.addEventListener('change', updateRawMaterialTab);
+
+    // Generate code
     document.getElementById("generateCodeBtn").addEventListener("click", function () {
         let randomCode = "ITM-" + Math.floor(1000 + Math.random() * 9000) + "-" + Date.now().toString().slice(-4);
         document.getElementById("item_code").value = randomCode;
     });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const switchEl = document.getElementById('switchType');
-        const hiddenEl = document.getElementById('itemTypeHidden');
-        // Initialize switch from hidden value
-        switchEl.checked = (hiddenEl.value === 'service');
-        switchEl.addEventListener('change', function () {
-            hiddenEl.value = this.checked ? 'service' : 'product';
-        });
-
-        // Pack a lightweight JSON snapshot before submit
-        const form = document.getElementById('addItemForm');
-        form.addEventListener('submit', function () {
-            const payload = {
-                item_type: hiddenEl.value,
-                unit_id: document.getElementById('unit_id')?.value || null,
-                select_category: document.getElementById('select_category')?.value || null,
-                quantity: document.querySelector('[name="quantity"]')?.value || null,
-                item_code: document.getElementById('item_code')?.value || null,
-                pricing: {
-                    sale_price: document.querySelector('[name="sale_price"]').value || null,
-                    select_type: document.querySelector('[name="select_type"]').value || null,
-                    disc_on_sale_price: document.querySelector('[name="disc_on_sale_price"]').value || null,
-                    disc_type: document.querySelector('[name="disc_type"]').value || null,
-                    select_tax_id: document.querySelector('[name="select_tax_id"]').value || null,
-                },
-                wholesale: {
-                    wholesale_price: document.querySelector('[name="wholesale_price"]').value || null,
-                    select_type_wholesale: document.querySelector('[name="select_type_wholesale"]').value || null,
-                    minimum_wholesale_qty: document.querySelector('[name="minimum_wholesale_qty"]').value || null,
-                },
-                purchase: {
-                    purchase_price: document.querySelector('[name="purchase_price"]').value || null,
-                    select_purchase_type: document.querySelector('[name="select_purchase_type"]').value || null,
-                },
-                stock: {
-                    opening_stock: document.querySelector('[name="opening_stock"]').value || null,
-                    low_stock_warning: document.querySelector('[name="low_stock_warning"]').value || null,
-                    warehouse_location: document.querySelector('[name="warehouse_location"]').value || null,
-                },
-                online: {
-                    title: document.querySelector('[name="online_store_title"]').value || null,
-                    description: document.querySelector('[name="online_store_description"]').value || null,
-                }
-            };
-            document.getElementById('json_data').value = JSON.stringify(payload);
-        });
+    // Pack JSON before submit
+    document.getElementById('addItemForm').addEventListener('submit', function () {
+        const payload = {
+            item_type: hiddenType.value,
+            product_type: productTypeDropdown.value,
+            quantity: document.querySelector('[name="quantity"]').value || null,
+        };
+        document.getElementById('json_data').value = JSON.stringify(payload);
     });
+});
 </script>
 @endsection
-

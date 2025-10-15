@@ -65,7 +65,8 @@ class AddItem extends Model
         'online_store_description',
         'online_store_image',
         'json_data',
-        'created_by_id'
+        'created_by_id',
+        'product_type',
     ];
 
     protected $casts = [
@@ -115,5 +116,15 @@ public function productCurrentStocks()
     return $this->belongsToMany(CurrentStock::class, 'add_item_current_stock', 'add_item_id', 'current_stock_id')
                 ->select('current_stocks.id', 'current_stocks.qty as stock_qty'); // alias qty
 }
+public function rawMaterials()
+{
+    return $this->belongsToMany(
+        AddItem::class,
+        'finished_goods_raw_material',
+        'item_id',
+        'select_raw_material_id'
+    )->withPivot(['qty', 'item_name', 'item_hsn', 'json_data'])->withTimestamps();
+}
+
 
 }

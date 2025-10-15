@@ -27,6 +27,7 @@ class Category extends Model
         'updated_at',
         'deleted_at',
         'created_by_id',
+        'created_by_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)

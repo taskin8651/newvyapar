@@ -15,6 +15,7 @@ use App\Models\Unit;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class AddItemController extends Controller
@@ -31,11 +32,23 @@ public function index()
     if ($userRole === 'Super Admin') {
         // Super Admin ko saara data dikhe, global scopes ignore karke
         $addItems = AddItem::withoutGlobalScopes()
-            ->with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
+            ->with([
+                'select_unit',
+                'select_categories',
+                'select_tax',
+                'created_by',
+                'rawMaterials' // ✅ Eager load pivot raw materials
+            ])
             ->get();
     } else {
         // Baaki users ke liye filter lagayein (example: user ke own created entries)
-        $addItems = AddItem::with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
+        $addItems = AddItem::with([
+                'select_unit',
+                'select_categories',
+                'select_tax',
+                'created_by',
+                'rawMaterials'
+            ])
             ->where('created_by_id', $user->id)
             ->get();
     }
@@ -44,26 +57,50 @@ public function index()
 }
 
 
-    public function create()
-    {
-        abort_if(Gate::denies('add_item_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $select_units = Unit::pluck('base_unit', 'id')->prepend(trans('global.pleaseSelect'), '');
+public function create()
+{
+    abort_if(Gate::denies('add_item_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $select_categories = Category::pluck('name', 'id');
+    $userId = Auth::id();
 
-        $select_taxes = TaxRate::pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $select_units = Unit::where('created_by_id', $userId)
+        ->pluck('base_unit', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units'));
-    }
+    $select_categories = Category::where('created_by_id', $userId)
+        ->pluck('name', 'id');
+
+    $select_taxes = TaxRate::where('created_by_id', $userId)
+        ->pluck('name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+
+    // ✅ Fetch only raw materials from current_stocks
+    $raw_materials = \App\Models\CurrentStock::with('addItems')
+        ->where('product_type', 'raw_material')
+        ->where('created_by_id', $userId)
+        ->get()
+        ->flatMap(function ($stock) {
+            return $stock->addItems->map(function ($item) use ($stock) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->item_name ?? 'Unnamed Item',
+                    'qty' => $stock->qty,
+                ];
+            });
+        });
+    
+    return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units', 'raw_materials'));
+}
+
+
 
 public function store(Request $request)
 {
-    // dd($request->all());
-   
-    // ✅ Validate data
+    // ✅ Validate incoming data
     $validated = $request->validate([
-        'item_type' => 'required|string|in:product,service',// ✅ Product/Service compulsory
+        'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
+        'item_type' => 'required|string|in:product,service',
         'item_name' => 'required|string|max:255',
         'item_hsn' => 'nullable|string|max:255',
         'select_unit_id' => 'required|integer|exists:units,id',
@@ -72,7 +109,7 @@ public function store(Request $request)
         'quantity' => 'nullable|integer',
         'item_code' => 'nullable|string|max:255',
         'sale_price' => 'nullable|numeric',
-        'select_type' => 'required', 
+        'select_type' => 'required',
         'disc_on_sale_price' => 'nullable|numeric',
         'disc_type' => 'nullable|string',
         'wholesale_price' => 'nullable|numeric',
@@ -87,50 +124,103 @@ public function store(Request $request)
         'online_store_title' => 'nullable|string|max:255',
         'online_store_description' => 'nullable|string',
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        'select_raw_materials' => 'nullable|array',
+        'select_raw_materials.*' => 'integer|exists:add_items,id',
         'json_data' => 'nullable',
     ]);
-   
+
     // ✅ Handle image upload
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
     }
 
-    // ✅ Created By User
     $validated['created_by_id'] = auth()->id();
 
-    // ✅ Save item
+    // Full data for JSON
+    $fullData = $request->all();
+    if ($request->hasFile('online_store_image')) {
+        $fullData['online_store_image'] = $validated['online_store_image'];
+    }
+    $validated['json_data'] = json_encode($fullData);
+
+    // ✅ Create item
     $item = AddItem::create($validated);
 
-    // ✅ Sync categories into pivot table
-    if ($request->has('select_category')) {
-        $item->select_categories()->sync($request->input('select_category'));
+    // ✅ Sync categories
+    if (!empty($validated['select_category'])) {
+        $item->select_categories()->sync($validated['select_category']);
     }
 
-    // ✅ Save Opening Stock only if item_type = Product
-    if (
-        isset($validated['item_type']) &&
-        strtolower($validated['item_type']) === 'product' &&
-        !empty($validated['opening_stock']) &&
-        $validated['opening_stock'] > 0
-    ) {
-        $defaultPartyId = 1; // ✅ Always 1
+    // ✅ Finished Goods Handling
+    if ($validated['product_type'] === 'finished_goods') {
+        $rawMaterials = $request->input('select_raw_materials', []);
+        $quantity = $validated['quantity'] ?? 0;
 
-        $stock = CurrentStock::create([
-            'json_data'     => $validated['json_data'],
-            'user_id'       => $defaultPartyId, // ✅ Fix: hamesha 1
+        foreach ($rawMaterials as $rawId) {
+            // Insert pivot data
+            DB::table('finished_goods_raw_material')->insert([
+                'item_id' => $item->id,
+                'select_raw_material_id' => $rawId,
+                'qty' => $quantity,
+                'item_name' => $validated['item_name'],
+                'item_hsn' => $validated['item_hsn'],
+                'json_data' => json_encode($fullData),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Reduce raw material stock
+            $stock = DB::table('current_stocks')->where('item_id', $rawId)->first();
+            if ($stock) {
+                DB::table('current_stocks')
+                    ->where('item_id', $rawId)
+                    ->update([
+                        'qty' => max(0, ($stock->qty ?? 0) - $quantity),
+                        'updated_at' => now(),
+                    ]);
+            }
+        }
+
+        // ✅ Add finished good itself to current_stocks
+        if ($quantity > 0) {
+            CurrentStock::create([
+                'json_data' => json_encode($fullData),
+                'user_id' => 1, // Default party id
+                'qty' => $quantity,
+                'type' => 'Finished Goods',
+                'created_by_id' => auth()->id(),
+                'item_id' => $item->id,
+                'product_type' => $validated['product_type'],
+            ]);
+        }
+    }
+
+    // ✅ Ready Made / Single Product Opening Stock
+    if (($validated['product_type'] === 'ready_made' || empty($request->select_raw_materials)) 
+        && strtolower($validated['item_type']) === 'product' 
+        && !empty($validated['opening_stock']) 
+        && $validated['opening_stock'] > 0) {
+
+        $defaultPartyId = 1;
+
+        CurrentStock::create([
+            'json_data'     => json_encode($fullData),
+            'user_id'       => $defaultPartyId,
             'qty'           => $validated['opening_stock'],
             'type'          => 'Opening Stock',
             'created_by_id' => auth()->id(),
-            'item_id'       => $item->id, // ✅ Link to the item
+            'item_id'       => $item->id,
+            'product_type'  => $validated['product_type'],
         ]);
-
-        // ✅ Attach item to the stock (pivot table)
-        $stock->items()->attach($item->id);
     }
 
-    return redirect()->route('admin.add-items.index')
+    return redirect()
+        ->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
+
+
+
 
 
 
