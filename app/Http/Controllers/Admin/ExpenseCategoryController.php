@@ -12,6 +12,7 @@ use Gate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+use Illuminate\Support\Facades\Auth;
 class ExpenseCategoryController extends Controller
 {
     use CsvImportTrait;
@@ -50,12 +51,17 @@ public function index()
         return view('admin.expenseCategories.create');
     }
 
-    public function store(StoreExpenseCategoryRequest $request)
-    {
-        $expenseCategory = ExpenseCategory::create($request->all());
+   public function store(StoreExpenseCategoryRequest $request)
+{
+    $data = $request->all();
 
-        return redirect()->route('admin.expense-categories.index');
-    }
+    // Add the current user ID to created_by_id
+    $data['created_by_id'] = Auth::id();
+
+    $expenseCategory = ExpenseCategory::create($data);
+
+    return redirect()->route('admin.expense-categories.index');
+}
 
     public function edit(ExpenseCategory $expenseCategory)
     {

@@ -15,7 +15,7 @@ use Gate;
 use Illuminate\Http\Request;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
-
+use App\Models\BankTransaction;
 class PaymentOutController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
@@ -40,20 +40,85 @@ class PaymentOutController extends Controller
         return view('admin.paymentOuts.create', compact('parties', 'payment_types'));
     }
 
-    public function store(StorePaymentOutRequest $request)
-    {
-        $paymentOut = PaymentOut::create($request->all());
+  public function store(StorePaymentOutRequest $request)
+{
+    // Step 1️⃣: PaymentOut create karo
+    $paymentOut = PaymentOut::create($request->all());
 
-        if ($request->input('attechment', false)) {
-            $paymentOut->addMedia(storage_path('tmp/uploads/' . basename($request->input('attechment'))))->toMediaCollection('attechment');
-        }
-
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $paymentOut->id]);
-        }
-
-        return redirect()->route('admin.payment-outs.index');
+    // Step 2️⃣: Attachment save karna
+    if ($request->input('attechment', false)) {
+        $paymentOut->addMedia(storage_path('tmp/uploads/' . basename($request->input('attechment'))))
+            ->toMediaCollection('attechment');
     }
+
+    if ($media = $request->input('ck-media', false)) {
+        Media::whereIn('id', $media)->update(['model_id' => $paymentOut->id]);
+    }
+
+    // Step 3️⃣: Related data fetch karo
+    $party = $paymentOut->parties; // Relation from PaymentOut -> PartyDetail
+    $bank  = $paymentOut->payment_type; // Relation from PaymentOut -> BankAccount
+
+    // Step 4️⃣: BankTransaction me insert karo
+    if ($party && $bank) {
+        $transactionData = [
+            'party_id'              => $party->id,
+            'party_name'            => $party->party_name,
+            // 👇 Ab Bank ke opening balance aur type se lenge
+            'opening_balance_type'  => $bank->opening_balance_type ?? null,
+            'opening_balance'       => $bank->opening_balance ?? 0,
+            'current_balance'       => $party->current_balance,
+            'current_balance_type'  => $party->current_balance_type,
+            'payment_type_id'       => $bank->id,
+            'amount'                => $paymentOut->amount,
+            'created_by_id'         => auth()->id(),
+            'updated_by_id'         => auth()->id(),
+            'description'           => $paymentOut->description,
+        ];
+
+        // 👇 JSON me poora data bhi save karo
+        $transactionData['json'] = json_encode([
+            'payment_out' => $paymentOut->toArray(),
+            'party'       => $party->toArray(),
+            'bank'        => $bank->toArray(),
+            'user'        => auth()->user()->only(['id', 'name', 'email']),
+        ]);
+    
+
+        BankTransaction::create($transactionData);
+    }
+
+    // Step 5️⃣: Bank balance update karo (opening_balance me se minus)
+    if ($bank) {
+        $bank->opening_balance = $bank->opening_balance - $paymentOut->amount;
+        $bank->save();
+    }
+
+    // Step 6️⃣: Party ka current balance update karo
+    if ($party) {
+        if ($party->current_balance_type == 'debit') {
+            $party->current_balance -= $paymentOut->amount;
+        } else {
+            $party->current_balance += $paymentOut->amount;
+        }
+
+        // Auto balance type adjust
+        if ($party->current_balance < 0) {
+            $party->current_balance = abs($party->current_balance);
+            $party->current_balance_type = $party->current_balance_type == 'debit' ? 'credit' : 'debit';
+        }
+
+        $party->save();
+    }
+
+    // Step 7️⃣: Redirect
+    return redirect()->route('admin.payment-outs.index')
+        ->with('success', 'Payment Out successfully recorded, balances updated, and JSON log saved.');
+}
+
+
+
+
 
     public function edit(PaymentOut $paymentOut)
     {
@@ -68,23 +133,116 @@ class PaymentOutController extends Controller
         return view('admin.paymentOuts.edit', compact('parties', 'paymentOut', 'payment_types'));
     }
 
-    public function update(UpdatePaymentOutRequest $request, PaymentOut $paymentOut)
-    {
-        $paymentOut->update($request->all());
+   public function update(UpdatePaymentOutRequest $request, PaymentOut $paymentOut)
+{
+    // Step 1️⃣: Old data store kar lo comparison ke liye
+    $oldAmount = $paymentOut->amount;
+    $oldBank   = $paymentOut->payment_type;
+    $oldParty  = $paymentOut->parties;
 
-        if ($request->input('attechment', false)) {
-            if (! $paymentOut->attechment || $request->input('attechment') !== $paymentOut->attechment->file_name) {
-                if ($paymentOut->attechment) {
-                    $paymentOut->attechment->delete();
-                }
-                $paymentOut->addMedia(storage_path('tmp/uploads/' . basename($request->input('attechment'))))->toMediaCollection('attechment');
-            }
-        } elseif ($paymentOut->attechment) {
-            $paymentOut->attechment->delete();
+    // Step 2️⃣: PaymentOut update karo
+    $paymentOut->update($request->all());
+
+    // Step 3️⃣: Attachment update
+    if ($request->input('attechment', false)) {
+        if (!$paymentOut->getMedia('attechment')->first() ||
+            $request->input('attechment') !== $paymentOut->getMedia('attechment')->first()->file_name) {
+            $paymentOut->clearMediaCollection('attechment');
+            $paymentOut->addMedia(storage_path('tmp/uploads/' . basename($request->input('attechment'))))
+                ->toMediaCollection('attechment');
+        }
+    } elseif ($paymentOut->getMedia('attechment')->first()) {
+        $paymentOut->clearMediaCollection('attechment');
+    }
+
+    if ($media = $request->input('ck-media', false)) {
+        Media::whereIn('id', $media)->update(['model_id' => $paymentOut->id]);
+    }
+
+    // Step 4️⃣: Naye relations fetch karo
+    $party = $paymentOut->parties;
+    $bank  = $paymentOut->payment_type;
+
+    // Step 5️⃣: Pichle balance ko revert karo (old bank aur party ko restore)
+    if ($oldBank) {
+        $oldBank->opening_balance += $oldAmount;
+        $oldBank->save();
+    }
+
+    if ($oldParty) {
+        if ($oldParty->current_balance_type == 'debit') {
+            $oldParty->current_balance += $oldAmount;
+        } else {
+            $oldParty->current_balance -= $oldAmount;
         }
 
-        return redirect()->route('admin.payment-outs.index');
+        if ($oldParty->current_balance < 0) {
+            $oldParty->current_balance = abs($oldParty->current_balance);
+            $oldParty->current_balance_type = $oldParty->current_balance_type == 'debit' ? 'credit' : 'debit';
+        }
+
+        $oldParty->save();
     }
+
+    // Step 6️⃣: Naye amount ke hisab se update karo
+    if ($bank) {
+        $bank->opening_balance -= $paymentOut->amount;
+        $bank->save();
+    }
+
+    if ($party) {
+        if ($party->current_balance_type == 'debit') {
+            $party->current_balance -= $paymentOut->amount;
+        } else {
+            $party->current_balance += $paymentOut->amount;
+        }
+
+        if ($party->current_balance < 0) {
+            $party->current_balance = abs($party->current_balance);
+            $party->current_balance_type = $party->current_balance_type == 'debit' ? 'credit' : 'debit';
+        }
+
+        $party->save();
+    }
+
+    // Step 7️⃣: BankTransaction record update ya create karo
+    $transaction = BankTransaction::where('description', $oldParty?->party_name)
+        ->where('amount', $oldAmount)
+        ->where('party_id', $oldParty?->id)
+        ->latest()
+        ->first();
+
+    $transactionData = [
+        'party_id'              => $party?->id,
+        'party_name'            => $party?->party_name,
+        'opening_balance_type'  => $bank?->opening_balance_type ?? null,
+        'opening_balance'       => $bank?->opening_balance ?? 0,
+        'current_balance'       => $party?->current_balance ?? 0,
+        'current_balance_type'  => $party?->current_balance_type ?? null,
+        'payment_type_id'       => $bank?->id,
+        'amount'                => $paymentOut->amount,
+        'updated_by_id'         => auth()->id(),
+        'description'           => $paymentOut->description,
+        'json'                  => json_encode([
+            'payment_out' => $paymentOut->toArray(),
+            'party'       => $party?->toArray(),
+            'bank'        => $bank?->toArray(),
+            'user'        => auth()->user()->only(['id', 'name', 'email']),
+        ]),
+    ];
+
+    if ($transaction) {
+        $transaction->update($transactionData);
+    } else {
+        $transactionData['created_by_id'] = auth()->id();
+        BankTransaction::create($transactionData);
+    }
+
+    // Step 8️⃣: Redirect
+    return redirect()->route('admin.payment-outs.index')
+        ->with('success', 'Payment Out successfully updated, balances adjusted, and JSON log refreshed.');
+}
+
 
     public function show(PaymentOut $paymentOut)
     {
