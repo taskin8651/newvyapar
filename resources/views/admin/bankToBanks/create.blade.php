@@ -66,7 +66,7 @@
                         {{-- Adjustment Date --}}
                         <div class="space-y-1">
                             <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToBank.fields.adjustment_date') }}</label>
-                            <input type="date" name="adjustment_date" id="adjustment_date" data-required="1" value="{{ old('adjustment_date') }}"
+                            <input type="date" name="adjustment_date" id="adjustment_date" data-required="1" value="{{ date('Y-m-d') }}"
                                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
                             @error('adjustment_date')
                                 <p class="text-red-600 text-xs mt-1">{{ $message }}</p>

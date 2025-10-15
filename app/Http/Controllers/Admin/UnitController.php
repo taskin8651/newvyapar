@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateUnitRequest;
 use App\Models\Unit;
 use Gate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class UnitController extends Controller
@@ -51,7 +52,11 @@ public function index()
 
     public function store(StoreUnitRequest $request)
     {
-        $unit = Unit::create($request->all());
+         
+        $data = $request->all();
+        $data['created_by_id'] = Auth::id(); // Logged-in user ka ID store karega
+        
+        $unit = Unit::create($data);
 
         return redirect()->route('admin.units.index');
     }

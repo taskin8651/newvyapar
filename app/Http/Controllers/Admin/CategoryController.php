@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Gate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class CategoryController extends Controller
@@ -50,12 +51,16 @@ public function index()
         return view('admin.categories.create');
     }
 
-    public function store(StoreCategoryRequest $request)
-    {
-        $category = Category::create($request->all());
+public function store(StoreCategoryRequest $request)
+{
+    $data = $request->all();
+    $data['created_by_id'] = Auth::id(); // Logged-in user ka ID store karega
 
-        return redirect()->route('admin.categories.index');
-    }
+    $category = Category::create($data);
+
+    return redirect()->route('admin.categories.index');
+}
+
 
     public function edit(Category $category)
     {
