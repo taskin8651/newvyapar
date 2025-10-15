@@ -44,7 +44,7 @@ public function index()
     } else {
         // Baaki users ke liye filter lagayein (example: user ke current stocks)
         $currentStocks = CurrentStock::with(['items', 'user', 'created_by'])
-            ->where('user_id', $user->id)
+            ->where('created_by_id', $user->id)
             ->get();
     }
 

@@ -121,6 +121,22 @@
                                         <i class="fas fa-eye mr-1"></i>{{ trans('global.view') }}
                                     </a>
                                 @endcan
+                                @can('add_item_edit')
+                                    <a href="{{ route('admin.add-items.edit', $addItem->id) }}"
+                                       class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+                                        <i class="fas fa-edit mr-1"></i>{{ trans('global.edit') }}
+                                    </a>
+                                @endcan
+                                @can('add_item_delete')
+                                    <form action="{{ route('admin.add-items.destroy', $addItem->id) }}" method="POST" onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
+                                            <i class="fas fa-trash mr-1"></i>{{ trans('global.delete') }}
+                                        </button>
+                                    </form>
+                                @endcan
                             </td>
                         </tr>
                     @endforeach
