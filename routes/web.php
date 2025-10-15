@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\PurchaseBillController;
 use App\Http\Controllers\Admin\CurrentStocksController;
 use App\Http\Controllers\Admin\TermAndConditionController;
+use App\Http\Controllers\Admin\PaymentInController;
 
 Route::redirect('/', '/login');
 Route::get('/home', function () {
@@ -346,6 +347,17 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     //End Rock
 
      Route::resource('terms', TermAndConditionController::class);
+
+         // PaymentIn CRUD
+    Route::resource('payment-ins', PaymentInController::class);
+    
+    // Optional: mass delete (if needed)
+    Route::post('payment-ins/massDestroy', [PaymentInController::class, 'massDestroy'])->name('payment-ins.massDestroy');
+
+    // Optional: CSV import (if needed)
+    Route::post('payment-ins/parseCsvImport', [PaymentInController::class, 'parseCsvImport'])->name('payment-ins.parseCsvImport');
+
+
 });
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
     // Change password

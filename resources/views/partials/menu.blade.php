@@ -1104,6 +1104,17 @@
             </a>
             @endcan
 
+            @can('payment_in_access')
+    <a href="{{ route('admin.payment-ins.index') }}"
+       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+       {{ request()->is('admin/payment-ins*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+       <i class="fas fa-money-bill-wave w-4 mr-3 {{ request()->is('admin/payment-ins*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+       <span>{{ trans('cruds.paymentIn.title') }}</span>
+    </a>
+@endcan
+
+
             @can('estimate_quotation_access')
             <a href="{{ route('admin.estimate-quotations.index') }}"
                class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
