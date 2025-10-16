@@ -26,30 +26,37 @@ public function index()
     $user = auth()->user();
     $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
+    // 🔹 Super Admin → See all data (ignore global scopes)
     if ($userRole === 'Super Admin') {
-        // Super Admin ko saara data dikhe aur global scopes ignore ho
         $currentStocks = CurrentStock::withoutGlobalScopes()
             ->with([
-                'items' => function ($query) {
-                    $query->withoutGlobalScopes(); // items ke liye bhi scope ignore
+                'addItems' => function ($query) {
+                    $query->withoutGlobalScopes(); // ignore scopes on AddItem too
                 },
                 'user' => function ($query) {
-                    $query->withoutGlobalScopes(); // user ke liye bhi
+                    $query->withoutGlobalScopes();
                 },
                 'created_by' => function ($query) {
-                    $query->withoutGlobalScopes(); // created_by ke liye bhi
+                    $query->withoutGlobalScopes();
+                },
+                'party' => function ($query) {
+                    $query->withoutGlobalScopes();
                 }
             ])
+            ->latest()
             ->get();
-    } else {
-        // Baaki users ke liye filter lagayein (example: user ke current stocks)
-        $currentStocks = CurrentStock::with(['items', 'user', 'created_by'])
+    } 
+    // 🔹 Other users → Only their own data
+    else {
+        $currentStocks = CurrentStock::with(['addItems', 'user', 'created_by', 'party'])
             ->where('created_by_id', $user->id)
+            ->latest()
             ->get();
     }
 
     return view('admin.currentStocks.index', compact('currentStocks'));
 }
+
 
 
     public function create()

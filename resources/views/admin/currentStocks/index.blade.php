@@ -42,32 +42,32 @@
         <!-- Table -->
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 datatable-CurrentStock">
-<thead class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white">
-  <tr>
-    <th class="px-4 py-3 w-10"></th>
-    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
-      {{ trans('cruds.currentStock.fields.id') }}
-    </th>
-    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
-      {{ trans('cruds.currentStock.fields.item') }}
-    </th>
-    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
-      {{ trans('cruds.currentStock.fields.parties') }}
-    </th>
-    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
-      {{ trans('cruds.currentStock.fields.Pdetails') }}
-    </th>
-    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
-      {{ trans('cruds.currentStock.fields.qty') }}
-    </th>
-    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
-      {{ trans('cruds.currentStock.fields.type') }}
-    </th>
-    <th class="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider">
-      {{ trans('global.actions') }}
-    </th>
-  </tr>
-</thead>
+                <thead class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white">
+                <tr>
+                    <th class="px-4 py-3 w-10"></th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('cruds.currentStock.fields.id') }}
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('cruds.currentStock.fields.item') }}
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('cruds.currentStock.fields.parties') }}
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('cruds.currentStock.fields.Pdetails') }}
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('cruds.currentStock.fields.qty') }}
+                    </th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('cruds.currentStock.fields.type') }}
+                    </th>
+                    <th class="px-4 py-3 text-center text-sm font-semibold uppercase tracking-wider">
+                    {{ trans('global.actions') }}
+                    </th>
+                </tr>
+                </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($currentStocks as $currentStock)
                         <tr data-entry-id="{{ $currentStock->id }}" class="hover:bg-gray-50">
@@ -78,7 +78,7 @@
                                     <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs mr-1">{{ $item->item_name }}</span>
                                 @endforeach
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->user->name ?? '' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->user->item_name ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 @php
                                     $json = $currentStock->json_data ? json_decode($currentStock->json_data, true) : null;
@@ -93,14 +93,14 @@
                                         <div><strong>Warehouse:</strong> {{ $json['stock']['warehouse_location'] ?? 'N/A' }}</div>
                                         <div><strong>Title:</strong> {{ $json['online']['title'] ?? 'N/A' }}</div>
                                     </div>
-<script src="//unpkg.com/alpinejs" defer></script>
+                                    <script src="//unpkg.com/alpinejs" defer></script>
 
-                                    <!-- Tailwind Alpine Modal Trigger -->
-                                  <button 
-    @click="$dispatch('open-json-modal', @js($json))"
-    class="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 mt-1">
-    View More
-</button>
+                                                                        <!-- Tailwind Alpine Modal Trigger -->
+                                                                    <button 
+                                        @click="$dispatch('open-json-modal', @js($json))"
+                                        class="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 mt-1">
+                                        View More
+                                    </button>
 
 
                                 @else
