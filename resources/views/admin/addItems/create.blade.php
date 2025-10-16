@@ -232,6 +232,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const rawMaterialTab = document.getElementById('rawMaterialTab');
     const rawMaterialSection = document.getElementById('rawMaterialSection');
 
+    const quantityField = document.querySelector('[name="quantity"]');
+    const openingStockField = document.querySelector('[name="opening_stock"]');
+
     function updateVisibility() {
         if (hiddenType.value === 'product') {
             productTypeSection.style.display = 'block';
@@ -276,10 +279,25 @@ document.addEventListener('DOMContentLoaded', function () {
         const payload = {
             item_type: hiddenType.value,
             product_type: productTypeDropdown.value,
-            quantity: document.querySelector('[name="quantity"]').value || null,
+            quantity: quantityField.value || null,
+            opening_stock: openingStockField.value || null,
         };
         document.getElementById('json_data').value = JSON.stringify(payload);
     });
+
+    // 🔹 Two-way binding between Quantity and Opening Stock
+    quantityField.addEventListener('input', function () {
+        if (openingStockField.value !== this.value) {
+            openingStockField.value = this.value;
+        }
+    });
+
+    openingStockField.addEventListener('input', function () {
+        if (quantityField.value !== this.value) {
+            quantityField.value = this.value;
+        }
+    });
 });
 </script>
+
 @endsection
