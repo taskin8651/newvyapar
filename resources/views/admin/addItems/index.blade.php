@@ -58,9 +58,7 @@
                                      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-auto">
                                     <div @click.away="open = false"
                                          class="bg-white rounded-lg shadow-lg max-w-5xl w-full p-6 relative">
-
-                                        <h3 class="text-lg font-semibold mb-4">Details for {{ $addItem->item_name }}</h3>
-
+                                         <h3 class="text-lg font-semibold mb-4">Details for {{ $addItem->item_name }}</h3>                                      
                                         {{-- Modal Table --}}
                                         <table id="modalTable-{{ $addItem->id }}" class="min-w-full text-left text-gray-700 border border-gray-200 table-auto">
                                             <thead class="bg-gray-100">
