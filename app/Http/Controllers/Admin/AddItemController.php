@@ -100,20 +100,20 @@ public function create()
 
 public function store(Request $request)
 {
-    // 🔍 First, basic validation for product_type (before dynamic rule)
-    $baseValidation = $request->validate([
+    // 🔍 Step 1: Basic validation for product_type
+    $request->validate([
         'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
     ]);
 
-    // 🔧 Dynamic validation rule for item_type
-    $itemTypeRule = ($request->product_type === 'raw_material')
-        ? 'required|string|in:raw_material'
-        : 'required|string|in:product,service';
+    // 🔧 Step 2: Automatically force item_type = raw_material if product_type = raw_material
+    if ($request->product_type === 'raw_material') {
+        $request->merge(['item_type' => 'raw_material']);
+    }
 
-    // ✅ Final validation
+    // 🔍 Step 3: Full validation
     $validated = $request->validate([
         'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
-        'item_type' => $itemTypeRule,
+        'item_type' => 'required|string|in:raw_material,product,service',
         'item_name' => 'required|string|max:255',
         'item_hsn' => 'nullable|string|max:255',
         'select_unit_id' => 'required|integer|exists:units,id',
@@ -142,40 +142,35 @@ public function store(Request $request)
         'json_data' => 'nullable',
     ]);
 
-    // ✅ If product_type = raw_material, force item_type = raw_material
-    if ($validated['product_type'] === 'raw_material') {
-        $validated['item_type'] = 'raw_material';
-    }
-
-    // ✅ Image upload handling
+    // 🔧 Step 4: Image upload handling
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
     }
 
+    // 🔧 Step 5: Set creator
     $validated['created_by_id'] = auth()->id();
 
-    // ✅ Full JSON backup
+    // 🔧 Step 6: Full JSON backup of request
     $fullData = $request->all();
     if ($request->hasFile('online_store_image')) {
         $fullData['online_store_image'] = $validated['online_store_image'];
     }
     $validated['json_data'] = json_encode($fullData);
 
-    // ✅ Create AddItem record
+    // 🔧 Step 7: Create AddItem record
     $item = AddItem::create($validated);
 
-    // ✅ Sync categories
+    // 🔧 Step 8: Sync categories
     if (!empty($validated['select_category'])) {
         $item->select_categories()->sync($validated['select_category']);
     }
 
-    // ✅ Handle Finished Goods logic
+    // 🔧 Step 9: Handle Finished Goods
     if ($validated['product_type'] === 'finished_goods') {
         $rawMaterials = $request->input('select_raw_materials', []);
         $finishedGoodsQty = 0;
 
         foreach ($rawMaterials as $rawId) {
-            // Pivot insert
             DB::table('finished_goods_raw_material')->insert([
                 'item_id' => $item->id,
                 'select_raw_material_id' => $rawId,
@@ -187,7 +182,6 @@ public function store(Request $request)
                 'updated_at' => now(),
             ]);
 
-            // Fetch raw stock
             $stock = DB::table('current_stocks')
                 ->where('item_id', $rawId)
                 ->where('created_by_id', auth()->id())
@@ -197,7 +191,6 @@ public function store(Request $request)
                 $usedQty = $validated['quantity'] ?? 0;
                 $remaining = max(0, ($stock->qty ?? 0) - $usedQty);
 
-                // Update raw stock
                 DB::table('current_stocks')
                     ->where('id', $stock->id)
                     ->update([
@@ -209,21 +202,20 @@ public function store(Request $request)
             }
         }
 
-        // ✅ Create finished goods stock record
         if ($finishedGoodsQty > 0) {
             CurrentStock::create([
-                'json_data'     => json_encode($fullData),
-                'user_id'       => 1,
-                'qty'           => $finishedGoodsQty,
-                'type'          => 'Manufactured Stock',
+                'json_data' => json_encode($fullData),
+                'user_id' => 1,
+                'qty' => $finishedGoodsQty,
+                'type' => 'Manufactured Stock',
                 'created_by_id' => auth()->id(),
-                'item_id'       => $item->id,
-                'product_type'  => 'finished_goods',
+                'item_id' => $item->id,
+                'product_type' => 'finished_goods',
             ]);
         }
     }
 
-    // ✅ Ready Made / Single Product Opening Stock
+    // 🔧 Step 10: Handle Ready Made / Single Product Opening Stock
     if (
         in_array($validated['product_type'], ['ready_made', 'single']) &&
         strtolower($validated['item_type']) === 'product' &&
@@ -233,13 +225,13 @@ public function store(Request $request)
         $defaultPartyId = 1;
 
         $stock = CurrentStock::create([
-            'json_data'     => json_encode($fullData),
-            'user_id'       => $defaultPartyId,
-            'qty'           => $validated['opening_stock'],
-            'type'          => 'Opening Stock',
+            'json_data' => json_encode($fullData),
+            'user_id' => $defaultPartyId,
+            'qty' => $validated['opening_stock'],
+            'type' => 'Opening Stock',
             'created_by_id' => auth()->id(),
-            'item_id'       => $item->id,
-            'product_type'  => $validated['product_type'],
+            'item_id' => $item->id,
+            'product_type' => $validated['product_type'],
         ]);
 
         if (method_exists($stock, 'items')) {
@@ -247,10 +239,12 @@ public function store(Request $request)
         }
     }
 
+    // 🔧 Step 11: Redirect back with success
     return redirect()
         ->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
+
 
     public function edit(AddItem $addItem)
     {

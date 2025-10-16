@@ -88,10 +88,10 @@
                                     <div class="space-y-1">
                                         <div><strong>Item Type:</strong> {{ $json['item_type'] ?? 'N/A' }}</div>
                                         <div><strong>Item Code:</strong> {{ $json['item_code'] ?? 'N/A' }}</div>
-                                        <div><strong class="text-green-500">Sale Price:</strong> ₹{{ $json['pricing']['sale_price'] ?? 'N/A' }}</div>
-                                        <div><strong class="text-red-500">Purchase Price:</strong> ₹{{ $json['purchase']['purchase_price'] ?? 'N/A' }}</div>
-                                        <div><strong>Warehouse:</strong> {{ $json['stock']['warehouse_location'] ?? 'N/A' }}</div>
-                                        <div><strong>Title:</strong> {{ $json['online']['title'] ?? 'N/A' }}</div>
+                                        <div><strong class="text-green-500">Sale Price:</strong> ₹{{ $json['sale_price'] ?? 'N/A' }}</div>
+                                        <div><strong class="text-red-500">Purchase Price:</strong> ₹{{ $json['purchase_price'] ?? 'N/A' }}</div>
+                                        <div><strong>Warehouse:</strong> {{ $json['warehouse_location'] ?? 'N/A' }}</div>
+                                        <div><strong>Title:</strong> {{ $json['title'] ?? 'N/A' }}</div>
                                     </div>
                                     <script src="//unpkg.com/alpinejs" defer></script>
 
