@@ -48,7 +48,7 @@ public function index()
     } 
     // 🔹 Other users → Only their own data
     else {
-        $currentStocks = CurrentStock::with(['addItems', 'user', 'created_by', 'party'])
+        $currentStocks = CurrentStock::with(['addItems', 'user', 'createdBy', 'party'])
             ->where('created_by_id', $user->id)
             ->latest()
             ->get();

@@ -34,7 +34,7 @@
 
                     <!-- Payment Type Dropdown -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Payment Type</label>
+                        <label class="block text-sm font-medium text-gray-700">Select Bank</label>
                         <select name="payment_type_id" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                             @foreach($payment_types as $id => $name)
                                 <option value="{{ $id }}" {{ old('payment_type_id') == $id ? 'selected' : '' }}>
@@ -54,7 +54,7 @@
                     <!-- Date -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Date</label>
-                        <input type="date" name="date" value="{{ old('date') }}" 
+                        <input type="date" name="date" value="{{ date('Y-m-d') }}" 
                                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                         @error('date')
                             <p class="text-red-600 text-sm mt-1">{{ $message }}</p>

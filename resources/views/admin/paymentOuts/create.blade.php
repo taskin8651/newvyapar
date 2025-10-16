@@ -51,7 +51,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Date</label>
-                        <input type="date" name="date" value="{{ old('date') }}" 
+                        <input type="date" name="date" value="{{ date('Y-m-d') }}" 
                                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                         @error('date')
                             <p class="text-red-600 text-sm mt-1">{{ $message }}</p>

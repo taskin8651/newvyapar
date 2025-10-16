@@ -11,7 +11,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Gate;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\BankTransaction;
-
+use App\Models\PartyDetail;
 
 class PaymentInController extends Controller
 {
@@ -25,12 +25,27 @@ class PaymentInController extends Controller
 {
     // Authorization check
     abort_if(Gate::denies('payment_in_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
+    $userId = auth()->id();
     // Parties list for dropdown
-    $parties = \App\Models\PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+        $parties = PartyDetail::where('created_by_id', $userId)
+        ->get()
+        ->mapWithKeys(function ($party) {
+            // Use current_balance if exists, else opening_balance
+            $balance = $party->current_balance ?? $party->opening_balance;
+            $type = $party->current_balance_type ?? $party->opening_balance_type;
+
+            // Format balance with arrow and Dr/Cr
+            $balanceFormatted = number_format($balance, 2);
+            $display = $type === 'Debit' ? "₹{$balanceFormatted} Dr" : "₹{$balanceFormatted} Cr";
+
+            return [$party->id => "{$party->party_name} ({$display})"];
+        });
 
     // Bank accounts list for dropdown
-    $payment_types = \App\Models\BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+   
+$payment_types = \App\Models\BankAccount::where('created_by_id', $userId)
+    ->pluck('account_name', 'id')
+    ->prepend(trans('global.pleaseSelect'), '');
 
     // Return create view with data
     return view('admin.paymentIns.create', compact('parties', 'payment_types'));

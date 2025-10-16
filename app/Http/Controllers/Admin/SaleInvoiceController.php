@@ -68,103 +68,65 @@ public function index()
 public function create()
 {
     abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
     $userId = Auth::id();
+    // Customers dropdown
+$userId = auth()->id(); // Logged-in user ID
 
-    // 1️⃣ Fetch customers created by the logged-in user
-    $select_customers = \App\Models\PartyDetail::where('created_by_id', $userId)->get();
+$select_customers = \App\Models\PartyDetail::select(
+        'id', 
+        'party_name', 
+        'opening_balance', 
+        'opening_balance_type', 
+        'current_balance', 
+        'current_balance_type'
+    )
+    ->where('created_by_id', $userId) // Filter by creator
+    ->get()
+    ->mapWithKeys(function($customer) {
+        // Use current_balance if exists, else opening_balance
+        $balance = $customer->current_balance !== null ? $customer->current_balance : $customer->opening_balance;
+        $type = $customer->current_balance_type ?? $customer->opening_balance_type;
 
-    // 2️⃣ Prepare array for dropdown + JS
-    $select_customers_details = $select_customers->map(function ($c) {
-        $balance = !is_null($c->current_balance) ? $c->current_balance : ($c->opening_balance ?? 0);
-        $balance_type = !is_null($c->current_balance_type) ? $c->current_balance_type : ($c->opening_balance_type ?? 'Debit');
-        $balance_date = $c->updated_at ? $c->updated_at->format('d-m-Y') : ($c->created_at->format('d-m-Y') ?? '-');
+        $balanceFormatted = number_format($balance, 2);
 
-        if ($balance_type === 'Debit') {
-            $icon = '↑';
-            $color = 'red';
-            $label = 'Payable';
+        // Add arrow HTML and color class
+        if ($type === 'Debit') {
+            $display = "₹{$balanceFormatted} Dr - Payable ↑";
         } else {
-            $icon = '↓';
-            $color = 'green';
-            $label = 'Receivable';
+            $display = "₹{$balanceFormatted} Cr - Receivable ↓";
         }
 
-        $balance_text = "<span style='color: $color; font-weight:bold;'>"
-            . $balance . " ($balance_date) $balance_type ($label) $icon</span>";
-
-        return [
-            'id' => $c->id,
-            'name' => $c->party_name . ' - ' . $balance_text,
-            'party_name' => $c->party_name,
-            'gstin' => $c->gstin,
-            'phone' => $c->phone_number,
-            'pan' => $c->pan_number,
-            'billing_address' => $c->billing_address,
-            'shipping_address' => $c->shipping_address,
-            'state' => $c->state,
-            'city' => $c->city,
-            'pincode' => $c->pincode,
-            'email' => $c->email,
-            'credit_limit' => $c->credit_limit,
-            'payment_terms' => $c->payment_terms,
-            'opening_balance' => $c->opening_balance,
-            'opening_balance_type' => $c->opening_balance_type,
-            'current_balance' => $c->current_balance,
-            'current_balance_type' => $c->current_balance_type,
-            'balance_used' => $balance,
-            'balance_type_used' => $balance_type,
-        ];
+        return [$customer->id => "{$customer->party_name} ({$display})"];
     });
 
-    // 3️⃣ Fetch AddItems created by this user (product + service)
-    $items = \App\Models\AddItem::where('created_by_id', $userId)
+
+        $items = AddItem::where('created_by_id', $userId)
         ->whereIn('item_type', ['product', 'service'])
-        ->select('id', 'item_name', 'sale_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+        ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
         ->with('select_unit')
         ->get()
         ->map(function ($item) use ($userId) {
-            if ($item->item_type === 'product') {
-                $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
+            // Only calculate stock for products linked to finished_goods or ready_made
+            $item->stock_qty = ($item->item_type === 'product')
+                ? CurrentStock::where('created_by_id', $userId)
                     ->where('item_id', $item->id)
                     ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
-            } else {
-                $item->stock_qty = null;
-            }
+                    ->sum('qty')
+                : null;
             return $item;
         });
 
-    // 4️⃣ Supporting dropdowns
-    $product_ids = $items->where('item_type', 'product')->pluck('id')->toArray();
-    $units = \App\Models\Unit::where('created_by_id', $userId)
-        ->pluck('base_unit', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-    $cost = \App\Models\MainCostCenter::where('created_by_id', $userId)
-        ->pluck('cost_center_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-    $sub_cost = \App\Models\SubCostCenter::where('created_by_id', $userId)
-        ->pluck('sub_cost_center_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-    $payment_types = \App\Models\BankAccount::where('created_by_id', $userId)
-        ->pluck('account_name', 'id')
-        ->prepend(trans('global.pleaseSelect'), '');
-    $tax_rates = \App\Models\TaxRate::where('created_by_id', $userId)
-        ->select('id', 'name', 'parcentage')
-        ->get();
 
-    // 5️⃣ Pass to view
-    return view('admin.saleInvoices.create', compact(
-        'items',
-        'product_ids',
-        'payment_types',
-        'select_customers',
-        'select_customers_details',
-        'cost',
-        'sub_cost',
-        'units',
-        'tax_rates'
-    ));
+    // Cost centers
+$cost = \App\Models\MainCostCenter::where('created_by_id', $userId)
+    ->pluck('cost_center_name', 'id')
+    ->prepend(trans('global.pleaseSelect'), '');
+
+// Fetch Sub Cost Centers created by this user
+$sub_cost = \App\Models\SubCostCenter::where('created_by_id', $userId)
+    ->pluck('sub_cost_center_name', 'id')
+    ->prepend(trans('global.pleaseSelect'), '');
+    return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
 }
 
 

@@ -29,16 +29,36 @@ class PaymentOutController extends Controller
         return view('admin.paymentOuts.index', compact('paymentOuts'));
     }
 
-    public function create()
-    {
-        abort_if(Gate::denies('payment_out_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function create()
+{
+    abort_if(Gate::denies('payment_out_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $parties = PartyDetail::pluck('party_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $userId = auth()->id(); // Logged-in user ID
 
-        $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    // Fetch parties created by this user with balance logic
+    $parties = PartyDetail::where('created_by_id', $userId)
+        ->get()
+        ->mapWithKeys(function ($party) {
+            // Use current_balance if exists, else opening_balance
+            $balance = $party->current_balance ?? $party->opening_balance;
+            $type = $party->current_balance_type ?? $party->opening_balance_type;
 
-        return view('admin.paymentOuts.create', compact('parties', 'payment_types'));
-    }
+            // Format balance with arrow and Dr/Cr
+            $balanceFormatted = number_format($balance, 2);
+            $display = $type === 'Debit' ? "₹{$balanceFormatted} Dr" : "₹{$balanceFormatted} Cr";
+
+            return [$party->id => "{$party->party_name} ({$display})"];
+        });
+
+    // Fetch bank accounts created by this user
+    $payment_types = BankAccount::where('created_by_id', $userId)
+        ->pluck('account_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+
+    return view('admin.paymentOuts.create', compact('parties', 'payment_types'));
+}
+
+
 
  public function store(StorePaymentOutRequest $request)
 {

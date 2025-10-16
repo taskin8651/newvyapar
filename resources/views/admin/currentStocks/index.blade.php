@@ -74,9 +74,14 @@
                             <td class="px-4 py-3"></td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->id }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
+                            @if($currentStock->items)
                                 @foreach($currentStock->items as $item)
                                     <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs mr-1">{{ $item->item_name }}</span>
                                 @endforeach
+                            @else
+                                <span class="text-gray-500 italic">No items</span>
+                            @endif
+
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $currentStock->user->item_name ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
