@@ -1351,6 +1351,17 @@
             </a>
             @endcan
 
+            @can('bank_transaction_access')
+    <a href="{{ route('admin.bank-transactions.index') }}" 
+       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+              hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium 
+              {{ request()->is('admin/bank-transactions*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+        <i class="fas fa-exchange-alt w-4 mr-3 {{ request()->is('admin/bank-transactions*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+        <span>Bank Transactions</span>
+    </a>
+@endcan
+
+
             @can('cash_in_hand_access')
             <a href="{{ route('admin.cash-in-hands.index') }}" 
                class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 

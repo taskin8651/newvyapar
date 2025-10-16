@@ -40,9 +40,9 @@ class PaymentOutController extends Controller
         return view('admin.paymentOuts.create', compact('parties', 'payment_types'));
     }
 
-  public function store(StorePaymentOutRequest $request)
+ public function store(StorePaymentOutRequest $request)
 {
-    // Step 1️⃣: PaymentOut create karo
+    // Step 1️⃣: Create PaymentOut
     $paymentOut = PaymentOut::create($request->all());
 
     // Step 2️⃣: Attachment save karna
@@ -55,16 +55,16 @@ class PaymentOutController extends Controller
         Media::whereIn('id', $media)->update(['model_id' => $paymentOut->id]);
     }
 
-    // Step 3️⃣: Related data fetch karo
-    $party = $paymentOut->parties; // Relation from PaymentOut -> PartyDetail
-    $bank  = $paymentOut->payment_type; // Relation from PaymentOut -> BankAccount
+    // Step 3️⃣: Related data fetch
+    $party = $paymentOut->parties;
+    $bank  = $paymentOut->payment_type;
 
-    // Step 4️⃣: BankTransaction me insert karo
+    // Step 4️⃣: BankTransaction me insert
     if ($party && $bank) {
         $transactionData = [
+            'payment_out_id'        => $paymentOut->id, // ✅ NEW FIELD
             'party_id'              => $party->id,
             'party_name'            => $party->party_name,
-            // 👇 Ab Bank ke opening balance aur type se lenge
             'opening_balance_type'  => $bank->opening_balance_type ?? null,
             'opening_balance'       => $bank->opening_balance ?? 0,
             'current_balance'       => $party->current_balance,
@@ -76,25 +76,24 @@ class PaymentOutController extends Controller
             'description'           => $paymentOut->description,
         ];
 
-        // 👇 JSON me poora data bhi save karo
+        // ✅ Save JSON snapshot
         $transactionData['json'] = json_encode([
             'payment_out' => $paymentOut->toArray(),
             'party'       => $party->toArray(),
             'bank'        => $bank->toArray(),
             'user'        => auth()->user()->only(['id', 'name', 'email']),
         ]);
-    
 
         BankTransaction::create($transactionData);
     }
 
-    // Step 5️⃣: Bank balance update karo (opening_balance me se minus)
+    // Step 5️⃣: Update bank balance
     if ($bank) {
         $bank->opening_balance = $bank->opening_balance - $paymentOut->amount;
         $bank->save();
     }
 
-    // Step 6️⃣: Party ka current balance update karo
+    // Step 6️⃣: Update party balance
     if ($party) {
         if ($party->current_balance_type == 'debit') {
             $party->current_balance -= $paymentOut->amount;
@@ -113,8 +112,9 @@ class PaymentOutController extends Controller
 
     // Step 7️⃣: Redirect
     return redirect()->route('admin.payment-outs.index')
-        ->with('success', 'Payment Out successfully recorded, balances updated, and JSON log saved.');
+        ->with('success', 'Payment Out successfully recorded, balances updated, and linked to BankTransaction.');
 }
+
 
 
 
