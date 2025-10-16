@@ -98,7 +98,7 @@ public function create()
     return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units', 'raw_materials'));
 }
 
-public function store(Request $request)
+    public function store(Request $request)
 {
     // 🔍 Step 1: Basic validation for product_type
     $request->validate([
@@ -142,27 +142,39 @@ public function store(Request $request)
         'json_data' => 'nullable',
     ]);
 
-    // 🔧 Step 4: Image upload handling
+    // 🔧 Step 4: Handle image upload
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
     }
 
-    // 🔧 Step 5: Set creator
     $validated['created_by_id'] = auth()->id();
 
-    // 🔧 Step 6: Full JSON backup of request
+    // 🔧 Step 5: Full JSON backup
     $fullData = $request->all();
     if ($request->hasFile('online_store_image')) {
         $fullData['online_store_image'] = $validated['online_store_image'];
     }
     $validated['json_data'] = json_encode($fullData);
 
-    // 🔧 Step 7: Create AddItem record
+    // 🔧 Step 6: Create AddItem record
     $item = AddItem::create($validated);
 
-    // 🔧 Step 8: Sync categories
+    // 🔧 Step 7: Sync categories
     if (!empty($validated['select_category'])) {
         $item->select_categories()->sync($validated['select_category']);
+    }
+
+    // 🔧 Step 8: If raw_material, add opening stock to current_stocks
+    if ($validated['product_type'] === 'raw_material' && !empty($validated['opening_stock']) && $validated['opening_stock'] > 0) {
+        CurrentStock::create([
+            'json_data' => json_encode($fullData),
+            'user_id' => 1,
+            'qty' => $validated['opening_stock'],
+            'type' => 'Opening Stock',
+            'created_by_id' => auth()->id(),
+            'item_id' => $item->id,
+            'product_type' => 'raw_material',
+        ]);
     }
 
     // 🔧 Step 9: Handle Finished Goods
@@ -171,37 +183,40 @@ public function store(Request $request)
         $finishedGoodsQty = 0;
 
         foreach ($rawMaterials as $rawId) {
-            DB::table('finished_goods_raw_material')->insert([
-                'item_id' => $item->id,
-                'select_raw_material_id' => $rawId,
-                'qty' => $validated['quantity'] ?? 0,
-                'item_name' => $validated['item_name'],
-                'item_hsn' => $validated['item_hsn'],
-                'json_data' => json_encode($fullData),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
+            // Get current stock of raw material
             $stock = DB::table('current_stocks')
                 ->where('item_id', $rawId)
                 ->where('created_by_id', auth()->id())
                 ->first();
 
-            if ($stock) {
-                $usedQty = $validated['quantity'] ?? 0;
-                $remaining = max(0, ($stock->qty ?? 0) - $usedQty);
+            $usedQty = $validated['quantity'] ?? 0;
 
+            if ($stock && $stock->qty >= $usedQty) {
+                // ✅ Reduce raw material stock
                 DB::table('current_stocks')
                     ->where('id', $stock->id)
                     ->update([
-                        'qty' => $remaining,
+                        'qty' => $stock->qty - $usedQty,
                         'updated_at' => now(),
                     ]);
 
                 $finishedGoodsQty += $usedQty;
+
+                // ✅ Insert pivot record
+                DB::table('finished_goods_raw_material')->insert([
+                    'item_id' => $item->id,
+                    'select_raw_material_id' => $rawId,
+                    'qty' => $usedQty,
+                    'item_name' => $validated['item_name'],
+                    'item_hsn' => $validated['item_hsn'],
+                    'json_data' => json_encode($fullData),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
         }
 
+        // ✅ Create finished goods stock record
         if ($finishedGoodsQty > 0) {
             CurrentStock::create([
                 'json_data' => json_encode($fullData),
@@ -215,7 +230,7 @@ public function store(Request $request)
         }
     }
 
-    // 🔧 Step 10: Handle Ready Made / Single Product Opening Stock
+    // 🔧 Step 10: Ready Made / Single Product Opening Stock
     if (
         in_array($validated['product_type'], ['ready_made', 'single']) &&
         strtolower($validated['item_type']) === 'product' &&
@@ -239,12 +254,10 @@ public function store(Request $request)
         }
     }
 
-    // 🔧 Step 11: Redirect back with success
     return redirect()
         ->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
-
 
     public function edit(AddItem $addItem)
     {
