@@ -15,6 +15,7 @@ use App\Models\Unit;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class AddItemController extends Controller
@@ -61,8 +62,8 @@ public function create()
         ->pluck('name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
 
-    // ✅ Fetch only raw materials from current_stocks
-    $raw_materials = \App\Models\CurrentStock::with('addItems')
+    // ✅ Fetch raw materials from current_stocks
+    $raw_materials_from_stock = \App\Models\CurrentStock::with('addItems')
         ->where('product_type', 'raw_material')
         ->where('created_by_id', $userId)
         ->get()
@@ -70,134 +71,174 @@ public function create()
             return $stock->addItems->map(function ($item) use ($stock) {
                 return [
                     'id' => $item->id,
-                    'name' => $item->item_name   ?? 'Unnamed Item',
+                    'name' => $item->item_name ?? 'Unnamed Item',
                     'qty' => $stock->qty,
+                    'source' => 'current_stock',
                 ];
             });
         });
 
+    // ✅ Fetch service-type items directly from add_items
+    $service_items = \App\Models\AddItem::where('created_by_id', $userId)
+        ->where('item_type', 'service')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->item_name ?? 'Unnamed Item',
+                'qty' => 'No Need', // services don't have stock qty
+                'source' => 'add_items',
+            ];
+        });
+
+    // ✅ Merge both collections
+    $raw_materials = $raw_materials_from_stock->merge($service_items);
+
     return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units', 'raw_materials'));
 }
 
-public function store(Request $request)
-{
-    // ✅ Validate incoming data
-    $validated = $request->validate([
-        'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
-        'item_type' => 'required|string|in:product,service',
-        'item_name' => 'required|string|max:255',
-        'item_hsn' => 'nullable|string|max:255',
-        'select_unit_id' => 'required|integer|exists:units,id',
-        'select_category' => 'required|array',
-        'select_category.*' => 'integer|exists:categories,id',
-        'quantity' => 'nullable|integer',
-        'item_code' => 'nullable|string|max:255',
-        'sale_price' => 'nullable|numeric',
-        'select_type' => 'required',
-        'disc_on_sale_price' => 'nullable|numeric',
-        'disc_type' => 'nullable|string',
-        'wholesale_price' => 'nullable|numeric',
-        'select_type_wholesale' => 'nullable|string',
-        'minimum_wholesale_qty' => 'nullable|integer',
-        'purchase_price' => 'nullable|numeric',
-        'select_purchase_type' => 'nullable|string',
-        'select_tax_id' => 'nullable|integer|exists:tax_rates,id',
-        'opening_stock' => 'nullable|integer',
-        'low_stock_warning' => 'nullable|integer',
-        'warehouse_location' => 'nullable|string|max:255',
-        'online_store_title' => 'nullable|string|max:255',
-        'online_store_description' => 'nullable|string',
-        'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-        'select_raw_materials' => 'nullable|array',
-        'select_raw_materials.*' => 'integer|exists:add_items,id',
-        'json_data' => 'nullable',
-    ]);
+    public function store(Request $request)
+    {
+        // dd($request->all());
 
-    // ✅ Handle image upload
-    if ($request->hasFile('online_store_image')) {
-        $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
-    }
-
-    // ✅ Created By
-    $validated['created_by_id'] = auth()->id();
-
-    // ✅ Prepare full request data for JSON storage
-    $fullData = $request->all();
-    if ($request->hasFile('online_store_image')) {
-        $fullData['online_store_image'] = $validated['online_store_image'];
-    }
-
-    $validated['json_data'] = json_encode($fullData);
-
-    // ✅ Create the item
-    $item = AddItem::create($validated);
-
-    // ✅ Sync categories
-    if (!empty($validated['select_category'])) {
-        $item->select_categories()->sync($validated['select_category']);
-    }
-
-    // ✅ Finished Goods Handling
-    if ($validated['product_type'] === 'finished_goods') {
-        $rawMaterials = $request->input('select_raw_materials', []);
-
-        foreach ($rawMaterials as $rawId) {
-            // Insert pivot data
-            DB::table('finished_goods_raw_material')->insert([
-                'item_id' => $item->id,
-                'select_raw_material_id' => $rawId,
-                'qty' => $validated['quantity'] ?? 0,
-                'item_name' => $validated['item_name'],
-                'item_hsn' => $validated['item_hsn'],
-                'json_data' => json_encode($fullData),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Reduce raw material stock
-            $stock = DB::table('current_stocks')->where('item_id', $rawId)->first();
-            if ($stock) {
-                DB::table('current_stocks')
-                    ->where('item_id', $rawId)
-                    ->update([
-                        'qty' => max(0, ($stock->qty ?? 0) - ($validated['quantity'] ?? 0)),
-                        'updated_at' => now(),
-                    ]);
-            }
-        }
-    }
-
-    // ✅ Ready Made / Single Product Opening Stock
-    if (($validated['product_type'] === 'ready_made' || empty($request->select_raw_materials)) 
-        && strtolower($validated['item_type']) === 'product' 
-        && !empty($validated['opening_stock']) 
-        && $validated['opening_stock'] > 0) {
-
-        $defaultPartyId = 1;
-
-        $stock = CurrentStock::create([
-            'json_data'     => json_encode($fullData),
-            'user_id'       => $defaultPartyId,
-            'qty'           => $validated['opening_stock'],
-            'type'          => 'Opening Stock',
-            'created_by_id' => auth()->id(),
-            'item_id'       => $item->id,
-            'product_type'  => $validated['product_type'],
+        // ✅ Validate data
+        $validated = $request->validate([
+            'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
+            'item_type' => 'required|string|in:product,service',
+            'item_name' => 'required|string|max:255',
+            'item_hsn' => 'nullable|string|max:255',
+            'select_unit_id' => 'required|integer|exists:units,id',
+            'select_category' => 'required|array',
+            'select_category.*' => 'integer|exists:categories,id',
+            'quantity' => 'nullable|integer|min:0',
+            'item_code' => 'nullable|string|max:255',
+            'sale_price' => 'nullable|numeric',
+            'select_type' => 'required',
+            'disc_on_sale_price' => 'nullable|numeric',
+            'disc_type' => 'nullable|string',
+            'wholesale_price' => 'nullable|numeric',
+            'select_type_wholesale' => 'nullable|string',
+            'minimum_wholesale_qty' => 'nullable|integer',
+            'purchase_price' => 'nullable|numeric',
+            'select_purchase_type' => 'nullable|string',
+            'select_tax_id' => 'nullable|integer|exists:tax_rates,id',
+            'opening_stock' => 'nullable|integer|min:0',
+            'low_stock_warning' => 'nullable|integer|min:0',
+            'warehouse_location' => 'nullable|string|max:255',
+            'online_store_title' => 'nullable|string|max:255',
+            'online_store_description' => 'nullable|string',
+            'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'select_raw_materials' => 'nullable|array',
+            'select_raw_materials.*' => 'integer|exists:add_items,id',
+            'json_data' => 'nullable',
         ]);
 
-        // Attach item to stock pivot if exists
-        if (method_exists($stock, 'items')) {
-            $stock->items()->attach($item->id);
+        // ✅ Image upload
+        if ($request->hasFile('online_store_image')) {
+            $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
         }
+
+        $validated['created_by_id'] = auth()->id();
+
+        // ✅ Full data for json backup
+        $fullData = $request->all();
+        if ($request->hasFile('online_store_image')) {
+            $fullData['online_store_image'] = $validated['online_store_image'];
+        }
+        $validated['json_data'] = json_encode($fullData);
+
+        // ✅ Create AddItem record
+        $item = AddItem::create($validated);
+
+        // ✅ Sync categories
+        if (!empty($validated['select_category'])) {
+            $item->select_categories()->sync($validated['select_category']);
+        }
+
+        // ✅ Handle Finished Goods
+        if ($validated['product_type'] === 'finished_goods') {
+            $rawMaterials = $request->input('select_raw_materials', []);
+            $finishedGoodsQty = 0;
+
+            foreach ($rawMaterials as $rawId) {
+                // Pivot insert
+                DB::table('finished_goods_raw_material')->insert([
+                    'item_id' => $item->id,
+                    'select_raw_material_id' => $rawId,
+                    'qty' => $validated['quantity'] ?? 0,
+                    'item_name' => $validated['item_name'],
+                    'item_hsn' => $validated['item_hsn'],
+                    'json_data' => json_encode($fullData),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // Fetch raw stock
+                $stock = DB::table('current_stocks')
+                    ->where('item_id', $rawId)
+                    ->where('created_by_id', auth()->id())
+                    ->first();
+
+                if ($stock) {
+                    $usedQty = $validated['quantity'] ?? 0;
+                    $remaining = max(0, ($stock->qty ?? 0) - $usedQty);
+
+                    // Update raw stock
+                    DB::table('current_stocks')
+                        ->where('id', $stock->id)
+                        ->update([
+                            'qty' => $remaining,
+                            'updated_at' => now(),
+                        ]);
+
+                    // ✅ Calculate total finished goods produced from available raw material
+                    // Example: if each finished good uses 1 unit raw material → 1 FG per raw qty
+                    $finishedGoodsQty += $usedQty;
+                }
+            }
+
+            // ✅ Create finished goods stock record
+            if ($finishedGoodsQty > 0) {
+                CurrentStock::create([
+                    'json_data'     => json_encode($fullData),
+                    'user_id'       => 1,
+                    'qty'           => $finishedGoodsQty,
+                    'type'          => 'Manufactured Stock',
+                    'created_by_id' => auth()->id(),
+                    'item_id'       => $item->id,
+                    'product_type'  => 'finished_goods',
+                ]);
+            }
+        }
+
+        // ✅ Ready Made / Single Product Opening Stock
+        if (
+            in_array($validated['product_type'], ['ready_made', 'single']) &&
+            strtolower($validated['item_type']) === 'product' &&
+            !empty($validated['opening_stock']) &&
+            $validated['opening_stock'] > 0
+        ) {
+            $defaultPartyId = 1;
+
+            $stock = CurrentStock::create([
+                'json_data'     => json_encode($fullData),
+                'user_id'       => $defaultPartyId,
+                'qty'           => $validated['opening_stock'],
+                'type'          => 'Opening Stock',
+                'created_by_id' => auth()->id(),
+                'item_id'       => $item->id,
+                'product_type'  => $validated['product_type'],
+            ]);
+
+            if (method_exists($stock, 'items')) {
+                $stock->items()->attach($item->id);
+            }
+        }
+
+        return redirect()
+            ->route('admin.add-items.index')
+            ->with('success', 'Item added successfully!');
     }
-
-    return redirect()
-        ->route('admin.add-items.index')
-        ->with('success', 'Item added successfully!');
-}
-
-
-
     public function edit(AddItem $addItem)
     {
         abort_if(Gate::denies('add_item_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');

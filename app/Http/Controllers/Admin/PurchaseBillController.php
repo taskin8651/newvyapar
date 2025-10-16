@@ -23,6 +23,7 @@ use App\Models\TaxRate;
 use Illuminate\Support\Facades\DB;
 use App\Models\TermAndCondition;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseBillController extends Controller
 {
@@ -86,24 +87,21 @@ public function index()
         ]);
     }
 
-
-
 public function create()
 {
     abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    // 1️⃣ Fetch full customer details
-    $select_customers = PartyDetail::all();
+    $userId = Auth::id();
+
+    // 1️⃣ Fetch customers created by the logged-in user
+    $select_customers = PartyDetail::where('created_by_id', $userId)->get();
 
     // 2️⃣ Prepare array for dropdown + JS
     $select_customers_details = $select_customers->map(function ($c) {
-
-        // 🔹 Choose balance type (current > opening)
         $balance = !is_null($c->current_balance) ? $c->current_balance : ($c->opening_balance ?? 0);
         $balance_type = !is_null($c->current_balance_type) ? $c->current_balance_type : ($c->opening_balance_type ?? 'Debit');
         $balance_date = $c->updated_at ? $c->updated_at->format('d-m-Y') : ($c->created_at->format('d-m-Y') ?? '-');
 
-        // 🔹 Color + Label based on type
         if ($balance_type === 'Debit') {
             $icon = '↑';
             $color = 'red';
@@ -119,7 +117,7 @@ public function create()
 
         return [
             'id' => $c->id,
-            'name' => $c->party_name . ' - ' . $balance_text, // HTML included
+            'name' => $c->party_name . ' - ' . $balance_text,
             'party_name' => $c->party_name,
             'gstin' => $c->gstin,
             'phone' => $c->phone_number,
@@ -141,26 +139,32 @@ public function create()
         ];
     });
 
-    // 3️⃣ Fetch other related data
-    $items = AddItem::whereIn('item_type', ['product', 'service'])
+    // 3️⃣ Fetch AddItems created by this user (product + service)
+    $items = AddItem::where('created_by_id', $userId)
+        ->whereIn('item_type', ['product', 'service'])
         ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
         ->with('select_unit')
         ->get()
-        ->map(function ($item) {
+        ->map(function ($item) use ($userId) {
+            // Only calculate stock for products linked to finished_goods or ready_made
             $item->stock_qty = ($item->item_type === 'product')
-                ? CurrentStock::where('item_id', $item->id)->sum('qty')
+                ? CurrentStock::where('created_by_id', $userId)
+                    ->where('item_id', $item->id)
+                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
+                    ->sum('qty')
                 : null;
             return $item;
         });
 
+    // 4️⃣ Supporting dropdowns
     $product_ids = $items->where('item_type', 'product')->pluck('id')->toArray();
-    $units = Unit::pluck('base_unit', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $cost = \App\Models\MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $sub_cost = \App\Models\SubCostCenter::pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $payment_types = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $tax_rates = TaxRate::select('id', 'name', 'parcentage')->get();
+    $units = Unit::where('created_by_id', $userId)->pluck('base_unit', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $cost = \App\Models\MainCostCenter::where('created_by_id', $userId)->pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $sub_cost = \App\Models\SubCostCenter::where('created_by_id', $userId)->pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $payment_types = BankAccount::where('created_by_id', $userId)->pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $tax_rates = TaxRate::where('created_by_id', $userId)->select('id', 'name', 'parcentage')->get();
 
-    // 4️⃣ Pass to view
+    // 5️⃣ Pass to view
     return view('admin.purchaseBills.create', compact(
         'items',
         'product_ids',
@@ -173,9 +177,6 @@ public function create()
         'tax_rates'
     ));
 }
-
-
-
 
     public function getSubCostCenters($mainCostCenterId)
     {
