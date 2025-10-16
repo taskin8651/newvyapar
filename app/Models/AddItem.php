@@ -125,6 +125,10 @@ public function rawMaterials()
         'select_raw_material_id'
     )->withPivot(['qty', 'item_name', 'item_hsn', 'json_data'])->withTimestamps();
 }
+public function currentStocksMain()
+{
+    return $this->hasMany(CurrentStock::class, 'item_id', 'id');
+}
 
 
 }

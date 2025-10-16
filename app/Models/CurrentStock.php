@@ -22,58 +22,81 @@ class CurrentStock extends Model
     ];
 
     protected $fillable = [
-        'user_id',
-        'qty',
-        'type',
+        'user_id',          // Stock owner
+        'created_by_id',    // Who created this record
+        'item_id',          // Reference to AddItem
+        'qty',              // Quantity in stock
+        'type',             // e.g., "Opening Stock", "Manufactured Stock"
+        'product_type',     // raw_material / finished_goods / single / ready_made
+        'json_data',        // Backup of request data
+        'party_id',         // Optional: party reference
         'created_at',
         'updated_at',
         'deleted_at',
-        'created_by_id',
-        'json_data',
-        'item_id',
-        'product_type',
     ];
 
+    /**
+     * Serialize dates to standard format
+     */
     protected function serializeDate(DateTimeInterface $date)
     {
         return $date->format('Y-m-d H:i:s');
     }
 
-    public function items()
+    /**
+     * Stock belongs to a single AddItem
+     */
+    public function addItem()
     {
-        return $this->belongsToMany(AddItem::class);
+        return $this->belongsTo(AddItem::class, 'item_id', 'id');
     }
 
+    /**
+     * Stock created by this user
+     */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function created_by()
+    /**
+     * Stock record created by
+     */
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
-    // In CurrentStock.php
-public function party()
-{
-    return $this->belongsTo(PartyDetail::class, 'party_id');
-}
-public function serviceItems()
-{
-    return $this->belongsToMany(AddItem::class)
-        ->where('item_type', 'service');
-}
-public function addItems()
-{
-    // Many-to-many relationship with pivot table
-    return $this->belongsToMany(AddItem::class, 'add_item_current_stock', 'current_stock_id', 'add_item_id');
-}
+    /**
+     * Optional: Stock associated with a party
+     */
+    public function party()
+    {
+        return $this->belongsTo(PartyDetail::class, 'party_id');
+    }
 
-public function productItems()
-{
-    return $this->belongsToMany(AddItem::class, 'item_id');
-    
-}
+    /**
+     * Many-to-many relationship with AddItem (pivot table if needed)
+     * Example: finished goods using raw materials
+     */
+    public function addItems()
+    {
+        return $this->belongsToMany(AddItem::class, 'add_item_current_stock', 'current_stock_id', 'add_item_id');
+    }
 
+    /**
+     * Optional: Only service items from this stock
+     */
+    public function serviceItems()
+    {
+        return $this->addItems()->where('item_type', 'service');
+    }
+
+    /**
+     * Helper: Fetch product items (optional)
+     */
+    public function productItems()
+    {
+        return $this->addItems()->where('item_type', 'product');
+    }
 }

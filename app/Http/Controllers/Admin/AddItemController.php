@@ -66,20 +66,21 @@ public function create()
     // ✅ Fetch raw materials from current_stocks
 
 
-$raw_materials = \App\Models\AddItem::with(['currentStocks' => function($q) use ($userId) {
-        $q->where('created_by_id', $userId);
-    }])
-    ->where('product_type', 'raw_material')
-    ->get()
-    ->map(function ($item) {
-        $stock = $item->currentStocks->first();
-        return [
-            'id' => $item->id,
-            'name' => $item->item_name ?? 'Unnamed Item',
-            'qty' => $stock->qty ?? 0, // 0 if no stock yet
-            'source' => $stock ? 'current_stock' : 'add_items',
-        ];
-    });
+    $userId = auth()->id();
+
+    $rawMaterials = CurrentStock::with('addItem') // Load the related AddItem
+        ->where('product_type', 'raw_material')
+        ->where('created_by_id', $userId)
+        ->get()
+        ->map(function ($stock) {
+            return [
+                'id' => $stock->addItem->id ?? null,
+                'name' => $stock->addItem->item_name ?? 'Unnamed Item',
+                'qty' => (int) $stock->qty, // Use the qty from current_stocks table
+                'source' => 'current_stock',
+            ];
+        });
+    
 
     
     // ✅ Fetch service-type items directly from add_items
@@ -96,7 +97,7 @@ $raw_materials = \App\Models\AddItem::with(['currentStocks' => function($q) use 
         });
 
     // ✅ Merge both collections
-    $raw_materials = $raw_materials->merge($service_items);
+    $raw_materials = $rawMaterials->merge($service_items);
 
     return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units', 'raw_materials'));
 }
