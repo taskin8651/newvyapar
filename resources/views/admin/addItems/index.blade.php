@@ -44,62 +44,147 @@
                         <tr class="hover:bg-gray-50">
                             <td></td>
                             <td class="px-4 py-3 font-medium text-gray-900">{{ $addItem->id ?? '' }}</td>
-                            <td class="px-4 py-3">{{ App\Models\AddItem::ITEM_TYPE_SELECT[$addItem->item_type] ?? '' }}</td>
+                            <td class="px-4 py-3">{{ $addItem->item_type ?? '' }}</td>
 
-                            {{-- Item Name with Modal --}}
-                            <td class="px-4 py-3" x-data="{ open: false }" x-init="$watch('open', value => value ? $nextTick(() => initModal({{ $addItem->id }})) : '')">
-                                <span @click="open = true" class="text-blue-600 cursor-pointer hover:underline">
-                                    {{ $addItem->item_name ?? '' }}
-                                </span>
+                         <td class="px-4 py-3" x-data="{ open: false, openJson: false }">
 
-                                {{-- Modal --}}
-                                <div x-show="open" x-cloak
-                                     x-transition
-                                     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-auto">
-                                    <div @click.away="open = false"
-                                         class="bg-white rounded-lg shadow-lg max-w-5xl w-full p-6 relative">
-                                         <h3 class="text-lg font-semibold mb-4">Details for {{ $addItem->item_name }}</h3>                                      
-                                        {{-- Modal Table --}}
-                                        <table id="modalTable-{{ $addItem->id }}" class="min-w-full text-left text-gray-700 border border-gray-200 table-auto">
-                                            <thead class="bg-gray-100">
-                                                <tr>
-                                                    <th class="px-4 py-2 border-b">Type</th>
-                                                    <th class="px-4 py-2 border-b">Key / Name</th>
-                                                    <th class="px-4 py-2 border-b">Value / Qty</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php $json = json_decode($addItem->json_data, true); @endphp
+    {{-- Item Name --}}
+    <span @click="open = true" class="text-blue-600 cursor-pointer hover:underline">
+        {{ $addItem->item_name ?? '' }}
+    </span>
 
-                                                {{-- JSON Data --}}
-                                                @if(is_array($json))
-                                                    @foreach($json as $key => $value)
-                                                        <tr>
-                                                            <td class="px-4 py-2 border-b font-medium">JSON</td>
-                                                            <td class="px-4 py-2 border-b">{{ $key }}</td>
-                                                            <td class="px-4 py-2 border-b">{{ is_array($value) ? json_encode($value) : $value }}</td>
-                                                        </tr>
-                                                    @endforeach
-                                                @endif
+   
 
-                                                {{-- Raw Materials --}}
-                                                @foreach($addItem->rawMaterials as $rm)
-                                                    <tr>
-                                                        <td class="px-4 py-2 border-b font-medium">Raw Material</td>
-                                                        <td class="px-4 py-2 border-b">{{ $rm->item_name }}</td>
-                                                        <td class="px-4 py-2 border-b">{{ $rm->pivot->qty ?? 0 }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
+    {{-- Raw Materials + Summary Modal --}}
+    <div x-show="open" x-cloak
+         x-transition
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-auto">
+        <div @click.away="open = false"
+             class="bg-white rounded-lg shadow-lg max-w-5xl w-full p-6 relative">
 
-                                        <button @click="open = false"
-                                                class="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded">
-                                            Close
-                                        </button>
-                                    </div>
-                                </div>
-                            </td>
+            <h3 class="text-lg font-semibold mb-4">
+                Details for {{ $addItem->item_name }}
+            </h3>
+
+            {{-- Modal Table --}}
+            @php
+                $rawMaterials = $addItem->rawMaterials;
+                if($rawMaterials->isEmpty() && isset($addItem->json_data['select_raw_materials'])){
+                    $ids = $addItem->json_data['select_raw_materials'];
+                    $rawMaterials = \App\Models\AddItem::whereIn('id', $ids)->get();
+                }
+            @endphp
+
+            <table class="min-w-full text-left text-gray-700 border border-gray-200 table-auto">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 border-b">Type</th>
+                        <th class="px-4 py-2 border-b">Key / Name</th>
+                        <th class="px-4 py-2 border-b">Value / Qty</th>
+                        <th class="px-4 py-2 border-b">json</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{-- Raw Materials --}}
+                    @foreach($rawMaterials as $rm)
+                        <tr>
+                            <td class="px-4 py-2 border-b font-medium">Raw Material</td>
+                            <td class="px-4 py-2 border-b">{{ $rm->item_name }}</td>
+                            <td class="px-4 py-2 border-b">{{ $rm->pivot->qty ?? '--' }}</td>
+                            <td class="px-4 py-2 border-b">
+                                <button @click="openJson = true; $nextTick(() => { initModal({{ $rm->id }}); })"
+                                        class="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded">
+                                    View JSON
+                                </button>
+
+                               
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <button @click="open = false"
+                    class="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded">
+                Close
+            </button>
+        </div>
+    </div>
+
+  {{-- JSON Data Modal --}}
+<div x-show="openJson" x-cloak
+     x-transition
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-auto">
+    <div @click.away="openJson = false"
+         class="bg-white rounded-lg shadow-lg max-w-5xl w-full p-6 relative">
+
+        <h3 class="text-lg font-semibold mb-4">
+            JSON Data for {{ $addItem->item_name }}
+        </h3>
+
+        @php
+            $json = [];
+            if(!empty($addItem->json_data)){
+                $json = is_array($addItem->json_data) 
+                    ? $addItem->json_data 
+                    : json_decode($addItem->json_data, true);
+                if(!is_array($json)) $json = [];
+            }
+        @endphp
+
+        <table id="jsonTable-{{ $addItem->id }}" class="min-w-full text-left table-auto">
+            <thead>
+                <tr>
+                    <th class="px-4 py-2 border-b">Key</th>
+                    <th class="px-4 py-2 border-b">Value</th>
+                    <th class="px-4 py-2 border-b">Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($json as $key => $value)
+                    <tr>
+                        <td class="px-4 py-2 border-b">{{ $key }}</td>
+                        <td class="px-4 py-2 border-b">
+                            @if(is_array($value))
+                                {{ json_encode($value) }}
+                            @else
+                                {{ $value }}
+                            @endif
+                        </td>
+                        <td class="px-4 py-2 border-b">{{ is_array($value) ? 'array' : gettype($value) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <button @click="openJson = false"
+                class="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded">
+            Close
+        </button>
+    </div>
+</div>
+
+{{-- DataTables JS init --}}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#jsonTable-{{ $addItem->id }}').DataTable({
+            paging: true,
+            searching: true,
+            ordering: true,
+            responsive: true
+        });
+    });
+</script>
+
+
+
+
+</td>
+
+
 
                             <td class="px-4 py-3">{{ $addItem->item_hsn ?? '' }}</td>
                             <td class="px-4 py-3">{{ $addItem->select_unit->base_unit ?? '' }}</td>
