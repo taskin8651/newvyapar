@@ -17,13 +17,11 @@ class StoreCashInHandRequest extends FormRequest
     public function rules()
     {
         return [
-            'adjustment' => [
+            'account_name' => [
                 'required',
             ],
-            'enter_amount' => [
-                'required',
-            ],
-            'adjustment_date' => [
+          
+            'as_of_date' => [
                 'date_format:' . config('panel.date_format'),
                 'nullable',
             ],

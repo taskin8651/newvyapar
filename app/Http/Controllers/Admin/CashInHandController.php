@@ -26,16 +26,21 @@ public function index()
     $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
     if ($userRole === 'Super Admin') {
-        // Super Admin ke liye saara data, global scopes ignore karke
+        // 🔹 Super Admin → sab data, bina kisi restriction ke
         $cashInHands = CashInHand::withoutGlobalScopes()
-            ->with([
-                'created_by' => function ($query) {
-                    $query->withoutGlobalScopes(); // created_by relation ke liye bhi
-                }
-            ])
+            ->with(['created_by' => fn($query) => $query->withoutGlobalScopes()])
             ->get();
+
+    } elseif ($userRole === 'Admin') {
+        // 🔹 Admin → apne dwara register kiye users + apna data
+        $createdUserIds = \App\Models\User::where('created_by_id', $user->id)->pluck('id');
+
+        $cashInHands = CashInHand::with(['created_by'])
+            ->whereIn('created_by_id', $createdUserIds->push($user->id)) // apna bhi include
+            ->get();
+
     } else {
-        // Baaki users ke liye filter (sirf apne created records)
+        // 🔹 Normal User → sirf apna data
         $cashInHands = CashInHand::with(['created_by'])
             ->where('created_by_id', $user->id)
             ->get();
@@ -43,6 +48,7 @@ public function index()
 
     return view('admin.cashInHands.index', compact('cashInHands'));
 }
+
 
 
     public function create()
@@ -54,14 +60,19 @@ public function index()
 
     public function store(StoreCashInHandRequest $request)
     {
-        $cashInHand = CashInHand::create($request->all());
+        $data = $request->all();
+        $data['status'] = 'pending'; // ✅ Default status
+
+        $cashInHand = CashInHand::create($data);
 
         if ($media = $request->input('ck-media', false)) {
             Media::whereIn('id', $media)->update(['model_id' => $cashInHand->id]);
         }
 
-        return redirect()->route('admin.cash-in-hands.index');
+        return redirect()->route('admin.cash-in-hands.index')
+            ->with('success', 'Cash In Hand entry created successfully with Pending status.');
     }
+
 
     public function edit(CashInHand $cashInHand)
     {

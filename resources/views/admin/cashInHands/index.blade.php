@@ -41,6 +41,9 @@
                                         {{ trans('cruds.cashInHand.fields.adjustment_date') }}
                                     </th>
                                     <th>
+                                        Account Number
+                                    </th>
+                                    <th>
                                         &nbsp;
                                     </th>
                                 </tr>
@@ -55,13 +58,16 @@
                                             {{ $cashInHand->id ?? '' }}
                                         </td>
                                         <td>
-                                            {{ App\Models\CashInHand::ADJUSTMENT_SELECT[$cashInHand->adjustment] ?? '' }}
+                                            {{ $cashInHand->account_name }}
                                         </td>
                                         <td>
-                                            {{ $cashInHand->enter_amount ?? '' }}
+                                            {{ $cashInHand->opening_balance ?? '' }}
                                         </td>
                                         <td>
-                                            {{ $cashInHand->adjustment_date ?? '' }}
+                                            {{ $cashInHand->as_of_date ?? '' }}
+                                        </td>
+                                        <td>
+                                            {{ $cashInHand->account_number ?? '' }}
                                         </td>
                                         <td>
                                             @can('cash_in_hand_show')

@@ -20,22 +20,25 @@ class CashInHand extends Model implements HasMedia
     public $table = 'cash_in_hands';
 
     protected $dates = [
-        'adjustment_date',
+        'as_of_date',
         'created_at',
         'updated_at',
         'deleted_at',
     ];
 
-    public const ADJUSTMENT_SELECT = [
-        'Add Cash'    => 'Add Cash',
-        'Reduce Cash' => 'Reduce Cash',
+    protected $attributes = [
+        'status' => 'pending',
     ];
 
+
     protected $fillable = [
-        'adjustment',
-        'enter_amount',
-        'adjustment_date',
-        'description',
+        'account_name',
+        'opening_balance',
+        'as_of_date',
+        'account_number',
+        'ifsc_code',
+        'bank_name',
+        'account_holder_name',
         'created_at',
         'updated_at',
         'deleted_at',
