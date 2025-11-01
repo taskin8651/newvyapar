@@ -21,19 +21,22 @@ public function index()
     abort_if(Gate::denies('bank_account_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+    $userRole = $user->roles->pluck('title')->first(); // Assuming one role per user
 
     if ($userRole === 'Super Admin') {
-        // Super Admin ke liye saara data, global scopes ignore karke
+        // Super Admin → see all data
         $bankAccounts = BankAccount::withoutGlobalScopes()
-            ->with([
-                'created_by' => function ($query) {
-                    $query->withoutGlobalScopes(); // created_by relation ke liye bhi
-                }
-            ])
+            ->with(['created_by' => fn($q) => $q->withoutGlobalScopes()])
+            ->get();
+    } elseif ($userRole === 'Admin') {
+        // Admin → apne dwara register kiye gaye users ka data + apna data
+        $createdUserIds = \App\Models\User::where('created_by_id', $user->id)->pluck('id');
+        
+        $bankAccounts = BankAccount::with(['created_by'])
+            ->whereIn('created_by_id', $createdUserIds->push($user->id)) // apna bhi include
             ->get();
     } else {
-        // Baaki users ke liye filter (apne created records)
+        // Normal User → sirf apna data
         $bankAccounts = BankAccount::with(['created_by'])
             ->where('created_by_id', $user->id)
             ->get();
@@ -41,6 +44,7 @@ public function index()
 
     return view('admin.bankAccounts.index', compact('bankAccounts'));
 }
+
 
 
     public function create()
