@@ -55,7 +55,7 @@
                                 {{ trans('cruds.bankAccount.fields.opening_balance') }} <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <span class="absolute left-3 top-2 text-gray-500">₹</span>
                                 <input type="text" name="opening_balance" id="opening_balance" data-required="1"
                                        value="{{ old('opening_balance') }}"
                                        class="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('opening_balance') border-red-500 @enderror">
@@ -70,7 +70,7 @@
                                 {{ trans('cruds.bankAccount.fields.as_of_date') }}
                             </label>
                             <input type="date" name="as_of_date" id="as_of_date" data-required="1"
-                                   value="{{ old('as_of_date') }}"
+              ₹                    value="{{ old('as_of_date') }}"
                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('as_of_date') border-red-500 @enderror">
                             @error('as_of_date')
                                 <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
