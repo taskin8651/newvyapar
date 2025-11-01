@@ -4,6 +4,9 @@ use App\Http\Controllers\Admin\PurchaseBillController;
 use App\Http\Controllers\Admin\CurrentStocksController;
 use App\Http\Controllers\Admin\TermAndConditionController;
 use App\Http\Controllers\Admin\PaymentInController;
+use App\Http\Controllers\Admin\StockHistoryController;
+use App\Http\Controllers\Admin\LedgerController;
+
 
 Route::redirect('/', '/login');
 Route::get('/home', function () {
@@ -314,6 +317,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::delete('messenger/{topic}', 'MessengerController@destroyTopic')->name('messenger.destroyTopic');
     Route::post('messenger/{topic}/reply', 'MessengerController@replyToTopic')->name('messenger.reply');
     Route::get('messenger/{topic}/reply', 'MessengerController@showReply')->name('messenger.showReply');
+
+    // Ledger
+    Route::delete('ledgers/destroy', 'LedgerController@massDestroy')->name('ledgers.massDestroy');
+    Route::post('ledgers/parse-csv-import', 'LedgerController@parseCsvImport')->name('ledgers.parseCsvImport');
+    Route::post('ledgers/process-csv-import', 'LedgerController@processCsvImport')->name('ledgers.processCsvImport');
+    Route::resource('ledgers', 'LedgerController');
+
 
     // custom rote by rock
    
