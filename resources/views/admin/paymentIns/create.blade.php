@@ -17,7 +17,6 @@
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Party Details</h2>
 
-                    <!-- Party Dropdown -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Select Party</label>
                         <select name="parties_id" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
@@ -32,7 +31,6 @@
                         @enderror
                     </div>
 
-                    <!-- Payment Type Dropdown -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Select Bank</label>
                         <select name="payment_type_id" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
@@ -51,7 +49,6 @@
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Payment Info</h2>
 
-                    <!-- Date -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Date</label>
                         <input type="date" name="date" value="{{ date('Y-m-d') }}" 
@@ -61,7 +58,6 @@
                         @enderror
                     </div>
 
-                    <!-- Reference No -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Reference No</label>
                         <input type="text" name="reference_no" value="{{ old('reference_no') }}" 
@@ -77,7 +73,7 @@
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Amount</label>
-                    <input type="number" step="0.01" name="amount" value="{{ old('amount') }}" 
+                    <input type="number" step="0.01" name="amount" id="amount" value="{{ old('amount') }}" 
                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                     @error('amount')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
@@ -86,7 +82,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Discount</label>
-                    <input type="number" step="0.01" name="discount" value="{{ old('discount') }}" 
+                    <input type="number" step="0.01" name="discount" id="discount" value="{{ old('discount') }}" 
                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
                     @error('discount')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
@@ -95,8 +91,8 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Total</label>
-                    <input type="number" step="0.01" name="total" value="{{ old('total') }}" 
-                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm">
+                    <input type="number" step="0.01" name="total" id="total" value="{{ old('total') }}" 
+                           class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100" readonly>
                     @error('total')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                     @enderror
@@ -130,4 +126,24 @@
         </form>
     </div>
 </div>
+
+<!-- 💡 JavaScript for Total Calculation -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const amount = document.getElementById('amount');
+    const discount = document.getElementById('discount');
+    const total = document.getElementById('total');
+
+    function calculateTotal() {
+        const amt = parseFloat(amount.value) || 0;
+        const disc = parseFloat(discount.value) || 0;
+        const result = amt - disc;
+        total.value = result.toFixed(2);
+    }
+
+    amount.addEventListener('input', calculateTotal);
+    discount.addEventListener('input', calculateTotal);
+});
+</script>
+
 @endsection
