@@ -21,18 +21,27 @@ class ExpenseCategory extends Model
         'deleted_at',
     ];
 
+    // Existing type options
     public const TYPE_SELECT = [
         'Asset'     => 'Asset',
-        'Liability' => 'liability',
+        'Liability' => 'Liability',
+    ];
+
+    // 🆕 New constant for Sale / Purchase / Capital field
+    public const CATEGORY_TYPE_SELECT = [
+        'sale'     => 'Sale',
+        'purchase' => 'Purchase',
+        'capital'  => 'Capital',
     ];
 
     protected $fillable = [
         'expense_category',
         'type',
+        'category_type', // 🆕 new field added
+        'created_by_id',
         'created_at',
         'updated_at',
         'deleted_at',
-        'created_by_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
