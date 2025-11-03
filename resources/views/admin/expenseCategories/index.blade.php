@@ -1,45 +1,39 @@
 @extends('layouts.admin')
+
 @section('content')
 <div class="max-w-7xl mx-auto py-6">
     <div class="bg-white shadow-lg rounded-2xl p-6">
 
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 border-b pb-4 gap-3">
-            <h6 class="text-xl font-bold text-indigo-700 flex items-center gap-2">
-    <i class="fas fa-tags text-indigo-600"></i>
-    {{ trans('cruds.expenseCategory.title_singular') }} {{ trans('global.list') }}
-</h2>
-
-<div class="flex items-center gap-2">
-    <!-- 🆕 Ledger Button -->
-    <a href="{{ route('admin.ledgers.index') }}"
-       class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow flex items-center gap-2">
-        <i class="fas fa-book"></i>
-        Ledger
-    </a>
-
-   
-</div>
-
+            <h2 class="text-xl font-bold text-indigo-700 flex items-center gap-2">
+                <i class="fas fa-tags text-indigo-600"></i>
+                {{ trans('cruds.expenseCategory.title_singular') }} {{ trans('global.list') }}
+            </h2>
 
             <div class="flex flex-wrap gap-2 items-center" x-data="{ openCsvModal: false }">
                 @can('expense_category_create')
+                    <!-- 🆕 Ledger Button -->
+                    <a href="{{ route('admin.ledgers.index') }}"
+                       class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow flex items-center gap-2">
+                        <i class="fas fa-book"></i> Ledger
+                    </a>
+
                     <!-- Add New -->
                     <a href="{{ route('admin.expense-categories.create') }}" 
-                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
-                        <i class="fas fa-plus mr-1"></i> 
+                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow flex items-center gap-2">
+                        <i class="fas fa-plus"></i>
                         {{ trans('global.add') }} {{ trans('cruds.expenseCategory.title_singular') }}
                     </a>
 
                     <!-- CSV Import -->
                     <button 
                         @click="openCsvModal = true"
-                        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow">
-                        <i class="fas fa-file-csv mr-1"></i> 
-                        {{ trans('global.app_csvImport') }}
+                        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow flex items-center gap-2">
+                        <i class="fas fa-file-csv"></i> {{ trans('global.app_csvImport') }}
                     </button>
 
-                    <!-- Modal Include -->
+                    <!-- CSV Import Modal -->
                     @include('csvImport.modal', [
                         'model' => 'ExpenseCategory', 
                         'route' => 'admin.expense-categories.parseCsvImport'
@@ -48,7 +42,7 @@
 
                 <!-- Search bar -->
                 <input type="text" id="expenseCategorySearch" placeholder="Search categories..."
-                    class="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 focus:border-blue-500 text-sm w-64">
+                    class="px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-indigo-200 focus:border-indigo-500 text-sm w-64">
             </div>
         </div>
 
@@ -58,55 +52,54 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-4 py-3 w-10"></th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('cruds.expenseCategory.fields.id') }}
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('cruds.expenseCategory.fields.expense_category') }}
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            {{ trans('cruds.expenseCategory.fields.type') }}
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category Type
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Category For
-                        </th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('global.actions') }}
                         </th>
                     </tr>
                 </thead>
+
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($expenseCategories as $key => $expenseCategory)
+                    @foreach($expenseCategories as $expenseCategory)
                         <tr data-entry-id="{{ $expenseCategory->id }}" class="hover:bg-gray-50">
                             <td class="px-4 py-3"></td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseCategory->id ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseCategory->expense_category ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">
-                                {{ App\Models\ExpenseCategory::TYPE_SELECT[$expenseCategory->type] ?? '' }}
-                            </td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 {{ ucfirst($expenseCategory->category_type ?? '—') }}
                             </td>
                             <td class="px-4 py-3 text-center space-x-1">
                                 @can('expense_category_show')
                                     <a href="{{ route('admin.expense-categories.show', $expenseCategory->id) }}" 
-                                       class="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
+                                       class="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 @endcan
+
                                 @can('expense_category_edit')
                                     <a href="{{ route('admin.expense-categories.edit', $expenseCategory->id) }}" 
-                                       class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">
+                                       class="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 @endcan
+
                                 @can('expense_category_delete')
-                                    <form action="{{ route('admin.expense-categories.destroy', $expenseCategory->id) }}" method="POST" 
-                                          onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
+                                    <form action="{{ route('admin.expense-categories.destroy', $expenseCategory->id) }}" 
+                                          method="POST" 
+                                          onsubmit="return confirm('{{ trans('global.areYouSure') }}');" 
+                                          class="inline-block">
                                         @method('DELETE')
                                         @csrf
                                         <button type="submit" 
-                                            class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
+                                            class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

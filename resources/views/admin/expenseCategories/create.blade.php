@@ -31,30 +31,7 @@
                     </p>
                 </div>
 
-                <!-- Existing Type -->
-                <div>
-                    <label for="type" class="block font-medium text-gray-700">
-                        {{ trans('cruds.expenseCategory.fields.type') }}
-                    </label>
-                    <select name="type" id="type"
-                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm 
-                               focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="" disabled {{ old('type') ? '' : 'selected' }}>
-                            {{ trans('global.pleaseSelect') }}
-                        </option>
-                        @foreach(App\Models\ExpenseCategory::TYPE_SELECT as $key => $label)
-                            <option value="{{ $key }}" {{ old('type') === (string)$key ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('type') 
-                        <span class="text-red-600 text-sm">{{ $message }}</span> 
-                    @enderror
-                    <p class="text-gray-500 text-sm mt-1">
-                        {{ trans('cruds.expenseCategory.fields.type_helper') }}
-                    </p>
-                </div>
-
-                <!-- 🆕 New Field: Category Type (Sale / Purchase / Capital) -->
+                <!-- 🆕 Combined Category Type -->
                 <div>
                     <label for="category_type" class="block font-medium text-gray-700">
                         Category Type <span class="text-danger">*</span>
@@ -62,15 +39,15 @@
                     <select name="category_type" id="category_type" required
                         class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm 
                                focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="" disabled {{ old('category_type') ? '' : 'selected' }}>-- Select Category Type --</option>
-                        <option value="sale" {{ old('category_type') === 'sale' ? 'selected' : '' }}>Sale</option>
-                        <option value="purchase" {{ old('category_type') === 'purchase' ? 'selected' : '' }}>Purchase</option>
-                        <option value="capital" {{ old('category_type') === 'capital' ? 'selected' : '' }}>Capital</option>
+                        <option value="" disabled {{ old('category_type') ? '' : 'selected' }}>-- Select Type --</option>
+                        @foreach(App\Models\ExpenseCategory::CATEGORY_TYPE_SELECT as $key => $label)
+                            <option value="{{ $key }}" {{ old('category_type') === $key ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
                     </select>
                     @error('category_type') 
                         <span class="text-red-600 text-sm">{{ $message }}</span> 
                     @enderror
-                    <p class="text-gray-500 text-sm mt-1">Select the type of category — Sale, Purchase, or Capital.</p>
+                    <p class="text-gray-500 text-sm mt-1">Select from Asset, Liability, Sale, Purchase, or Capital.</p>
                 </div>
 
                 <!-- Submit -->
