@@ -34,23 +34,21 @@ public function index()
     abort_if(Gate::denies('sale_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+    $userRole = $user->roles->pluck('title')->first();
 
     if ($userRole === 'Super Admin') {
-        // Super Admin ko saara data dikhe, global scopes ignore karke
         $saleInvoices = SaleInvoice::withoutGlobalScopes()
             ->with([
                 'select_customer' => function ($query) {
-                    $query->withoutGlobalScopes(); // PartyDetail ko bhi global scope ignore karenge
+                    $query->withoutGlobalScopes();
                 },
                 'items',
                 'created_by',
                 'media'
             ])
             ->latest()
-            ->get();
+            ->paginate(10); // ✅ use paginate instead of get()
     } else {
-        // Baaki users ke liye filter lagayein (example: user ke own created entries)
         $saleInvoices = SaleInvoice::with([
                 'select_customer',
                 'items',
@@ -59,11 +57,12 @@ public function index()
             ])
             ->where('created_by_id', $user->id)
             ->latest()
-            ->get();
+            ->paginate(10); // ✅
     }
 
     return view('admin.saleInvoices.index', compact('saleInvoices'));
 }
+
 
 public function confirmManufacture(SaleInvoice $saleInvoice)
 {
@@ -269,6 +268,7 @@ public function getCustomerDetails($id)
 
 public function store(Request $request)
 {
+    
     $request->validate([
         'select_customer_id' => 'required|exists:party_details,id',
         'po_no' => 'required|string',
@@ -281,11 +281,11 @@ public function store(Request $request)
         'attachment' => 'nullable|file|max:10240', // max 10MB
     ]);
 
-    // Generate sale invoice number
+    // Generate unique sale invoice number
     $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
 
-    // Save invoice (status pending)
-    $invoice = SaleInvoice::create([
+    // Save invoice
+    $invoice = \App\Models\SaleInvoice::create([
         'sale_invoice_number' => $sale_invoice_number,
         'payment_type' => $request->payment_type,
         'select_customer_id' => $request->select_customer_id,
@@ -306,19 +306,20 @@ public function store(Request $request)
         'total' => $request->total ?? 0,
         'created_by_id' => auth()->id(),
         'json_data' => json_encode($request->all()),
-        'status' => 'pending', // ensure pending
+        'status' => 'pending',
         'main_cost_center_id' => $request->main_cost_center_id,
         'sub_cost_center_id' => $request->sub_cost_center_id,
     ]);
 
+    // Save attachment
     if ($request->hasFile('attachment')) {
         $invoice->addMediaFromRequest('attachment')->toMediaCollection('document');
     }
 
-    // Customer
+    // Get customer
     $customer = \App\Models\PartyDetail::find($request->select_customer_id);
 
-    // --- Calculate balances (unchanged) ---
+    // ---- Balance Update ----
     $baseBalance = $customer->current_balance ?? $customer->opening_balance ?? 0;
     $baseType = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
 
@@ -343,7 +344,7 @@ public function store(Request $request)
     $customer->current_balance_type = $closingType;
     $customer->save();
 
-    // Transaction record (unchanged)
+    // ---- Transaction ----
     \App\Models\Transaction::create([
         'sale_invoice_id' => $invoice->id,
         'select_customer_id' => $customer->id,
@@ -370,16 +371,16 @@ public function store(Request $request)
         ]),
     ]);
 
-    // ---------- COMPOSITION: compute total purchase cost for this invoice ----------
-    $invoice_total_purchase_cost = 0; // sum of purchase cost of all raw materials used * qty sold
-    $invoice_total_sale_from_composition = 0; // sum of sale-value (from composition) * qty sold
-    $composition_master = []; // collect composition rows for storing
+    // ---- Composition Profit/Loss Setup ----
+    $invoice_total_purchase_cost = 0;
+    $invoice_total_sale_from_composition = 0;
+    $composition_master = [];
 
-    // Attach items and update stock
+    // ---- Loop through each item ----
     foreach ($request->items as $itemData) {
         $item = \App\Models\AddItem::find($itemData['add_item_id']);
 
-        // Attach item to invoice pivot
+        // attach item
         $invoice->items()->attach($item->id, [
             'description' => $itemData['description'] ?? null,
             'qty' => $itemData['qty'],
@@ -394,18 +395,17 @@ public function store(Request $request)
             'json_data' => json_encode($itemData),
         ]);
 
-        // if product -> read its composition (finished_goods_raw_material) and compute cost for the sold qty
+        // ---- If product: handle composition ----
         if ($item->item_type === 'product') {
             $compositionRows = DB::table('finished_goods_raw_material')
                 ->where('item_id', $item->id)
                 ->get();
 
             foreach ($compositionRows as $c) {
-                $qtyPerFinished = (float) $c->qty; // raw material qty used per 1 finished good
+                $qtyPerFinished = (float) $c->qty;
                 $salePriceAtTime = (float) ($c->sale_price_at_time ?? 0);
                 $purchasePriceAtTime = (float) ($c->purchase_price_at_time ?? 0);
 
-                // total used for this invoice line
                 $usedTotalQty = $qtyPerFinished * (float)$itemData['qty'];
 
                 $lineSaleValue = $usedTotalQty * $salePriceAtTime;
@@ -414,7 +414,32 @@ public function store(Request $request)
                 $invoice_total_sale_from_composition += $lineSaleValue;
                 $invoice_total_purchase_cost += $linePurchaseValue;
 
-                // push to composition_master for storage
+                // ✅ Deduct raw material stock
+                $rawStock = \App\Models\CurrentStock::where('item_id', $c->select_raw_material_id)->first();
+                if ($rawStock) {
+                    $previousQty = $rawStock->qty;
+                    $rawStock->qty = max(0, $rawStock->qty - $usedTotalQty);
+                    $rawStock->save();
+
+                    // Raw material usage log
+                    \App\Models\SaleLog::create([
+                        'sale_invoice_id' => $invoice->id,
+                        'item_id' => $c->select_raw_material_id,
+                        'item_type' => 'raw_material',
+                        'stock_id' => $rawStock->id,
+                        'previous_qty' => $previousQty,
+                        'sold_qty' => $usedTotalQty,
+                        'sold_amount' => 0,
+                        'price' => 0,
+                        'sold_to_user_id' => $request->select_customer_id,
+                        'created_by_id' => auth()->id(),
+                        'json_data_add_item_sale_invoice' => json_encode($itemData),
+                        'json_data_current_stock' => json_encode($rawStock),
+                        'json_data_sale_invoice' => json_encode($invoice),
+                    ]);
+                }
+
+                // store composition info for reporting
                 $composition_master[] = [
                     'finished_item_id' => $item->id,
                     'finished_item_name' => $item->item_name,
@@ -428,35 +453,12 @@ public function store(Request $request)
                     'total_purchase_value' => $linePurchaseValue,
                 ];
             }
-        } else {
-            // service: treat sold item's own price as sale and its purchase_price as cost (if you record)
-            $qty = (float)$itemData['qty'];
-            $sale = ((float)$itemData['price']) * $qty;
-            $purchase = ((float)$item->purchase_price ?? 0) * $qty;
-            $invoice_total_sale_from_composition += $sale;
-            $invoice_total_purchase_cost += $purchase;
 
-            $composition_master[] = [
-                'finished_item_id' => $item->id,
-                'finished_item_name' => $item->item_name,
-                'raw_material_id' => null,
-                'raw_material_name' => $item->item_name,
-                'qty_used_per_finished' => 1,
-                'used_total_qty' => $qty,
-                'sale_price_at_time' => (float)$itemData['price'],
-                'purchase_price_at_time' => (float)($item->purchase_price ?? 0),
-                'total_sale_value' => $sale,
-                'total_purchase_value' => $purchase,
-            ];
-        }
-
-        // existing stock update and sale log as before
-        if ($item->item_type === 'product') {
+            // ---- Update finished product stock ----
             $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
             if ($stock) {
                 $previousQty = $stock->qty;
                 $previousAmount = $previousQty * $itemData['price'];
-
                 $stock->qty -= $itemData['qty'];
                 $stock->save();
 
@@ -477,7 +479,28 @@ public function store(Request $request)
                     'json_data_sale_invoice' => json_encode($invoice),
                 ]);
             }
-        } else {
+        } 
+        // ---- If service: simple log ----
+        else {
+            $qty = (float)$itemData['qty'];
+            $sale = ((float)$itemData['price']) * $qty;
+            $purchase = ((float)$item->purchase_price ?? 0) * $qty;
+            $invoice_total_sale_from_composition += $sale;
+            $invoice_total_purchase_cost += $purchase;
+
+            $composition_master[] = [
+                'finished_item_id' => $item->id,
+                'finished_item_name' => $item->item_name,
+                'raw_material_id' => null,
+                'raw_material_name' => $item->item_name,
+                'qty_used_per_finished' => 1,
+                'used_total_qty' => $qty,
+                'sale_price_at_time' => (float)$itemData['price'],
+                'purchase_price_at_time' => (float)($item->purchase_price ?? 0),
+                'total_sale_value' => $sale,
+                'total_purchase_value' => $purchase,
+            ];
+
             \App\Models\SaleLog::create([
                 'sale_invoice_id' => $invoice->id,
                 'item_id' => $item->id,
@@ -490,13 +513,12 @@ public function store(Request $request)
                 'json_data_add_item_sale_invoice' => json_encode($itemData),
             ]);
         }
-    } // end foreach items
+    }
 
-    // Compute profit / loss for invoice
+    // ---- Compute Profit/Loss ----
     $profit_loss_amount = floatval($invoice->total) - floatval($invoice_total_purchase_cost);
     $is_profit = $profit_loss_amount >= 0;
 
-    // Save profit/loss master record for later reporting & modal viewing
     DB::table('sale_profit_losses')->insert([
         'sale_invoice_id' => $invoice->id,
         'select_customer_id' => $invoice->select_customer_id,
@@ -513,9 +535,8 @@ public function store(Request $request)
     ]);
 
     return redirect()->route('admin.sale-invoices.index')
-                     ->with('success', 'Sale Invoice Created Successfully.');
+        ->with('success', 'Sale Invoice Created Successfully.');
 }
-
 
 
 

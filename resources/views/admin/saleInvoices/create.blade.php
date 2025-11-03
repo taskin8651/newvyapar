@@ -23,7 +23,7 @@
                 </div>
             </div>
 
-            <!-- Customer Info (unchanged) -->
+            <!-- Customer Info -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Bill To</h2>
@@ -44,7 +44,36 @@
                                         <td class="px-3 py-2 font-semibold text-gray-700">GSTIN</td>
                                         <td class="px-3 py-2 text-green-700 font-medium" id="customer_gstin"></td>
                                     </tr>
-                                    <!-- ... rest unchanged ... -->
+                                    <tr>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Phone</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_phone"></td>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">PAN</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_pan"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Billing Address</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_billing_address"></td>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Shipping Address</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_shipping_address"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">State</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_state"></td>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">City</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_city"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Pincode</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_pincode"></td>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Email</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_email"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Credit Limit</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_credit_limit"></td>
+                                        <td class="px-3 py-2 font-semibold text-gray-700">Payment Terms</td>
+                                        <td class="px-3 py-2 text-gray-900" id="customer_payment_terms"></td>
+                                    </tr>
                                     <tr class="bg-gray-50">
                                         <td class="px-3 py-2 font-semibold text-gray-700">Opening Balance</td>
                                         <td class="px-3 py-2 space-y-1">
@@ -83,7 +112,7 @@
                     </div>
                 </div>
 
-                <!-- Invoice Details (unchanged) -->
+                <!-- Invoice Details -->
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Invoice Details</h2>
                     @php
@@ -143,24 +172,31 @@
                         <tbody>
                             <tr class="item-row">
                                 <td class="px-1 py-1">
-                                    <select name="items[0][add_item_id]" class="form-select item-select select2">
-                                        <option value="">-- Select Item --</option>
-                                        @foreach($items as $item)
-                                            <option value="{{ $item->id }}"
-                                                data-sale-price="{{ $item->sale_price ?? $item->purchase_price ?? 0 }}"
-                                                data-purchase-price="{{ $item->purchase_price ?? 0 }}"
-                                                data-unit="{{ $item->select_unit->unit_name ?? '' }}"
-                                                data-hsn="{{ $item->item_hsn }}"
-                                                data-code="{{ $item->item_code }}"
-                                                data-item-type="{{ $item->item_type }}"
-                                                data-stock="{{ $item->stock_qty ?? 0 }}">
-                                                {{ $item->item_name }} ({{ ucfirst($item->item_type) }})
-                                                @if($item->item_type === 'product' && $item->stock_qty !== null)
-                                                    - Stock: {{ $item->stock_qty }}
-                                                @endif
-                                            </option>
-                                        @endforeach
-                                    </select>
+                            <select name="items[0][add_item_id]" class="form-select item-select select2">
+                                <option value="">-- Select Item --</option>
+                                @foreach($items as $item)
+                                    <option 
+                                        value="{{ $item->id }}"
+                                        data-sale-price="{{ $item->sale_price ?? $item->purchase_price ?? 0 }}"
+                                        data-purchase-price="{{ $item->purchase_price ?? 0 }}"
+                                        data-unit="{{ $item->select_unit->unit_name ?? '' }}"
+                                        data-hsn="{{ $item->item_hsn ?? '' }}"
+                                        data-code="{{ $item->item_code ?? '' }}"
+                                        data-item-type="{{ $item->item_type ?? 'product' }}"
+                                        @if($item->item_type === 'product')
+                                            data-stock="{{ $item->stock_qty ?? 0 }}"
+                                        @else
+                                            data-stock="0"
+                                        @endif
+                                    >
+                                        {{ $item->item_name }} ({{ ucfirst($item->item_type ?? 'Product') }})
+                                        @if($item->item_type === 'product' && $item->stock_qty !== null)
+                                            - Stock: {{ $item->stock_qty }}
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+
                                 </td>
                                 <td class="px-1 py-1 description"></td>
                                 <td class="px-1 py-1"><input type="number" name="items[0][qty]" class="qty w-full border px-2 py-1" min="1" value="1"></td>
@@ -197,6 +233,7 @@
                 <div class="space-y-4">
                     <textarea name="notes" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Notes"></textarea>
                     <textarea name="terms" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Terms & Conditions"></textarea>
+                    
                     <!-- COMPOSITION SUMMARY (real-time) -->
                     <div class="bg-white p-4 rounded-lg border mb-4">
                         <h3 class="font-semibold mb-2">Selected Product Composition</h3>
@@ -215,6 +252,7 @@
                                         <th>Purchase Price (unit)</th>
                                         <th>Item Sale Total</th>
                                         <th>Item Purchase Total</th>
+                                        <th>Item Profit/Loss</th>
                                     </tr>
                                 </thead>
                                 <tbody id="compositionRows"></tbody>
@@ -230,7 +268,7 @@
                                     <p class="font-semibold">₹ <span id="comp_total_sale">0.00</span></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-500">Profit / Loss:</p>
+                                    <p class="text-xs text-gray-500">Overall Profit / Loss:</p>
                                     <p id="comp_profit_label" class="font-semibold text-green-600">₹ <span id="comp_profit">0.00</span></p>
                                 </div>
                             </div>
@@ -267,8 +305,6 @@
                         </div>
                     </div>
 
-                    
-
                     <div class="mb-6">
                         <label class="font-semibold">Attachment:</label>
                         <input type="file" name="attachment" class="w-full border px-3 py-2 rounded-md">
@@ -283,7 +319,6 @@
 </div>
 
 <!-- Modal for Index view (sample) -->
-<!-- You will place this modal on your index page; included here as example -->
 <div id="invoiceDetailsModal" class="fixed inset-0 z-50 items-center justify-center hidden">
   <div class="absolute inset-0 bg-black opacity-40"></div>
   <div class="relative bg-white max-w-3xl mx-auto rounded p-6 z-50 overflow-auto" style="max-height:90vh;">
@@ -295,223 +330,211 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
 $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
 
-    // Save original options markup for item selects so we can reconstruct selects for cloned rows
-    const masterItemOptions = $('#itemsTable tbody tr.item-row').first().find('.item-select').html();
+    // 🔹 Save master options to clone rows dynamically
+    const masterItemOptions = $('#itemsTable tbody tr.item-row')
+        .first().find('.item-select').html();
 
-    // Customer details (unchanged)
+    // 🔹 Customer selection → fetch & fill details
     $('#customer_id').on('change', function() {
-        let customerId = $(this).val();
-        if (!customerId) {
-            $('#customerDetailsCard').addClass('hidden');
-            return;
-        }
+        const customerId = $(this).val();
+        if (!customerId) return $('#customerDetailsCard').addClass('hidden');
+
         $.get("{{ route('admin.saleInvoice.getCustomerDetails', '') }}/" + customerId, function(data) {
-            function stripTags(input) { return $('<div>').html(input).text(); }
-            $('#customer_name').text(stripTags(data.party_name));
-            $('#customer_gstin').text(stripTags(data.gstin));
-            $('#customer_phone').text(stripTags(data.phone_number));
-            $('#customer_pan').text(stripTags(data.pan_number));
-            $('#customer_billing_address').text(stripTags(data.billing_address));
-            $('#customer_shipping_address').text(stripTags(data.shipping_address));
-            $('#customer_state').text(stripTags(data.state));
-            $('#customer_city').text(stripTags(data.city));
-            $('#customer_pincode').text(stripTags(data.pincode));
-            $('#customer_email').text(stripTags(data.email));
-            $('#customer_credit_limit').text(stripTags(data.credit_limit));
-            $('#customer_payment_terms').text(stripTags(data.payment_terms));
-            // Opening / Current balances
-            function formatBalance(balance, type) {
+            function clean(t) { return $('<div>').html(t).text(); }
+
+            $('#customer_name').text(clean(data.party_name));
+            $('#customer_gstin').text(clean(data.gstin));
+            $('#customer_phone').text(clean(data.phone_number));
+            $('#customer_pan').text(clean(data.pan_number));
+            $('#customer_billing_address').text(clean(data.billing_address));
+            $('#customer_shipping_address').text(clean(data.shipping_address));
+            $('#customer_state').text(clean(data.state));
+            $('#customer_city').text(clean(data.city));
+            $('#customer_pincode').text(clean(data.pincode));
+            $('#customer_email').text(clean(data.email));
+            $('#customer_credit_limit').text(clean(data.credit_limit));
+            $('#customer_payment_terms').text(clean(data.payment_terms));
+
+            // Opening/current balances display
+            function fmt(balance, type) {
                 balance = parseFloat(balance) || 0; type = type || 'Debit';
-                let label = type === 'Debit' ? 'Payable' : 'Receivable';
-                let arrow = type === 'Debit' ? '↑' : '↓';
-                let colorClass = type === 'Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold';
-                return { text: `${balance.toFixed(2)} (${type}) ${label} ${arrow}`, class: colorClass }
+                const label = type === 'Debit' ? 'Payable' : 'Receivable';
+                const arrow = type === 'Debit' ? '↑' : '↓';
+                const cls = type === 'Debit' ? 'text-red-600 font-bold' : 'text-green-700 font-bold';
+                return { txt: `${balance.toFixed(2)} (${type}) ${label} ${arrow}`, cls };
             }
-            let opening = formatBalance(data.opening_balance, data.opening_balance_type);
-            $('#opening_balance_type').text(opening.text).removeClass('text-red-600 text-green-700 font-bold').addClass(opening.class);
-            let current = formatBalance(data.current_balance, data.current_balance_type);
-            $('#current_balance_type').text(current.text).removeClass('text-red-600 text-green-700 font-bold').addClass(current.class);
+            const open = fmt(data.opening_balance, data.opening_balance_type);
+            $('#opening_balance_type').text(open.txt)
+                .removeClass('text-red-600 text-green-700 font-bold').addClass(open.cls);
+
+            const curr = fmt(data.current_balance, data.current_balance_type);
+            $('#current_balance_type').text(curr.txt)
+                .removeClass('text-red-600 text-green-700 font-bold').addClass(curr.cls);
+
             $('#current_balance_date').text(data.updated_at || '-');
-            $('#invoice_customer_phone').val(stripTags(data.phone_number));
-            $('#invoice_billing_address').val(stripTags(data.billing_address));
+            $('#invoice_customer_phone').val(clean(data.phone_number));
+            $('#invoice_billing_address').val(clean(data.billing_address));
             $('#customerDetailsCard').removeClass('hidden');
         });
     });
 
-    // Composition cache for selected items (by add_item_id)
+    // 🔹 Cache for product compositions
     let compositionCache = {};
 
-    // function to render composition to right panel
-    function renderComposition(rows, finishedQty, finishedSaleUnitPrice) {
-        if (!rows || rows.length === 0) {
+    // 🔹 Render composition for right panel
+    function renderComposition(rows, finishedQty, finishedSalePrice) {
+        if (!rows || !rows.length) {
             $('#compositionPlaceholder').show();
             $('#compositionDetails').hide();
             return;
         }
         $('#compositionPlaceholder').hide();
         $('#compositionDetails').show();
-        const tbody = $('#compositionRows').empty();
-        let totalPurchase = 0, totalSale = 0;
 
-        // finishedQty: quantity of finished good in invoice (integer)
+        const tbody = $('#compositionRows').empty();
+        let totalPurchase = 0;
         finishedQty = parseFloat(finishedQty) || 1;
-        finishedSaleUnitPrice = parseFloat(finishedSaleUnitPrice) || 0;
+        finishedSalePrice = parseFloat(finishedSalePrice) || 0;
 
         rows.forEach(r => {
-            // r.qty_used is quantity of raw material used PER finished good unit
-            const perUnitQtyUsed = parseFloat(r.qty_used) || 0;
-            const usedQty = perUnitQtyUsed * finishedQty; // total used for invoice qty
-            const salePriceUnit = parseFloat(r.sale_price || 0);
-            const purchasePriceUnit = parseFloat(r.purchase_price || 0);
-
-            const itemSaleTotal = usedQty * salePriceUnit;
-            const itemPurchaseTotal = usedQty * purchasePriceUnit;
-
-            totalSale += itemSaleTotal;
-            totalPurchase += itemPurchaseTotal;
+            const usedQty = (parseFloat(r.qty_used) || 0) * finishedQty;
+            const sale = (parseFloat(r.sale_price) || 0) * usedQty;
+            const purchase = (parseFloat(r.purchase_price) || 0) * usedQty;
+            const diff = sale - purchase;
+            totalPurchase += purchase;
 
             tbody.append(`
                 <tr>
-                    <td class="py-1">${r.name}</td>
-                    <td class="py-1">${usedQty}</td>
-                    <td class="py-1">₹ ${salePriceUnit.toFixed(2)}</td>
-                    <td class="py-1">₹ ${purchasePriceUnit.toFixed(2)}</td>
-                    <td class="py-1">₹ ${itemSaleTotal.toFixed(2)}</td>
-                    <td class="py-1">₹ ${itemPurchaseTotal.toFixed(2)}</td>
+                    <td>${r.name}</td>
+                    <td>${usedQty}</td>
+                    <td>₹ ${parseFloat(r.sale_price).toFixed(2)}</td>
+                    <td>₹ ${parseFloat(r.purchase_price).toFixed(2)}</td>
+                    <td>₹ ${sale.toFixed(2)}</td>
+                    <td>₹ ${purchase.toFixed(2)}</td>
+                    <td class="${diff >= 0 ? 'text-green-600' : 'text-red-600'}">₹ ${diff.toFixed(2)}</td>
                 </tr>
             `);
         });
 
-        // Total sale of finished goods according to finishedQty and finishedSaleUnitPrice
-        const finishedGoodsSaleTotal = finishedQty * finishedSaleUnitPrice;
-
+        const finishedSaleTotal = finishedQty * finishedSalePrice;
+        const profit = finishedSaleTotal - totalPurchase;
         $('#comp_total_purchase').text(totalPurchase.toFixed(2));
-        $('#comp_total_sale').text(finishedGoodsSaleTotal.toFixed(2));
-        const profit = finishedGoodsSaleTotal - totalPurchase;
+        $('#comp_total_sale').text(finishedSaleTotal.toFixed(2));
         $('#comp_profit').text(profit.toFixed(2));
-        $('#comp_profit_label').toggleClass('text-green-600', profit>=0).toggleClass('text-red-600', profit<0);
+        $('#comp_profit_label')
+            .toggleClass('text-green-600', profit >= 0)
+            .toggleClass('text-red-600', profit < 0);
     }
 
-    // When an item is selected in any row: auto-fill price, unit and fetch composition if product
-    $(document).on('change', '.item-select', function(){
-        let row = $(this).closest('tr');
-        let selected = $(this).find(':selected');
-        if(selected.val() === '') {
-            // clear row fields
-            row.find('.price').val('');
-            row.find('.unit').text('');
-            row.find('.description').text('');
+    // 🔹 When item is selected (✅ Updated version with stock validation)
+    $(document).on('change', '.item-select', function() {
+        const row = $(this).closest('tr');
+        const sel = $(this).find(':selected');
+
+        if (!sel.val()) {
+            row.find('.price, .unit, .description').val('').text('');
             return;
         }
 
-        const itemId = selected.val();
-        const salePrice = parseFloat(selected.data('sale-price') || 0);
-        const purchasePrice = parseFloat(selected.data('purchase-price') || 0);
-        const unitText = selected.data('unit') || '';
-        const itemType = selected.data('item-type') || 'product';
-        const itemHSN = selected.data('hsn') || '';
-        const itemCode = selected.data('code') || '';
+        const itemId = sel.val();
+        const salePrice = parseFloat(sel.data('sale-price')) || 0;
+        const purchasePrice = parseFloat(sel.data('purchase-price')) || 0;
+        const unit = sel.data('unit') || '';
+        const type = sel.data('item-type') || 'product';
+        const hsn = sel.data('hsn') || '';
+        const code = sel.data('code') || '';
 
-        // Auto-fill sale price in price input
         row.find('.price').val(salePrice.toFixed(2));
-        row.find('.unit').text(unitText);
-        row.find('.qty').attr('max', selected.data('stock') || 0).val(1);
+        row.find('.unit').text(unit);
+        row.find('.description').text(`Type: ${type} | HSN: ${hsn} | Code: ${code}`);
+        row.find('.tax_type').val('without').trigger('change');
 
-        // Fill description with item_type, item_hsn, item_code
-        const descriptionText = `Type: ${itemType} | HSN: ${itemHSN} | Code: ${itemCode}`;
-        row.find('.description').text(descriptionText);
+        // ✅ Handle stock only for product type
+        if (type === 'product') {
+            const stockQty = parseFloat(sel.data('stock')) || 0;
 
-        // Recalculate row totals and overall
-        // Show/hide tax input correctly
-        if(row.find('.tax_type').val()==='with'){ row.find('.tax_rate').show(); } else { row.find('.tax_rate').hide().val(0); }
-        calculateRow(row); calculateTotals();
-
-        // Reconstruct other selects to avoid removing options permanently:
-        // We DO NOT remove option from other selects here to allow multiple same items on purpose.
-        // If you still want unique selections, handle on server-side or maintain a more complex state.
-
-        // If product – fetch its composition (raw materials used to make it)
-        if(itemType === 'product') {
-            // use cache if exists
-            if(compositionCache[itemId]) {
-                // use cache
-                const finishedQty = row.find('.qty').val() || 1;
-                renderComposition(compositionCache[itemId], finishedQty, salePrice);
+            if (stockQty > 0) {
+                row.find('.qty')
+                    .attr('min', 1)
+                    .attr('max', stockQty)
+                    .attr('placeholder', `Max: ${stockQty}`)
+                    .val(1)
+                    .prop('readonly', false);
             } else {
-                // AJAX fetch composition
-                $.get("{{ route('admin.saleInvoice.getItemComposition', '') }}/"+itemId, function(resp){
-                    // resp expected: { composition: [ {id,name,qty_used,sale_price,purchase_price}, ... ] }
-                    compositionCache[itemId] = resp.composition || [];
-                    const finishedQty = row.find('.qty').val() || 1;
-                    renderComposition(compositionCache[itemId], finishedQty, salePrice);
-                }).fail(function(){
-                    compositionCache[itemId] = [];
-                    renderComposition([], 1, salePrice);
-                });
+                row.find('.qty')
+                    .attr('min', 0)
+                    .removeAttr('max')
+                    .attr('placeholder', 'Out of stock')
+                    .val(0)
+                    .prop('readonly', true);
+
+                alert(`⚠️ This item is out of stock and cannot be sold.`);
             }
         } else {
-            // service or raw item: simple composition - itself as service/raw
-            const finishedQty = row.find('.qty').val() || 1;
-            const svc = [{ id: itemId, name: selected.text(), qty_used: 1, sale_price: salePrice, purchase_price: purchasePrice }];
-            renderComposition(svc, finishedQty, salePrice);
+            // ✅ Service / non-product → no stock restriction
+            row.find('.qty')
+                .removeAttr('max')
+                .removeAttr('min')
+                .removeAttr('placeholder')
+                .prop('readonly', false)
+                .val(1);
+        }
+
+        calculateRow(row);
+        calculateTotals();
+
+        // 🔹 Handle composition (optional)
+        if (type === 'product') {
+            if (compositionCache[itemId]) {
+                renderComposition(compositionCache[itemId], 1, salePrice);
+            } else {
+                $.get("{{ route('admin.saleInvoice.getItemComposition', '') }}/" + itemId, function(resp) {
+                    compositionCache[itemId] = resp.composition || [];
+                    renderComposition(resp.composition, 1, salePrice);
+                }).fail(() => renderComposition([], 1, salePrice));
+            }
+        } else {
+            renderComposition([
+                { id: itemId, name: sel.text(), qty_used: 1, sale_price: salePrice, purchase_price: purchasePrice }
+            ], 1, salePrice);
         }
     });
 
-    // Calculation functions - corrected to avoid double counting tax and to compute amounts cleanly
-    function calculateRow(row){
-        let qty = parseFloat(row.find('.qty').val()) || 0;
-        let price = parseFloat(row.find('.price').val()) || 0;
-        let discountVal = parseFloat(row.find('.discount').val()) || 0;
-        let discountType = row.find('.discount_type').val();
-        let taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
-        let taxType = row.find('.tax_type').val();
+    // 🔹 Row calculation
+    function calculateRow(row) {
+        const qty = parseFloat(row.find('.qty').val()) || 0;
+        const price = parseFloat(row.find('.price').val()) || 0;
+        const discountVal = parseFloat(row.find('.discount').val()) || 0;
+        const discountType = row.find('.discount_type').val();
+        const taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
+        const taxType = row.find('.tax_type').val();
 
-        // base amount before tax
-        let baseAmount = price * qty;
+        let base = qty * price;
+        let discAmt = discountType === 'percentage' ? base * (discountVal / 100) : discountVal;
+        let afterDisc = base - discAmt;
+        let taxAmt = taxType === 'with' ? afterDisc * (taxRate / 100) : 0;
+        let final = afterDisc + taxAmt;
 
-        // compute discount amount
-        let discountAmount = 0;
-        if(discountType === 'percentage'){
-            discountAmount = baseAmount * (discountVal/100);
-        } else {
-            discountAmount = discountVal;
-        }
-        let amountAfterDiscount = baseAmount - discountAmount;
-
-        // tax amount (if tax applies)
-        let taxAmount = 0;
-        if(taxType === 'with'){ // 'with' means tax to be applied on top
-            taxAmount = amountAfterDiscount * (taxRate/100);
-        }
-
-        // final row amount (without storing tax separately in the field)
-        let finalAmount = amountAfterDiscount + taxAmount;
-
-        row.find('.amount').val(finalAmount.toFixed(2));
-        // store data attributes for debugging / usage
-        row.data('row-base', baseAmount);
-        row.data('row-discount', discountAmount);
-        row.data('row-tax', taxAmount);
+        row.find('.amount').val(final.toFixed(2));
+        row.data({ base, discAmt, taxAmt });
     }
 
-    function calculateTotals(){
-        let subtotal=0, discountTotal=0, taxTotal=0;
-        $('#itemsTable tbody tr').each(function(){
-            let row = $(this);
-            let amount = parseFloat(row.find('.amount').val()) || 0;
-            subtotal += (parseFloat(row.data('row-base')) || 0) - (parseFloat(row.data('row-discount')) || 0); // sum of base-after-discount
-            discountTotal += parseFloat(row.data('row-discount')) || 0;
-            taxTotal += parseFloat(row.data('row-tax')) || 0;
+    // 🔹 Totals calculation
+    function calculateTotals() {
+        let subtotal = 0, discountTotal = 0, taxTotal = 0;
+        $('#itemsTable tbody tr').each(function() {
+            const d = $(this).data();
+            subtotal += (d.base || 0) - (d.discAmt || 0);
+            discountTotal += d.discAmt || 0;
+            taxTotal += d.taxAmt || 0;
         });
 
-        let overallDiscount = parseFloat($('#overall_discount').val()) || 0;
-        // overallDiscount is subtracted after row-level discounts/taxes
-        let total = subtotal + taxTotal - overallDiscount;
+        const overallDiscount = parseFloat($('#overall_discount').val()) || 0;
+        const total = subtotal + taxTotal - overallDiscount;
 
         $('#subtotal_display').text(subtotal.toFixed(2));
         $('#tax_display').text(taxTotal.toFixed(2));
@@ -523,137 +546,101 @@ $(document).ready(function() {
         $('#discount_input').val((discountTotal + overallDiscount).toFixed(2));
         $('#total_input').val(total.toFixed(2));
 
-        // update composition panel profit calculation using latest selected product & its qty
-        const activeSelects = $('.item-select');
-        // find selected product (first one with an item_type 'product'); preferentially pick focused row
-        let focusedRow = $(':focus').closest('tr');
-        if(focusedRow.length === 0) {
-            // fallback to first row
-            focusedRow = $('#itemsTable tbody tr').first();
-        }
-        const activeItemId = focusedRow.find('.item-select').find(':selected').val();
-        const finishedQty = focusedRow.find('.qty').val() || 1;
-        const finishedSaleUnitPrice = parseFloat(focusedRow.find('.price').val()) || 0;
-        if(activeItemId && compositionCache[activeItemId]) {
-            renderComposition(compositionCache[activeItemId], finishedQty, finishedSaleUnitPrice);
-        } else if(activeItemId) {
-            // try fetch if not cached
-            const itemType = focusedRow.find('.item-select').find(':selected').data('item-type') || 'product';
-            if(itemType === 'product') {
-                $.get("{{ route('admin.saleInvoice.getItemComposition', '') }}/"+activeItemId, function(resp){
-                    compositionCache[activeItemId] = resp.composition || [];
-                    renderComposition(compositionCache[activeItemId], finishedQty, finishedSaleUnitPrice);
-                }).fail(function(){
-                    renderComposition([], finishedQty, finishedSaleUnitPrice);
-                });
-            } else {
-                // service/raw fallback
-                const name = focusedRow.find('.item-select').find(':selected').text();
-                const purchasePrice = parseFloat(focusedRow.find('.item-select').find(':selected').data('purchase-price') || 0);
-                const svc = [{ id: activeItemId, name: name, qty_used: 1, sale_price: finishedSaleUnitPrice, purchase_price: purchasePrice }];
-                renderComposition(svc, finishedQty, finishedSaleUnitPrice);
-            }
-        } else {
-            // nothing selected
-            renderComposition([], 1, 0);
-        }
+        updateOverallComposition();
     }
 
-    $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function(){
-        let row = $(this).closest('tr');
-        let maxQty = parseFloat(row.find('.qty').attr('max')) || 999999;
-        if(parseFloat(row.find('.qty').val())>maxQty){ row.find('.qty').val(maxQty); }
-        if(row.find('.tax_type').val()==='with'){ row.find('.tax_rate').show(); } else { row.find('.tax_rate').hide().val(0); }
-        calculateRow(row); calculateTotals();
-    });
-
-    // Add/remove rows
-    $('#addRow').click(function(){
-        let tbody = $('#itemsTable tbody');
-        let newRow = $('<tr class="item-row"></tr>');
-        const rowCount = tbody.find('tr').length;
-        // build markup similar to first row but with input names updated
-        const markup = `
-            <td class="px-1 py-1">
-                <select name="items[${rowCount}][add_item_id]" class="form-select item-select select2">
-                    <option value="">-- Select Item --</option>
-                    ${masterItemOptions}
-                </select>
-            </td>
-            <td class="px-1 py-1 description"></td>
-            <td class="px-1 py-1"><input type="number" name="items[${rowCount}][qty]" class="qty w-full border px-2 py-1" min="1" value="1"></td>
-            <td class="px-1 py-1 unit"></td>
-            <td class="px-1 py-1"><input type="number" name="items[${rowCount}][price]" class="price w-full border px-2 py-1" step="0.01"></td>
-            <td class="px-1 py-1">
-                <select name="items[${rowCount}][discount_type]" class="discount_type w-full select2">
-                    <option value="value">Value</option>
-                    <option value="percentage">Percentage</option>
-                </select>
-                <input type="number" name="items[${rowCount}][discount]" class="discount w-full mt-1 border px-2 py-1" value="0" step="0.01">
-            </td>
-            <td class="px-1 py-1">
-                <select name="items[${rowCount}][tax_type]" class="tax_type w-full select2">
-                    <option value="without">Without Tax</option>
-                    <option value="with">With Tax</option>
-                </select>
-                <input type="number" name="items[${rowCount}][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
-            </td>
-            <td class="px-1 py-1"><input type="text" name="items[${rowCount}][amount]" class="amount w-full border px-2 py-1" readonly></td>
-            <td class="px-1 py-1 text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
-        `;
-        newRow.html(markup);
-        tbody.append(newRow);
-        // init select2 on new selects
-        newRow.find('.select2').select2({ width: '100%' });
-        // set default values & run calculating
-        newRow.find('.qty').val(1);
-        calculateRow(newRow);
+    // 🔹 Recalculate on input change
+    $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function() {
+        const row = $(this).closest('tr');
+        if (row.find('.tax_type').val() === 'with') row.find('.tax_rate').show(); else row.find('.tax_rate').hide().val(0);
+        calculateRow(row);
         calculateTotals();
     });
 
-    $(document).on('click', '.removeRow', function(){
-        let tbody = $('#itemsTable tbody');
-        if(tbody.find('tr').length>1){
-            $(this).closest('tr').remove();
-            calculateTotals();
-        } else { alert('At least one row is required'); }
+    // 🔹 Add new item row
+    $('#addRow').click(function() {
+        const tbody = $('#itemsTable tbody');
+        const count = tbody.find('tr').length;
+        const row = $(`
+            <tr class="item-row">
+                <td><select name="items[${count}][add_item_id]" class="form-select item-select select2">${masterItemOptions}</select></td>
+                <td class="description"></td>
+                <td><input type="number" name="items[${count}][qty]" class="qty border px-2 py-1 w-full" min="1" value="1"></td>
+                <td class="unit"></td>
+                <td><input type="number" name="items[${count}][price]" class="price border px-2 py-1 w-full" step="0.01"></td>
+                <td>
+                    <select name="items[${count}][discount_type]" class="discount_type select2 w-full"><option value="value">Value</option><option value="percentage">Percentage</option></select>
+                    <input type="number" name="items[${count}][discount]" class="discount mt-1 border px-2 py-1 w-full" value="0" step="0.01">
+                </td>
+                <td>
+                    <select name="items[${count}][tax_type]" class="tax_type select2 w-full"><option value="without">Without Tax</option><option value="with">With Tax</option></select>
+                    <input type="number" name="items[${count}][tax]" class="tax_rate mt-1 border px-2 py-1 w-full" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                </td>
+                <td><input type="text" name="items[${count}][amount]" class="amount border px-2 py-1 w-full" readonly></td>
+                <td class="text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
+            </tr>
+        `);
+        tbody.append(row);
+        row.find('.select2').select2({ width: '100%' });
     });
 
-    // Initial calc
-    // initialize first row select2 properly
-    $('#itemsTable tbody tr.item-row').find('.select2').select2({ width: '100%' });
-    calculateTotals();
+    // 🔹 Remove row
+    $(document).on('click', '.removeRow', function() {
+        const tbody = $('#itemsTable tbody');
+        if (tbody.find('tr').length > 1) {
+            $(this).closest('tr').remove();
+            calculateTotals();
+        } else {
+            alert('At least one row is required.');
+        }
+    });
 
-    // ---------- Modal sample handlers (for index page) ----------
-    window.openInvoiceModal = function(invoiceId) {
-        $('#invoiceModalContent').html('Loading...');
-        $('#invoiceDetailsModal').removeClass('hidden').addClass('flex');
-        $.get("{{ route('admin.saleInvoice.profitDetails', '') }}/" + invoiceId, function(resp) {
-            let html = '<div class="prose">';
-            html += `<p><strong>Invoice:</strong> ${resp.invoice.sale_invoice_number} | <strong>Customer:</strong> ${resp.customer_name}</p>`;
-            html += `<p><strong>Total Purchase Cost:</strong> ₹ ${parseFloat(resp.total_purchase_value||0).toFixed(2)}</p>`;
-            html += `<p><strong>Total Sale Value:</strong> ₹ ${parseFloat(resp.total_sale_value||0).toFixed(2)}</p>`;
-            html += `<p><strong>Profit/Loss:</strong> ₹ ${parseFloat(resp.profit_loss_amount||0).toFixed(2)} (${resp.is_profit ? 'Profit' : 'Loss'})</p>`;
-            html += '<hr/>';
-            if(resp.composition && resp.composition.length) {
-                html += '<table class="min-w-full text-sm"><thead><tr><th>Name</th><th>Qty</th><th>Sale Price</th><th>Purchase Price</th><th>Item Sale Total</th><th>Item Purchase Total</th></tr></thead><tbody>';
-                resp.composition.forEach(c=>{
-                    html += `<tr><td>${c.name}</td><td>${c.qty_used}</td><td>₹ ${parseFloat(c.sale_price||0).toFixed(2)}</td><td>₹ ${parseFloat(c.purchase_price||0).toFixed(2)}</td><td>₹ ${(c.qty_used*c.sale_price).toFixed(2)}</td><td>₹ ${(c.qty_used*c.purchase_price).toFixed(2)}</td></tr>`;
+    // 🔹 Update overall composition for profit/loss summary
+    function updateOverallComposition() {
+        let rows = [], totalSale = 0, totalPurchase = 0;
+        $('#itemsTable tbody tr').each(function() {
+            const sel = $(this).find('.item-select :selected');
+            if (!sel.val()) return;
+            const id = sel.val(), qty = parseFloat($(this).find('.qty').val()) || 1;
+            const salePrice = parseFloat($(this).find('.price').val()) || 0;
+            const purchasePrice = parseFloat(sel.data('purchase-price')) || 0;
+            const type = sel.data('item-type') || 'product';
+            totalSale += salePrice * qty;
+
+            if (type === 'product' && compositionCache[id]) {
+                compositionCache[id].forEach(c => {
+                    const used = (parseFloat(c.qty_used) || 0) * qty;
+                    const cost = used * (parseFloat(c.purchase_price) || 0);
+                    totalPurchase += cost;
+                    rows.push({ ...c, usedQty: used, itemPurchaseTotal: cost, itemSaleTotal: used * c.sale_price });
                 });
-                html += '</tbody></table>';
             } else {
-                html += '<p>No composition stored for this invoice.</p>';
+                const cost = purchasePrice * qty;
+                totalPurchase += cost;
+                rows.push({ id, name: sel.text(), usedQty: qty, sale_price: salePrice, purchase_price: purchasePrice, itemPurchaseTotal: cost, itemSaleTotal: salePrice * qty });
             }
-            html += '</div>';
-            $('#invoiceModalContent').html(html);
-        }).fail(function(){
-            $('#invoiceModalContent').html('<p class="text-red-500">Could not load details.</p>');
         });
-    };
+        renderComposition(rows, 1, totalSale - totalPurchase);
+    }
 
-    $('#closeInvoiceModal').on('click', function(){ $('#invoiceDetailsModal').addClass('hidden').removeClass('flex'); });
+    // 🔹 Sub Cost Center AJAX
+    $('#main_cost_center_id').on('change', function() {
+        const id = $(this).val();
+        const subSelect = $('#sub_cost_center_id');
+        subSelect.empty().append('<option value="">-- Select Sub Cost Center --</option>');
+        if (!id) return;
+        $.get("{{ route('admin.purchaseBill.getSubCostCenters', '') }}/" + id, function(data) {
+            $.each(data, function(k, v) {
+                subSelect.append('<option value="' + k + '">' + v + '</option>');
+            });
+        });
+    });
 
+    // Init first row
+    calculateTotals();
 });
-</script>
+</script> 
 
 @endsection
+
+

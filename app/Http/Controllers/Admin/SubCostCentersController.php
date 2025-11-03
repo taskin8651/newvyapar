@@ -27,19 +27,22 @@ public function index()
     $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
     if ($userRole === 'Super Admin') {
-        // Super Admin ke liye saara data, global scopes ignore karke
+        // Super Admin → sabhi records dekh sakta hai
         $subCostCenters = SubCostCenter::withoutGlobalScopes()
             ->with([
-                'main_cost_center' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
-                'created_by' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
+                'main_cost_center' => fn($q) => $q->withoutGlobalScopes(),
+                'created_by' => fn($q) => $q->withoutGlobalScopes(),
             ])
             ->get();
+    } elseif ($userRole === 'Admin') {
+        // Admin → apne dwara banaye gaye users ke records + apne records
+        $createdUserIds = \App\Models\User::where('created_by_id', $user->id)->pluck('id');
+
+        $subCostCenters = SubCostCenter::with(['main_cost_center', 'created_by'])
+            ->whereIn('created_by_id', $createdUserIds->push($user->id)) // include admin's own ID too
+            ->get();
     } else {
-        // Baaki users ke liye filter (apne created records)
+        // Normal user → sirf apne created records
         $subCostCenters = SubCostCenter::with(['main_cost_center', 'created_by'])
             ->where('created_by_id', $user->id)
             ->get();
@@ -47,6 +50,7 @@ public function index()
 
     return view('admin.subCostCenters.index', compact('subCostCenters'));
 }
+
 
 
     public function create()
