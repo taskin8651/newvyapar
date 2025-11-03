@@ -6,7 +6,7 @@ use App\Http\Controllers\Admin\TermAndConditionController;
 use App\Http\Controllers\Admin\PaymentInController;
 use App\Http\Controllers\Admin\StockHistoryController;
 use App\Http\Controllers\Admin\LedgerController;
-
+use App\Http\Controllers\Admin\SaleInvoiceController;
 
 Route::redirect('/', '/login');
 Route::get('/home', function () {
@@ -366,7 +366,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
     // Optional: CSV import (if needed)
     Route::post('payment-ins/parseCsvImport', [PaymentInController::class, 'parseCsvImport'])->name('payment-ins.parseCsvImport');
- Route::resource('bank-transactions', App\Http\Controllers\Admin\BankTransactionController::class);
+    Route::resource('bank-transactions', App\Http\Controllers\Admin\BankTransactionController::class);
+
+    // inside admin middleware group
+    Route::get('sale-invoice/customer-details/{id}', [SaleInvoiceController::class, 'getCustomerDetails'])->name('saleInvoice.getCustomerDetails');
+    Route::get('sale-invoice/item-composition/{id}', [SaleInvoiceController::class, 'getItemComposition'])->name('saleInvoice.getItemComposition');
+    Route::get('sale-invoice/profit-details/{id}', [SaleInvoiceController::class, 'profitDetails'])->name('saleInvoice.profitDetails');
+    Route::post('sale-invoices/{id}/confirm-manufacture', [SaleInvoiceController::class, 'confirmManufacture'])->name('admin.sale-invoices.confirm');
+
 
 });
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {

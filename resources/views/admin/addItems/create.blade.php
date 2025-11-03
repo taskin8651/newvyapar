@@ -186,22 +186,69 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         @forelse($raw_materials as $material)
-                            <label class="flex items-center space-x-2 bg-white p-3 rounded-md border shadow-sm hover:bg-blue-50 cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    name="select_raw_materials[]" 
-                                    value="{{ $material['id'] }}" 
-                                    class="form-checkbox h-5 w-5 text-blue-600"
-                                >
-                                <div>
-                                    <p class="text-gray-800 font-medium">{{ $material['name'] }}</p>
-                                    <p class="text-xs text-gray-500">Available Qty: {{ $material['qty'] }}</p>
+                            @php
+                                $mid = $material['id'];
+                            @endphp
+                            <label class="raw-material-card flex items-start space-x-3 bg-white p-3 rounded-md border shadow-sm hover:bg-blue-50 cursor-pointer">
+                                <div class="flex-shrink-0">
+                                    <input 
+                                        type="checkbox" 
+                                        name="select_raw_materials[]" 
+                                        value="{{ $mid }}" 
+                                        class="raw-checkbox form-checkbox h-5 w-5 text-blue-600"
+                                    >
+                                </div>
+
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="text-gray-800 font-medium">{{ $material['name'] }}</p>
+                                            <p class="text-xs text-gray-500">Available Qty: {{ $material['qty'] }}</p>
+                                        </div>
+                                        <div class="text-right text-xs text-gray-600">
+                                            <p>Sale: <span class="raw-sale-price">{{ number_format($material['sale_price'], 2) }}</span></p>
+                                            <p>Purchase: <span class="raw-purchase-price">{{ number_format($material['purchase_price'], 2) }}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Qty controls -->
+                                    <div class="mt-3 flex items-center space-x-3">
+                                        <div class="flex items-center border rounded-md overflow-hidden">
+                                            <button type="button" class="decreaseBtn px-3 py-1">−</button>
+                                            <input type="number" min="0" step="0.01" name="raw_qty[{{ $mid }}]" value="0" class="raw-qty-input w-20 text-center border-l border-r px-2 py-1">
+                                            <button type="button" class="increaseBtn px-3 py-1">+</button>
+                                        </div>
+
+                                        <div class="text-sm text-gray-600">
+                                            <div>Item Sale Total: ₹ <span class="raw-item-sale-total">0.00</span></div>
+                                            <div>Item Purchase Total: ₹ <span class="raw-item-purchase-total">0.00</span></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Hidden inputs for the price snapshot -->
+                                    <input type="hidden" name="raw_sale_price[{{ $mid }}]" value="{{ $material['sale_price'] }}" class="raw-sale-price-input">
+                                    <input type="hidden" name="raw_purchase_price[{{ $mid }}]" value="{{ $material['purchase_price'] }}" class="raw-purchase-price-input">
                                 </div>
                             </label>
                         @empty
                             <p class="text-gray-500 text-sm">No raw materials available in current stock.</p>
                         @endforelse
                     </div>
+
+                    <!-- Totals -->
+                    <div class="mt-4 p-4 bg-white rounded border">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Total Sale Value (composition)</p>
+                                <p class="text-xl font-semibold">₹ <span id="totalSaleValue">0.00</span></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Total Purchase Value (composition)</p>
+                                <p class="text-xl font-semibold">₹ <span id="totalPurchaseValue">0.00</span></p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -281,22 +328,90 @@ document.addEventListener('DOMContentLoaded', function () {
             product_type: productTypeDropdown.value,
             quantity: quantityField.value || null,
             opening_stock: openingStockField.value || null,
+            composition_totals: {
+                total_sale_value: parseFloat(document.getElementById('totalSaleValue').innerText.replace(/,/g,'')) || 0,
+                total_purchase_value: parseFloat(document.getElementById('totalPurchaseValue').innerText.replace(/,/g,'')) || 0,
+            }
         };
         document.getElementById('json_data').value = JSON.stringify(payload);
     });
 
-    // 🔹 Two-way binding between Quantity and Opening Stock
-    quantityField.addEventListener('input', function () {
-        if (openingStockField.value !== this.value) {
-            openingStockField.value = this.value;
-        }
+    // Two-way binding between Quantity and Opening Stock
+    if (quantityField && openingStockField) {
+        quantityField.addEventListener('input', function () {
+            if (openingStockField.value !== this.value) {
+                openingStockField.value = this.value;
+            }
+        });
+
+        openingStockField.addEventListener('input', function () {
+            if (quantityField.value !== this.value) {
+                quantityField.value = this.value;
+            }
+        });
+    }
+
+    // RAW MATERIALS: increase/decrease, totals and checkbox handling
+    function recalcTotals() {
+        const cards = document.querySelectorAll('.raw-material-card');
+        let totalSale = 0;
+        let totalPurchase = 0;
+
+        cards.forEach(card => {
+            const checkbox = card.querySelector('.raw-checkbox');
+            const qtyInput = card.querySelector('.raw-qty-input');
+            const salePrice = parseFloat(card.querySelector('.raw-sale-price-input').value || 0);
+            const purchasePrice = parseFloat(card.querySelector('.raw-purchase-price-input').value || 0);
+            const itemSaleTotalEl = card.querySelector('.raw-item-sale-total');
+            const itemPurchaseTotalEl = card.querySelector('.raw-item-purchase-total');
+
+            const qty = parseFloat(qtyInput.value || 0);
+
+            // only show totals if checkbox selected
+            const saleTotal = qty * salePrice;
+            const purchaseTotal = qty * purchasePrice;
+
+            itemSaleTotalEl.innerText = saleTotal.toFixed(2);
+            itemPurchaseTotalEl.innerText = purchaseTotal.toFixed(2);
+
+            if (checkbox.checked && qty > 0) {
+                totalSale += saleTotal;
+                totalPurchase += purchaseTotal;
+            }
+        });
+
+        document.getElementById('totalSaleValue').innerText = totalSale.toFixed(2);
+        document.getElementById('totalPurchaseValue').innerText = totalPurchase.toFixed(2);
+    }
+
+    // add click handlers
+    document.querySelectorAll('.raw-material-card').forEach(card => {
+        const decrease = card.querySelector('.decreaseBtn');
+        const increase = card.querySelector('.increaseBtn');
+        const qtyInput = card.querySelector('.raw-qty-input');
+        const checkbox = card.querySelector('.raw-checkbox');
+
+        decrease.addEventListener('click', function (e) {
+            let v = parseFloat(qtyInput.value || 0);
+            v = Math.max(0, (v - 1));
+            qtyInput.value = v;
+            recalcTotals();
+        });
+
+        increase.addEventListener('click', function (e) {
+            let v = parseFloat(qtyInput.value || 0);
+            v = v + 1;
+            qtyInput.value = v;
+            recalcTotals();
+        });
+
+        // also recalc on manual input
+        qtyInput.addEventListener('input', recalcTotals);
+        checkbox.addEventListener('change', recalcTotals);
     });
 
-    openingStockField.addEventListener('input', function () {
-        if (quantityField.value !== this.value) {
-            quantityField.value = this.value;
-        }
-    });
+    // initial calc
+    recalcTotals();
 });
 </script>
 
