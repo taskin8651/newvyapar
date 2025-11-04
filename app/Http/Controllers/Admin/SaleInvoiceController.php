@@ -270,64 +270,128 @@ public function confirmManufacture($id)
 public function create()
 {
     abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-    $userId = Auth::id();
-    // Customers dropdown
-$userId = auth()->id(); // Logged-in user ID
 
-$select_customers = \App\Models\PartyDetail::select(
-        'id', 
-        'party_name', 
-        'opening_balance', 
-        'opening_balance_type', 
-        'current_balance', 
-        'current_balance_type'
-    )
-    ->where('created_by_id', $userId) // Filter by creator
-    ->get()
-    ->mapWithKeys(function($customer) {
-        // Use current_balance if exists, else opening_balance
-        $balance = $customer->current_balance !== null ? $customer->current_balance : $customer->opening_balance;
-        $type = $customer->current_balance_type ?? $customer->opening_balance_type;
+    $user = Auth::user();
+    $userId = $user->id;
+    $userRole = $user->roles->pluck('title')->first();
 
+    // ✅ Fetch company_id from pivot table (add_business_user)
+    $companyId = $user->select_companies()->pluck('add_businesses.id')->first(); 
+    // or: $companyId = optional($user->select_companies->first())->id;
+
+    /* ======================================================
+       1️⃣ CUSTOMERS DROPDOWN — SAME COMPANY USERS
+    ====================================================== */
+    if ($userRole === 'Super Admin') {
+        $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
+    } elseif ($companyId) {
+        $companyUserIds = \DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
+
+        $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $companyUserIds)->get();
+    } else {
+        $select_customers = \App\Models\PartyDetail::where('created_by_id', $userId)->get();
+    }
+
+    // Format customer dropdown with balance info
+    $select_customers = $select_customers->mapWithKeys(function ($customer) {
+        $balance = $customer->current_balance ?? $customer->opening_balance ?? 0;
+        $type = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
         $balanceFormatted = number_format($balance, 2);
-
-        // Add arrow HTML and color class
-        if ($type === 'Debit') {
-            $display = "₹{$balanceFormatted} Dr - Payable ↑";
-        } else {
-            $display = "₹{$balanceFormatted} Cr - Receivable ↓";
-        }
+        $display = $type === 'Debit'
+            ? "₹{$balanceFormatted} Dr - Payable ↑"
+            : "₹{$balanceFormatted} Cr - Receivable ↓";
 
         return [$customer->id => "{$customer->party_name} ({$display})"];
     });
 
+    /* ======================================================
+       2️⃣ ITEMS DROPDOWN — SAME COMPANY USERS
+    ====================================================== */
+    if ($userRole === 'Super Admin') {
+        $items = \App\Models\AddItem::withoutGlobalScopes()
+            ->whereIn('item_type', ['product', 'service'])
+            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+            ->with('select_unit')
+            ->get();
+    } elseif ($companyId) {
+        $companyUserIds = \DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
 
-        $items = AddItem::where('created_by_id', $userId)
-        ->whereIn('item_type', ['product', 'service'])
-        ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
-        ->with('select_unit')
-        ->get()
-        ->map(function ($item) use ($userId) {
-            // Only calculate stock for products linked to finished_goods or ready_made
-            $item->stock_qty = ($item->item_type === 'product')
-                ? CurrentStock::where('created_by_id', $userId)
+        $items = \App\Models\AddItem::whereIn('created_by_id', $companyUserIds)
+            ->whereIn('item_type', ['product', 'service'])
+            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+            ->with('select_unit')
+            ->get();
+    } else {
+        $items = \App\Models\AddItem::where('created_by_id', $userId)
+            ->whereIn('item_type', ['product', 'service'])
+            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
+            ->with('select_unit')
+            ->get();
+    }
+
+    // Attach stock qty (only for products)
+    $items->map(function ($item) use ($userRole, $companyId, $userId) {
+        if ($item->item_type === 'product') {
+            if ($userRole === 'Super Admin') {
+                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)
+                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
+                    ->sum('qty');
+            } elseif ($companyId) {
+                $companyUserIds = \DB::table('add_business_user')
+                    ->where('add_business_id', $companyId)
+                    ->pluck('user_id')
+                    ->toArray();
+
+                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $companyUserIds)
                     ->where('item_id', $item->id)
                     ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty')
-                : null;
-            return $item;
-        });
+                    ->sum('qty');
+            } else {
+                $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
+                    ->where('item_id', $item->id)
+                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
+                    ->sum('qty');
+            }
+        } else {
+            $item->stock_qty = null;
+        }
+        return $item;
+    });
 
+    /* ======================================================
+       3️⃣ COST & SUB COST CENTERS — SAME COMPANY USERS
+    ====================================================== */
+    $fetchDropdown = function ($model, $column) use ($userRole, $userId, $companyId) {
+        if ($userRole === 'Super Admin') {
+            return $model::withoutGlobalScopes()->pluck($column, 'id')->prepend(trans('global.pleaseSelect'), '');
+        } elseif ($companyId) {
+            $companyUserIds = \DB::table('add_business_user')
+                ->where('add_business_id', $companyId)
+                ->pluck('user_id')
+                ->toArray();
 
-    // Cost centers
-$cost = \App\Models\MainCostCenter::where('created_by_id', $userId)
-    ->pluck('cost_center_name', 'id')
-    ->prepend(trans('global.pleaseSelect'), '');
+            return $model::whereIn('created_by_id', $companyUserIds)
+                ->pluck($column, 'id')
+                ->prepend(trans('global.pleaseSelect'), '');
+        } else {
+            return $model::where('created_by_id', $userId)
+                ->pluck($column, 'id')
+                ->prepend(trans('global.pleaseSelect'), '');
+        }
+    };
 
-// Fetch Sub Cost Centers created by this user
-$sub_cost = \App\Models\SubCostCenter::where('created_by_id', $userId)
-    ->pluck('sub_cost_center_name', 'id')
-    ->prepend(trans('global.pleaseSelect'), '');
+    $cost = $fetchDropdown(\App\Models\MainCostCenter::class, 'cost_center_name');
+    $sub_cost = $fetchDropdown(\App\Models\SubCostCenter::class, 'sub_cost_center_name');
+
+    /* ======================================================
+       4️⃣ RETURN VIEW
+    ====================================================== */
     return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
 }
 
@@ -461,6 +525,7 @@ public function store(Request $request)
         'status' => 'pending',
         'main_cost_center_id' => $request->main_cost_center_id,
         'sub_cost_center_id' => $request->sub_cost_center_id,
+        'price'              => $request->price ?? 0,
     ]);
 
     // Save attachment
@@ -973,22 +1038,50 @@ public function update(Request $request, SaleInvoice $saleInvoice)
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
 
-     public function pdf(SaleInvoice $saleInvoice)
-    {
-        // Bank details for PDF
-        $bankDetails = BankAccount::all();
+public function pdf(SaleInvoice $saleInvoice)
+{
+    // ✅ Only bank accounts where print_bank_details = 1
+    $bankDetails = BankAccount::where('print_bank_details', 1)->get();
 
-        // Only active terms
-        $terms = TermAndCondition::where('status', 'active')->get();
+    // ✅ Only active terms
+    $terms = TermAndCondition::where('status', 'active')->get();
 
-        // Load relationships
-        $saleInvoice->load(
-            'select_customer', 
-            'items', 
-            'created_by'
-        );
+    // ✅ Load all relationships with pivot details
+    $saleInvoice->load([
+        'select_customer',
+        'items' => function ($query) {
+            $query->withPivot([
+                'description',
+                'qty',
+                'unit',
+                'price',
+                'discount_type',
+                'discount',
+                'tax_type',
+                'tax',
+                'amount',
+                'created_by_id',
+                'json_data',
+            ]);
+        },
+        'created_by',
+        'main_cost_center',
+        'sub_cost_center',
+    ]);
 
-        // Return PDF view
-        return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms'));
+    // ✅ Get company through pivot table
+    $user = auth()->user();
+    $company = $user->select_companies()->first(); // get first linked business
+
+    // ✅ Get logo if available
+    $logoUrl = null;
+    if ($company && $company->getFirstMediaUrl('logo_upload')) {
+        $logoUrl = $company->getFirstMediaUrl('logo_upload');
     }
+    
+    // ✅ Return view
+    return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
+}
+
+
 }

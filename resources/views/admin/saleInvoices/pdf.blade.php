@@ -29,9 +29,22 @@
 
         <!-- Header -->
         <div class="text-center mb-2">
-            <h1 class="text-xl font-bold text-blue-800">MARUTI SUZUKI VENTURES</h1>
-            <p class="text-blue-600 text-xs">Authorized Dealer & Service Center</p>
+            <div class="flex items-center justify-center space-x-3">
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="Company Logo" class="h-12 w-auto rounded shadow-sm" style="width: 200px;">
+                @else
+                    <img src="{{ asset('images/default-logo.png') }}" alt="Default Logo" class="h-12 w-auto rounded shadow-sm">
+                @endif
+
+                <div class="text-left">
+                    <h1 class="text-xl font-bold text-blue-800">
+                        {{ $company->company_name ?? 'MARUTI SUZUKI VENTURES' }}
+                    </h1>
+                    <p class="text-blue-600 text-xs">Authorized Dealer & Service Center</p>
+                </div>
+            </div>
         </div>
+
 
         <!-- Invoice Container -->
         <div class="invoice-container bg-white rounded-xl overflow-hidden text-xs">
@@ -151,7 +164,7 @@
                         @forelse($saleInvoice->items as $key => $item)
                             @php
                                 $qty = $item->pivot->qty ?? 1;
-                                $price = $item->sale_price ?? 0;
+                                $price = $item->pivot->price ?? 0;
                                 $amount = $qty * $price;
                                 $total += $amount;
                             @endphp
@@ -252,7 +265,7 @@
 
              <tr class="border-t border-gray-200 bg-blue-50">
                                         <td class="py-1 px-2">Current Balance</td>
-                                        <td class="text-right py-1 px-2">Rs {{ number_format($saleInvoice->select_customer->opening_balance ?? 0, 2) }}</td>
+                                        <td class="text-right py-1 px-2">Rs {{ number_format($saleInvoice->select_customer->current_balance ?? $saleInvoice->select_customer->opening_balance ??  0, 2) }} - {{ $saleInvoice->select_customer->current_balance_type ?? $saleInvoice->select_customer->opening_balance_type ?? 0,2}}</td>
                                     </tr>
         </tbody>
     </table>

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CurrentStock extends Model
 {
-    use SoftDeletes, MultiTenantModelTrait, Auditable, HasFactory;
+    use SoftDeletes,  Auditable, HasFactory;
 
     public $table = 'current_stocks';
 

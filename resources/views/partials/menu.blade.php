@@ -1482,6 +1482,15 @@
                     <span>{{ trans('cruds.userAlert.title') }}</span>
                 </a>
             @endcan
+            @can('term_access')
+                <a href="{{ route('admin.terms.index') }}"
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                          hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+                          {{ request()->is('admin/user-alerts*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+                    <i class="fas fa-bell w-4 mr-3 {{ request()->is('admin/user-alerts*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+                    <span>{{ trans('cruds.term.title') }}</span>
+                </a>
+            @endcan
 
             @can('unit_access')
                 <a href="{{ route('admin.units.index') }}"

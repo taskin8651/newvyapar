@@ -112,6 +112,10 @@ return [
             'created_by_helper' => ' ',
         ],
     ],
+    'term' => [
+        'title'          => 'Terms',
+        'title_singular' => 'Term',
+    ],
     'addBusiness' => [
         'title'          => 'Add Business',
         'title_singular' => 'Add Business',

@@ -91,26 +91,43 @@ public function create()
 {
     abort_if(Gate::denies('purchase_bill_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    $userId = Auth::id();
+    $user = Auth::user();
+    $userRole = $user->roles->pluck('title')->first(); // e.g. Admin, Branch, User, Super Admin
+    $userId = $user->id;
 
-    // 1️⃣ Fetch customers created by the logged-in user
-    $select_customers = PartyDetail::where('created_by_id', $userId)->get();
+    // ✅ Fetch company_id from pivot table `add_business_user`
+    $companyId = $user->select_companies()->pluck('add_businesses.id')->first(); 
+    // or: $companyId = optional($user->select_companies->first())->id;
 
-    // 2️⃣ Prepare array for dropdown + JS
+   
+
+    /* ======================================================
+       1️⃣ PARTY (CUSTOMER/SUPPLIER) LIST — SAME COMPANY USERS
+    ====================================================== */
+    if ($userRole === 'Super Admin') {
+        $select_customers = PartyDetail::withoutGlobalScopes()->get();
+    } elseif ($companyId) {
+        // Get all user IDs (admin, branch, user) of the same company via pivot relation
+        $companyUserIds = \DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
+
+        $select_customers = PartyDetail::whereIn('created_by_id', $companyUserIds)->get();
+    } else {
+        // Fallback for users without company_id
+        $select_customers = PartyDetail::where('created_by_id', $userId)->get();
+    }
+
+    // Format customer details with balance info
     $select_customers_details = $select_customers->map(function ($c) {
-        $balance = !is_null($c->current_balance) ? $c->current_balance : ($c->opening_balance ?? 0);
-        $balance_type = !is_null($c->current_balance_type) ? $c->current_balance_type : ($c->opening_balance_type ?? 'Debit');
-        $balance_date = $c->updated_at ? $c->updated_at->format('d-m-Y') : ($c->created_at->format('d-m-Y') ?? '-');
+        $balance = $c->current_balance ?? $c->opening_balance ?? 0;
+        $balance_type = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
+        $balance_date = $c->updated_at ? $c->updated_at->format('d-m-Y') : ($c->created_at?->format('d-m-Y') ?? '-');
 
-        if ($balance_type === 'Debit') {
-            $icon = '↑';
-            $color = 'red';
-            $label = 'Payable';
-        } else {
-            $icon = '↓';
-            $color = 'green';
-            $label = 'Receivable';
-        }
+        $icon = $balance_type === 'Debit' ? '↑' : '↓';
+        $color = $balance_type === 'Debit' ? 'red' : 'green';
+        $label = $balance_type === 'Debit' ? 'Payable' : 'Receivable';
 
         $balance_text = "<span style='color: $color; font-weight:bold;'>"
             . $balance . " ($balance_date) $balance_type ($label) $icon</span>";
@@ -139,32 +156,101 @@ public function create()
         ];
     });
 
-    // 3️⃣ Fetch AddItems created by this user (product + service)
-    $items = AddItem::where('created_by_id', $userId)
-        ->whereIn('item_type', ['product', 'service'])
-        ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
-        ->with('select_unit')
-        ->get()
-        ->map(function ($item) use ($userId) {
-            // Only calculate stock for products linked to finished_goods or ready_made
-            $item->stock_qty = ($item->item_type === 'product')
-                ? CurrentStock::where('created_by_id', $userId)
+    /* ======================================================
+       2️⃣ ITEMS FETCHING (ALL ITEM TYPES) — SAME COMPANY USERS
+    ====================================================== */
+    if ($userRole === 'Super Admin') {
+        $items = AddItem::withoutGlobalScopes()
+            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type', 'created_by_id')
+            ->with('select_unit')
+            ->get();
+    } elseif ($companyId) {
+        $companyUserIds = \DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
+
+        $items = AddItem::whereIn('created_by_id', $companyUserIds)
+            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type', 'created_by_id')
+            ->with('select_unit')
+            ->get();
+    } else {
+        $items = AddItem::where('created_by_id', $userId)
+            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type', 'created_by_id')
+            ->with('select_unit')
+            ->get();
+    }
+
+    /* ======================================================
+       3️⃣ ATTACH STOCK QUANTITY — SAME COMPANY USERS
+    ====================================================== */
+    $items->map(function ($item) use ($userRole, $companyId, $userId) {
+        if ($item->item_type === 'service') {
+            $item->stock_qty = null;
+        } else {
+            if ($userRole === 'Super Admin') {
+                $item->stock_qty = CurrentStock::where('item_id', $item->id)->sum('qty');
+            } elseif ($companyId) {
+                $companyUserIds = \DB::table('add_business_user')
+                    ->where('add_business_id', $companyId)
+                    ->pluck('user_id')
+                    ->toArray();
+
+                $item->stock_qty = CurrentStock::whereIn('created_by_id', $companyUserIds)
                     ->where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty')
-                : null;
-            return $item;
-        });
+                    ->sum('qty');
+            } else {
+                $item->stock_qty = CurrentStock::where('created_by_id', $userId)
+                    ->where('item_id', $item->id)
+                    ->sum('qty');
+            }
+        }
+        return $item;
+    });
 
-    // 4️⃣ Supporting dropdowns
-    $product_ids = $items->where('item_type', 'product')->pluck('id')->toArray();
-    $units = Unit::where('created_by_id', $userId)->pluck('base_unit', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $cost = \App\Models\MainCostCenter::where('created_by_id', $userId)->pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $sub_cost = \App\Models\SubCostCenter::where('created_by_id', $userId)->pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $payment_types = BankAccount::where('created_by_id', $userId)->pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $tax_rates = TaxRate::where('created_by_id', $userId)->select('id', 'name', 'parcentage')->get();
+    /* ======================================================
+       4️⃣ SUPPORTING DROPDOWNS — SAME COMPANY USERS
+    ====================================================== */
+    $product_ids = $items->pluck('id')->toArray();
 
-    // 5️⃣ Pass to view
+    $fetchDropdown = function ($model, $column) use ($userRole, $userId, $companyId) {
+        if ($userRole === 'Super Admin') {
+            return $model::withoutGlobalScopes()->pluck($column, 'id')->prepend(trans('global.pleaseSelect'), '');
+        } elseif ($companyId) {
+            $companyUserIds = \DB::table('add_business_user')
+                ->where('add_business_id', $companyId)
+                ->pluck('user_id')
+                ->toArray();
+
+            return $model::whereIn('created_by_id', $companyUserIds)
+                ->pluck($column, 'id')
+                ->prepend(trans('global.pleaseSelect'), '');
+        } else {
+            return $model::where('created_by_id', $userId)
+                ->pluck($column, 'id')
+                ->prepend(trans('global.pleaseSelect'), '');
+        }
+    };
+
+    $units = $fetchDropdown(\App\Models\Unit::class, 'base_unit');
+    $cost = $fetchDropdown(\App\Models\MainCostCenter::class, 'cost_center_name');
+    $sub_cost = $fetchDropdown(\App\Models\SubCostCenter::class, 'sub_cost_center_name');
+    $payment_types = $fetchDropdown(\App\Models\BankAccount::class, 'account_name');
+
+    $tax_rates = ($userRole === 'Super Admin')
+        ? \App\Models\TaxRate::withoutGlobalScopes()->select('id', 'name', 'parcentage')->get()
+        : (($companyId)
+            ? \App\Models\TaxRate::whereIn(
+                'created_by_id',
+                \DB::table('add_business_user')
+                    ->where('add_business_id', $companyId)
+                    ->pluck('user_id')
+            )->select('id', 'name', 'parcentage')->get()
+            : \App\Models\TaxRate::where('created_by_id', $userId)->select('id', 'name', 'parcentage')->get());
+
+    /* ======================================================
+       5️⃣ RETURN VIEW
+    ====================================================== */
     return view('admin.purchaseBills.create', compact(
         'items',
         'product_ids',
@@ -177,6 +263,9 @@ public function create()
         'tax_rates'
     ));
 }
+
+
+
 
     public function getSubCostCenters($mainCostCenterId)
     {
@@ -452,7 +541,7 @@ public function edit(PurchaseBill $purchaseBill)
     }
 
     // All available items for dropdown
-    $items = AddItem::whereIn('item_type', ['product', 'service'])
+    $items = AddItem::whereIn('item_type',['product', 'service','raw_material','finished_goods','single','ready_made'])
         ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
         ->with('select_unit')
         ->get();

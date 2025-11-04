@@ -24,39 +24,40 @@ public function index()
     abort_if(Gate::denies('current_stock_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+    $userRole = $user->roles->pluck('title')->first();
 
-    // 🔹 Super Admin → See all data (ignore global scopes)
+    // 🟢 1️⃣ Super Admin → sabhi records dekh sakta hai
     if ($userRole === 'Super Admin') {
-        $currentStocks = CurrentStock::withoutGlobalScopes()
+        $currentStocks = \App\Models\CurrentStock::withoutGlobalScopes()
             ->with([
-                'addItems' => function ($query) {
-                    $query->withoutGlobalScopes(); // ignore scopes on AddItem too
-                },
-                'user' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
-                'created_by' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
-                'party' => function ($query) {
-                    $query->withoutGlobalScopes();
-                }
+                'addItems' => fn($q) => $q->withoutGlobalScopes(),
+                'user' => fn($q) => $q->withoutGlobalScopes(),
+                'created_by' => fn($q) => $q->withoutGlobalScopes(),
+                'party' => fn($q) => $q->withoutGlobalScopes(),
             ])
             ->latest()
             ->get();
-    } 
-    // 🔹 Other users → Only their own data
-    else {
-        $currentStocks = CurrentStock::with(['addItems', 'user', 'createdBy', 'party'])
-            ->where('created_by_id', $user->id)
+
+    } else {
+        // 🟢 2️⃣ Admin / Branch / Same Company users
+
+        // Step 1️⃣ - Get all company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣ - Get all user IDs (Admin + Branch) under same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣ - Fetch all CurrentStock entries created by users of same company
+        $currentStocks = \App\Models\CurrentStock::with(['addItems', 'user', 'createdBy', 'party'])
+            ->whereIn('created_by_id', $relatedUserIds)
             ->latest()
             ->get();
     }
-
+    dd( $currentStocks);
     return view('admin.currentStocks.index', compact('currentStocks'));
 }
-
 
 
     public function create()
