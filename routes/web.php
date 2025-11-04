@@ -372,7 +372,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('sale-invoice/customer-details/{id}', [SaleInvoiceController::class, 'getCustomerDetails'])->name('saleInvoice.getCustomerDetails');
     Route::get('sale-invoice/item-composition/{id}', [SaleInvoiceController::class, 'getItemComposition'])->name('saleInvoice.getItemComposition');
     Route::get('sale-invoice/profit-details/{id}', [SaleInvoiceController::class, 'profitDetails'])->name('saleInvoice.profitDetails');
-    Route::post('sale-invoices/{id}/confirm-manufacture', [SaleInvoiceController::class, 'confirmManufacture'])->name('admin.sale-invoices.confirm');
+    Route::post('sale-invoices/{id}/confirm-manufacture', [SaleInvoiceController::class, 'confirmManufacture'])
+        ->name('sale-invoices.confirm');
+
+    Route::get('sale-invoices/{saleInvoice}/profit-loss', [SaleInvoiceController::class, 'getProfitLoss'])->name('sale-invoices.get-profit-loss');
+    Route::post('sale-invoices/{saleInvoice}/profit-loss', [SaleInvoiceController::class, 'updateProfitLoss'])->name('sale-invoices.update-profit-loss');
 
 
 });

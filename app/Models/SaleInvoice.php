@@ -137,5 +137,8 @@ class SaleInvoice extends Model implements HasMedia
     {
         return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
     }
-    
+
+
+
+
 }
