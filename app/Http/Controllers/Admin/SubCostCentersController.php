@@ -26,25 +26,33 @@ public function index()
     $user = auth()->user();
     $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
+    // 🟢 1️⃣ Super Admin → sabhi records (ignore tenant scope)
     if ($userRole === 'Super Admin') {
-        // Super Admin → sabhi records dekh sakta hai
         $subCostCenters = SubCostCenter::withoutGlobalScopes()
             ->with([
                 'main_cost_center' => fn($q) => $q->withoutGlobalScopes(),
                 'created_by' => fn($q) => $q->withoutGlobalScopes(),
             ])
             ->get();
-    } elseif ($userRole === 'Admin') {
-        // Admin → apne dwara banaye gaye users ke records + apne records
-        $createdUserIds = \App\Models\User::where('created_by_id', $user->id)->pluck('id');
 
-        $subCostCenters = SubCostCenter::with(['main_cost_center', 'created_by'])
-            ->whereIn('created_by_id', $createdUserIds->push($user->id)) // include admin's own ID too
-            ->get();
     } else {
-        // Normal user → sirf apne created records
-        $subCostCenters = SubCostCenter::with(['main_cost_center', 'created_by'])
-            ->where('created_by_id', $user->id)
+        // 🟢 2️⃣ Admin / Branch / Same Company Users
+
+        // Step 1️⃣: Get company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣: Get all user IDs of the same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣: Fetch all SubCostCenters created by users of same company
+        $subCostCenters = SubCostCenter::withoutGlobalScopes()
+            ->with([
+                'main_cost_center' => fn($q) => $q->withoutGlobalScopes(),
+                'created_by' => fn($q) => $q->withoutGlobalScopes(),
+            ])
+            ->whereIn('created_by_id', $relatedUserIds)
             ->get();
     }
 
@@ -53,14 +61,41 @@ public function index()
 
 
 
-    public function create()
-    {
-        abort_if(Gate::denies('sub_cost_center_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function create()
+{
+    abort_if(Gate::denies('sub_cost_center_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $main_cost_centers = MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first();
 
-        return view('admin.subCostCenters.create', compact('main_cost_centers'));
+    // 🟢 1️⃣ Super Admin → All MainCostCenters
+    if ($userRole === 'Super Admin') {
+        $main_cost_centers = MainCostCenter::withoutGlobalScopes()
+            ->pluck('cost_center_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
+
+    } else {
+        // 🟢 2️⃣ Admin / Branch / Same Company Users
+
+        // Step 1️⃣: Find company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣: Get all user IDs (Admin + Branch) of same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣: Get MainCostCenters linked with the same company (created by admin or same company users)
+        $main_cost_centers = MainCostCenter::withoutGlobalScopes()
+            ->whereIn('link_with_company_id', $companyIds)
+            ->whereIn('created_by_id', $relatedUserIds)
+            ->pluck('cost_center_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
     }
+
+    return view('admin.subCostCenters.create', compact('main_cost_centers'));
+}
+
 
    public function store(StoreSubCostCenterRequest $request)
 {

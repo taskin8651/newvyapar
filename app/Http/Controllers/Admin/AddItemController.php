@@ -28,17 +28,28 @@ public function index()
     abort_if(Gate::denies('add_item_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+    $userRole = $user->roles->pluck('title')->first();
 
+    // 🟢 1️⃣ Super Admin → sabhi records dekh sakta hai
     if ($userRole === 'Super Admin') {
-        // Super Admin ko saara data dikhe, global scopes ignore karke
-        $addItems = AddItem::withoutGlobalScopes()
+        $addItems = \App\Models\AddItem::withoutGlobalScopes()
             ->with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
             ->get();
+
     } else {
-        // Baaki users ke liye filter lagayein (example: user ke own created entries)
-        $addItems = AddItem::with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
-            ->where('created_by_id', $user->id)
+        // 🟢 2️⃣ Admin / Branch / Same Company users
+
+        // Step 1️⃣ - Get all company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣ - Get all user IDs (Admin + Branch) under same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣ - Fetch all AddItems created by users of same company
+        $addItems = \App\Models\AddItem::with(['select_unit', 'select_categories', 'select_tax', 'created_by'])
+            ->whereIn('created_by_id', $relatedUserIds)
             ->get();
     }
 

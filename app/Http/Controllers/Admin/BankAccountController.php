@@ -21,29 +21,34 @@ public function index()
     abort_if(Gate::denies('bank_account_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // Assuming one role per user
+    $userRole = $user->roles->pluck('title')->first();
 
+    // 🟢 1️⃣ Super Admin → sabhi records dekh sakta hai
     if ($userRole === 'Super Admin') {
-        // Super Admin → see all data
-        $bankAccounts = BankAccount::withoutGlobalScopes()
+        $bankAccounts = \App\Models\BankAccount::withoutGlobalScopes()
             ->with(['created_by' => fn($q) => $q->withoutGlobalScopes()])
             ->get();
-    } elseif ($userRole === 'Admin') {
-        // Admin → apne dwara register kiye gaye users ka data + apna data
-        $createdUserIds = \App\Models\User::where('created_by_id', $user->id)->pluck('id');
-        
-        $bankAccounts = BankAccount::with(['created_by'])
-            ->whereIn('created_by_id', $createdUserIds->push($user->id)) // apna bhi include
-            ->get();
+
     } else {
-        // Normal User → sirf apna data
-        $bankAccounts = BankAccount::with(['created_by'])
-            ->where('created_by_id', $user->id)
+        // 🟢 2️⃣ Admin / Branch / Same Company users
+
+        // Step 1️⃣ - Get all company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣ - Get all user IDs (Admin + Branch) under same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣ - Fetch all bank accounts created by users of same company
+        $bankAccounts = \App\Models\BankAccount::with(['created_by'])
+            ->whereIn('created_by_id', $relatedUserIds)
             ->get();
     }
 
     return view('admin.bankAccounts.index', compact('bankAccounts'));
 }
+
 
 
 
@@ -54,12 +59,17 @@ public function index()
         return view('admin.bankAccounts.create');
     }
 
-    public function store(StoreBankAccountRequest $request)
-    {
-        $bankAccount = BankAccount::create($request->all());
+public function store(StoreBankAccountRequest $request)
+{
+    $data = $request->all();
+    $data['created_by_id'] = auth()->id(); // ✅ Logged-in user ka ID store karega
 
-        return redirect()->route('admin.bank-accounts.index');
-    }
+    $bankAccount = BankAccount::create($data);
+
+    return redirect()->route('admin.bank-accounts.index')
+        ->with('success', 'Bank account created successfully!');
+}
+
 
     public function edit(BankAccount $bankAccount)
     {

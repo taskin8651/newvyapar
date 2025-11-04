@@ -28,42 +28,80 @@ public function index()
     $user = auth()->user();
     $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
 
+    // 🟢 1. Super Admin → Show all records
     if ($userRole === 'Super Admin') {
-        // Super Admin ke liye saara data, global scopes ignore karke
         $mainCostCenters = MainCostCenter::withoutGlobalScopes()
             ->with([
-                'link_with_company' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
-                'responsible_manager' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
-                'created_by' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
+                'link_with_company' => fn($q) => $q->withoutGlobalScopes(),
+                'responsible_manager' => fn($q) => $q->withoutGlobalScopes(),
+                'created_by' => fn($q) => $q->withoutGlobalScopes(),
             ])
             ->get();
+
     } else {
-        // Baaki users ke liye filter (apne created records)
+        // 🟢 2. Admin / Branch / Same Company Users
+
+        // Step 1️⃣ - Get company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣ - Get all user IDs of same company (admin, branch, other users)
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣ - Fetch all MainCostCenters linked with same company
         $mainCostCenters = MainCostCenter::with(['link_with_company', 'responsible_manager', 'created_by'])
-            ->where('created_by_id', $user->id)
+            ->whereIn('link_with_company_id', $companyIds)
+            ->orWhereIn('created_by_id', $relatedUserIds)
             ->get();
+            
     }
 
     return view('admin.mainCostCenters.index', compact('mainCostCenters'));
 }
 
 
-    public function create()
-    {
-        abort_if(Gate::denies('main_cost_center_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $link_with_companies = AddBusiness::pluck('company_name', 'id')->prepend(trans('global.pleaseSelect'), '');
 
-        $responsible_managers = User::pluck('name', 'id')->prepend(trans('global.pleaseSelect'), '');
+public function create()
+{
+    abort_if(Gate::denies('main_cost_center_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        return view('admin.mainCostCenters.create', compact('link_with_companies', 'responsible_managers'));
+    $user = auth()->user();
+    $userRole = $user->roles->pluck('title')->first();
+
+    // 🟢 1️⃣ Super Admin → sabhi companies dekh sakta hai
+    if ($userRole === 'Super Admin') {
+        $link_with_companies = \App\Models\AddBusiness::withoutGlobalScopes()
+            ->pluck('company_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
+    } else {
+        // 🟢 2️⃣ Admin / Branch / Same Company Users
+
+        // Step 1️⃣: Find company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣: Get all user IDs (Admin + Branch) of same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣: Show only companies where current user's company matches
+        $link_with_companies = \App\Models\AddBusiness::withoutGlobalScopes()
+            ->whereIn('id', $companyIds)
+            ->pluck('company_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
     }
+
+    // 🟢 Responsible managers — only users from same company (Admin + Branch)
+    $responsible_managers = \App\Models\User::withoutGlobalScopes()
+        ->whereIn('id', $relatedUserIds ?? [$user->id])
+        ->pluck('name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+
+    return view('admin.mainCostCenters.create', compact('link_with_companies', 'responsible_managers'));
+}
+
 
 public function store(StoreMainCostCenterRequest $request)
 {

@@ -23,31 +23,34 @@ public function index()
     abort_if(Gate::denies('cash_in_hand_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+    $userRole = $user->roles->pluck('title')->first();
 
+    // 🟢 1️⃣ Super Admin → sabhi records dekh sakta hai
     if ($userRole === 'Super Admin') {
-        // 🔹 Super Admin → sab data, bina kisi restriction ke
-        $cashInHands = CashInHand::withoutGlobalScopes()
+        $cashInHands = \App\Models\CashInHand::withoutGlobalScopes()
             ->with(['created_by' => fn($query) => $query->withoutGlobalScopes()])
             ->get();
 
-    } elseif ($userRole === 'Admin') {
-        // 🔹 Admin → apne dwara register kiye users + apna data
-        $createdUserIds = \App\Models\User::where('created_by_id', $user->id)->pluck('id');
-
-        $cashInHands = CashInHand::with(['created_by'])
-            ->whereIn('created_by_id', $createdUserIds->push($user->id)) // apna bhi include
-            ->get();
-
     } else {
-        // 🔹 Normal User → sirf apna data
-        $cashInHands = CashInHand::with(['created_by'])
-            ->where('created_by_id', $user->id)
+        // 🟢 2️⃣ Admin / Branch / Same Company users
+
+        // Step 1️⃣ - Get all company IDs linked with this user
+        $companyIds = $user->select_companies()->pluck('id')->toArray();
+
+        // Step 2️⃣ - Get all user IDs (Admin + Branch) under same company
+        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+            $q->whereIn('add_businesses.id', $companyIds);
+        })->pluck('id')->toArray();
+
+        // Step 3️⃣ - Fetch all Cash In Hand entries created by users of same company
+        $cashInHands = \App\Models\CashInHand::with(['created_by'])
+            ->whereIn('created_by_id', $relatedUserIds)
             ->get();
     }
 
     return view('admin.cashInHands.index', compact('cashInHands'));
 }
+
 
 
 
