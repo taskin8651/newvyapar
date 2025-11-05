@@ -134,6 +134,10 @@
             </div>
 
             <!-- UPI QR Code Upload (Spatie Media Library) -->
+            @php
+                $upiQr = $bankAccount->getMedia('upi_qr');
+            @endphp
+
             <div class="bg-blue-50 p-4 rounded-lg shadow-inner mt-4">
                 <label class="block font-semibold text-gray-700 mb-2">
                     Upload UPI QR Code (Optional)
@@ -147,9 +151,9 @@
 
                         <input type="file" name="upi_qr" id="upi_qr" accept="image/*" class="hidden" onchange="previewQR(event)">
 
-                        @if($bankAccount->upi_qr->count())
+                        @if($upiQr->count() > 0)
                             <div id="qrPreviewContainer" class="w-full h-full relative">
-                                <img id="qrPreview" src="{{ $bankAccount->upi_qr[0]->preview ?? $bankAccount->upi_qr[0]->url }}" 
+                                <img id="qrPreview" src="{{ $upiQr[0]->getUrl() }}" 
                                      class="w-full h-full object-contain p-2 rounded-xl" />
 
                                 <button type="button" 
@@ -169,7 +173,7 @@
                             </div>
                         @endif
 
-                        <div id="qrPlaceholder" class="{{ $bankAccount->upi_qr->count() ? 'hidden' : '' }} flex flex-col items-center text-center text-gray-500">
+                        <div id="qrPlaceholder" class="{{ $upiQr->count() ? 'hidden' : '' }} flex flex-col items-center text-center text-gray-500">
                             <i class="fas fa-upload text-2xl mb-1"></i>
                             <p class="text-xs">Click to Upload QR</p>
                         </div>
