@@ -306,18 +306,24 @@
                     <td class="px-2 py-1">{{ $bank->account_holder_name ?? '-' }}</td>
                 </tr>
 
-                {{-- ✅ UPI QR Row --}}
-                @if($bank->upi_qr)
-                    <img src="{{ $bank->upi_qr }}" width="100" height="100" alt="UPI QR">
-                    @if($bank->upi_id)
-                        <p>{{ $bank->upi_id }}</p>
-                    @endif
+                {{-- ✅ Show UPI QR if uploaded --}}
+                @if($bank->print_upi_qr && $bank->upi_qr)
+                    <tr>
+                        <td class="font-medium px-2 py-1">UPI QR:</td>
+                        <td class="px-2 py-1">
+                            <img src="{{ $bank->upi_qr }}" width="100" height="100" alt="UPI QR">
+                            @if($bank->upi)
+                                <p class="mt-1 font-semibold">{{ $bank->upi }}</p>
+                            @endif
+                        </td>
+                    </tr>
                 @endif
 
             </tbody>
         @endif
     @endforeach
 </table>
+
 
 
                             </td>

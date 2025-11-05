@@ -19,7 +19,7 @@ class BankAccount extends Model implements HasMedia
     public $table = 'bank_accounts';
 
     protected $appends = [
-        'upi_qr', // ⭐ Add accessor to include QR in JSON
+        'upi_qr', // ✅ Will return UPI QR URL
     ];
 
     protected $dates = [
@@ -40,9 +40,6 @@ class BankAccount extends Model implements HasMedia
         'upi',
         'print_upi_qr',
         'print_bank_details',
-        'created_at',
-        'updated_at',
-        'deleted_at',
         'created_by_id',
     ];
 
@@ -58,7 +55,9 @@ class BankAccount extends Model implements HasMedia
 
     public function setAsOfDateAttribute($value)
     {
-        $this->attributes['as_of_date'] = $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
+        $this->attributes['as_of_date'] = $value
+            ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d')
+            : null;
     }
 
     public function created_by()
@@ -66,23 +65,16 @@ class BankAccount extends Model implements HasMedia
         return $this->belongsTo(User::class, 'created_by_id');
     }
 
-    /* ✅ Register Media Conversions (optional but recommended) */
+    /* ✅ UPI QR Accessor: returns only URL string */
+    public function getUpiQrAttribute()
+    {
+        $media = $this->getFirstMedia('upi_qr');
+        return $media ? $media->getUrl() : null;
+    }
+
     public function registerMediaConversions(Media $media = null): void
     {
         $this->addMediaConversion('thumb')->fit('crop', 50, 50);
         $this->addMediaConversion('preview')->fit('crop', 200, 200);
-    }
-
-    /* ✅ Add Accessor for UPI QR */
-    public function getUpiQrAttribute()
-    {
-        $files = $this->getMedia('upi_qr');
-        $files->each(function ($item) {
-            $item->url       = $item->getUrl();
-            $item->thumbnail = $item->getUrl('thumb');
-            $item->preview   = $item->getUrl('preview');
-        });
-
-        return $files;
     }
 }
