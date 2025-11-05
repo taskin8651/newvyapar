@@ -1042,7 +1042,7 @@ public function pdf(SaleInvoice $saleInvoice)
 {
     // ✅ Fetch banks where bank details should be printed
     $bankDetails = BankAccount::where('print_bank_details', 1)->get();
-
+    
     // ✅ Active terms
     $terms = TermAndCondition::where('status', 'active')->get();
 
@@ -1069,16 +1069,33 @@ public function pdf(SaleInvoice $saleInvoice)
         'sub_cost_center',
     ]);
 
-    // ✅ Logged-in user company
+    // ✅ Get company via pivot
     $user = auth()->user();
     $company = $user->select_companies()->first();
 
-    // ✅ Company logo
+    // ✅ Company logo (string URL)
     $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+
+    // ✅ Attach UPI QR for each bank (if `print_upi_qr = 1`)
+    foreach ($bankDetails as $bank) {
+        if ($bank->print_upi_qr == 1) {
+
+            // ✅ Correct: Get only URL (string), not full media object
+            $upiQrMedia = $bank->getFirstMedia('upi_qr'); 
+
+            $bank->upi_qr = $upiQrMedia ? $upiQrMedia->getUrl() : null;
+
+        } else {
+            $bank->upi_qr = null;
+        }
+    }
+
+
+    // 🔍 Test Output
+    // dd($bankDetails->pluck('upi_qr', 'bank_name'));
 
     return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
 }
-
 
 
 
