@@ -286,29 +286,40 @@
                                     <i class="fas fa-university mr-1"></i> Bank Details
                                 </h3>
                                 <table class="w-full text-xs">
-                                    @foreach($bankDetails as $bank)
-                                        @if($bank->print_bank_details)
-                                            <tbody>
-                                                <tr>
-                                                    <td class="font-medium px-2 py-1">Bank Name:</td>
-                                                    <td class="px-2 py-1">{{ $bank->bank_name ?? '-' }}</td>
-                                                </tr>
-                                                <tr class="bg-gray-50">
-                                                    <td class="font-medium px-2 py-1">Account No.:</td>
-                                                    <td class="px-2 py-1">{{ $bank->account_number ?? '-' }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="font-medium px-2 py-1">IFSC Code:</td>
-                                                    <td class="px-2 py-1">{{ $bank->ifsc_code ?? '-' }}</td>
-                                                </tr>
-                                                <tr class="bg-gray-50">
-                                                    <td class="font-medium px-2 py-1">Account Holder:</td>
-                                                    <td class="px-2 py-1">{{ $bank->account_holder_name ?? '-' }}</td>
-                                                </tr>
-                                            </tbody>
-                                        @endif
-                                    @endforeach
-                                </table>
+    @foreach($bankDetails as $bank)
+        @if($bank->print_bank_details)
+            <tbody>
+                <tr>
+                    <td class="font-medium px-2 py-1">Bank Name:</td>
+                    <td class="px-2 py-1">{{ $bank->bank_name ?? '-' }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="font-medium px-2 py-1">Account No.:</td>
+                    <td class="px-2 py-1">{{ $bank->account_number ?? '-' }}</td>
+                </tr>
+                <tr>
+                    <td class="font-medium px-2 py-1">IFSC Code:</td>
+                    <td class="px-2 py-1">{{ $bank->ifsc_code ?? '-' }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="font-medium px-2 py-1">Account Holder:</td>
+                    <td class="px-2 py-1">{{ $bank->account_holder_name ?? '-' }}</td>
+                </tr>
+
+                {{-- ✅ UPI QR Row --}}
+                @if($bank->upi_qr)
+                    <img src="{{ $bank->upi_qr }}" width="100" height="100" alt="UPI QR">
+                    @if($bank->upi_id)
+                        <p>{{ $bank->upi_id }}</p>
+                    @endif
+                @endif
+
+            </tbody>
+        @endif
+    @endforeach
+</table>
+
+
                             </td>
 
                             <!-- Terms & Conditions -->
