@@ -1040,13 +1040,13 @@ public function update(Request $request, SaleInvoice $saleInvoice)
 
 public function pdf(SaleInvoice $saleInvoice)
 {
-    // ✅ Only bank accounts where print_bank_details = 1
+    // ✅ Fetch banks where bank details should be printed
     $bankDetails = BankAccount::where('print_bank_details', 1)->get();
 
-    // ✅ Only active terms
+    // ✅ Active terms
     $terms = TermAndCondition::where('status', 'active')->get();
 
-    // ✅ Load all relationships with pivot details
+    // ✅ Load relations
     $saleInvoice->load([
         'select_customer',
         'items' => function ($query) {
@@ -1069,19 +1069,35 @@ public function pdf(SaleInvoice $saleInvoice)
         'sub_cost_center',
     ]);
 
-    // ✅ Get company through pivot table
+    // ✅ Get company via pivot
     $user = auth()->user();
-    $company = $user->select_companies()->first(); // get first linked business
+    $company = $user->select_companies()->first();
 
-    // ✅ Get logo if available
-    $logoUrl = null;
-    if ($company && $company->getFirstMediaUrl('logo_upload')) {
-        $logoUrl = $company->getFirstMediaUrl('logo_upload');
+    // ✅ Company logo
+    $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+
+    // ✅ Attach UPI QR for each bank (if `print_upi_qr = 1`)
+    foreach ($bankDetails as $bank) {
+        if ($bank->print_upi_qr == 1) {
+
+            // ✅ Correct: Get only URL (string), not full media object
+            $upiQrMedia = $bank->getFirstMedia('upi_qr'); 
+
+            $bank->upi_qr = $upiQrMedia ? $upiQrMedia->getUrl() : null;
+
+        } else {
+            $bank->upi_qr = null;
+        }
     }
-    
-    // ✅ Return view
+
+
+    // 🔍 Test Output
+    // dd($bankDetails->pluck('upi_qr', 'bank_name'));
+
     return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
 }
+
+
 
 
 }

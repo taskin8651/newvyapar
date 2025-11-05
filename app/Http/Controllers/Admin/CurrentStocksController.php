@@ -55,7 +55,7 @@ public function index()
             ->latest()
             ->get();
     }
-    dd( $currentStocks);
+
     return view('admin.currentStocks.index', compact('currentStocks'));
 }
 
