@@ -25,7 +25,7 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-4 px-2 text-xs">
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-4xl mx-auto border border-gray-300 bg-white p-4 rounded-lg shadow-md">
 
         <!-- Header -->
         <div class="text-center mb-2">
@@ -52,7 +52,7 @@
             <!-- Header -->
             <div class="header-gradient text-white p-4 text-xs">
                 <div class="flex justify-between items-start">
-                    <div>
+                    <div class="font-bold">
                         <h1 class="text-lg font-bold">SALE INVOICE</h1>
                         <p class="text-blue-200 mt-1 text-xs">ORIGINAL FOR RECIPIENT</p>
                         <div class="mt-2 text-xs">
@@ -61,7 +61,7 @@
                             <p><i class="fas fa-envelope mr-1"></i> marutisuzukiventures@gmail.com</p>
                         </div>
                     </div>
-                    <div class="text-right bg-white/10 p-2 rounded-lg text-xs">
+                    <div class="text-right bg-white text-blue-700 p-2 rounded-lg text-xs">
                         <p class="font-semibold">GSTIN: 10ABZFM8479K1ZC</p>
                         <p>State: Bihar</p>
                     </div>
@@ -223,6 +223,18 @@
                                             {{ $saleInvoice->payment_mode ?? 'N/A' }}
                                         </td>
                                     </tr>
+
+                                    <tr>
+                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
+                                            <i class="fas fa-receipt mr-1"></i> Notes
+                                        </th>
+                                    </tr>
+
+                                     <tr>
+                                        <td class="bg-blue-100 font-medium py-7 px-2 text-center">
+                                            {{ $saleInvoice->notes ?? 'N/A' }}
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </td>
@@ -237,37 +249,63 @@
                 </th>
             </tr>
         </thead>
-        <tbody>
-            <tr class="bg-blue-100">
-                <td class="font-medium py-1 px-2">Subtotal</td>
-                <td class="text-right font-medium py-1 px-2">
-                    Rs {{ number_format($total, 2) }}
-                </td>
-            </tr>
-            <tr>
-                <td class="font-medium py-1 px-2">Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})</td>
-                <td class="text-right py-1 px-2">
-                    Rs {{ number_format($saleInvoice->discount ?? 0, 2) }}
-                </td>
-            </tr>
-            <tr>
-            <td class="font-medium py-1 px-2">GST({{ $item->pivot->tax ?? 0 }}%)</td>
-                <td class="text-right py-1 px-2">
-                    Rs {{ number_format($saleInvoice->tax ?? 0, 2) }}
-                </td>
-            </tr>
-            <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
-                <td class="py-1 px-2">Grand Total</td>
-                <td class="text-right py-1 px-2">
-                    Rs {{ number_format($saleInvoice->total ?? $total, 2) }}
-                </td>
-            </tr>
+        @php
+    // Previous balance nikal rahe hain
+    $previous_balance = $saleInvoice->select_customer->current_balance 
+        ?? $saleInvoice->select_customer->opening_balance 
+        ?? 0;
 
-             <tr class="border-t border-gray-200 bg-blue-50">
-                                        <td class="py-1 px-2">Current Balance</td>
-                                        <td class="text-right py-1 px-2">Rs {{ number_format($saleInvoice->select_customer->current_balance ?? $saleInvoice->select_customer->opening_balance ??  0, 2) }} - {{ $saleInvoice->select_customer->current_balance_type ?? $saleInvoice->select_customer->opening_balance_type ?? 0,2}}</td>
-                                    </tr>
-        </tbody>
+    // Grand total (already calculated)
+    $grand_total = $saleInvoice->total ?? $total ?? 0;
+
+    // Current balance = previous + grand total
+    $current_balance = $previous_balance + $grand_total;
+@endphp
+
+<tbody>
+    <tr class="bg-blue-100">
+        <td class="font-medium py-1 px-2">Subtotal</td>
+        <td class="text-right font-medium py-1 px-2">
+            Rs {{ number_format($total, 2) }}
+        </td>
+    </tr>
+    <tr>
+        <td class="font-medium py-1 px-2">
+            Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})
+        </td>
+        <td class="text-right py-1 px-2">
+            Rs {{ number_format($saleInvoice->discount ?? 0, 2) }}
+        </td>
+    </tr>
+    <tr>
+        <td class="font-medium py-1 px-2">GST ({{ $item->pivot->tax ?? 0 }}%)</td>
+        <td class="text-right py-1 px-2">
+            Rs {{ number_format($saleInvoice->tax ?? 0, 2) }}
+        </td>
+    </tr>
+    <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
+        <td class="py-1 px-2">Grand Total</td>
+        <td class="text-right py-1 px-2">
+            Rs {{ number_format($grand_total, 2) }}
+        </td>
+    </tr>
+
+    <tr class="border-t border-gray-200 bg-blue-50">
+        <td class="py-1 px-2">Previous Balance</td>
+        <td class="text-right py-1 px-2">
+            Rs {{ number_format($previous_balance, 2) }}
+            - {{ $saleInvoice->select_customer->current_balance_type ?? $saleInvoice->select_customer->opening_balance_type ?? '' }}
+        </td>
+    </tr>
+
+    <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
+        <td class="py-1 px-2">Current Balance</td>
+        <td class="text-right py-1 px-2">
+            Rs {{ number_format($current_balance, 2) }}
+        </td>
+    </tr>
+</tbody>
+
     </table>
 </td>
 
@@ -333,6 +371,15 @@
                                 <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
                                     <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
                                 </h3>
+
+                                
+                                    
+                                    <div class="bg-yellow-50 p-2 rounded border text-xs mb-2">
+                                        <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
+                                        <p class="text-orange-800 text-xs">{!! $saleInvoice->terms !!}</p>
+                                    </div>
+                              
+
                                 @foreach($terms as $term)
                                     
                                     <div class="bg-yellow-50 p-2 rounded border text-xs">
