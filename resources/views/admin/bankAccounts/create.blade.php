@@ -160,6 +160,44 @@
                         <span class="ml-2">{{ trans('cruds.bankAccount.fields.print_bank_details') }}</span>
                     </label>
                 </div>
+                {{-- UPI QR Code Upload --}}
+                <div class="mt-8 border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center gap-2">
+                        <i class="fas fa-qrcode text-indigo-600"></i> UPI QR Code (Optional)
+                    </h3>
+
+                    <div class="flex items-start gap-6">
+                        {{-- Upload Box --}}
+                        <div class="w-48 h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition relative bg-gray-50"
+                            onclick="document.getElementById('upi_qr').click()">
+
+                            <input type="file" name="upi_qr" id="upi_qr" accept="image/*" class="hidden" onchange="previewQR(event)">
+
+                            <div id="qrPreviewContainer" class="hidden w-full h-full relative">
+                                <img id="qrPreview" class="w-full h-full object-contain p-2 rounded-xl" />
+                                <button type="button" 
+                                        onclick="removeQR(event)" 
+                                        class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center shadow">
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div id="qrPlaceholder" class="flex flex-col items-center text-center text-gray-500">
+                                <i class="fas fa-upload text-3xl mb-1"></i>
+                                <p class="text-xs">Click to Upload QR</p>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-gray-500 w-64 leading-5">
+                            Upload your UPI QR code to display on invoices.  
+                            Recommended size: **400 × 400 px (PNG/JPG)**  
+                        </p>
+                    </div>
+
+                    @error('upi_qr')
+                        <p class="text-red-600 text-xs mt-2">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 {{-- Submit --}}
                 <div class="pt-6 flex justify-end">
@@ -172,6 +210,32 @@
         </div>
     </div>
 </div>
+<script>
+function previewQR(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const qrPreview = document.getElementById('qrPreview');
+    const qrPreviewContainer = document.getElementById('qrPreviewContainer');
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+
+    qrPreview.src = URL.createObjectURL(file);
+    qrPreviewContainer.classList.remove('hidden');
+    qrPlaceholder.classList.add('hidden');
+}
+
+function removeQR(event) {
+    event.stopPropagation();
+
+    const input = document.getElementById('upi_qr');
+    const qrPreviewContainer = document.getElementById('qrPreviewContainer');
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+
+    input.value = "";
+    qrPreviewContainer.classList.add('hidden');
+    qrPlaceholder.classList.remove('hidden');
+}
+</script>
 
 {{-- Progress Bar JS --}}
 <script>

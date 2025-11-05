@@ -16,41 +16,31 @@ class BankAccountController extends Controller
 {
     use CsvImportTrait;
 
-public function index()
-{
-    abort_if(Gate::denies('bank_account_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    public function index()
+    {
+        abort_if(Gate::denies('bank_account_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first();
+        $user = auth()->user();
+        $userRole = $user->roles->pluck('title')->first();
 
-    // 🟢 1️⃣ Super Admin → sabhi records dekh sakta hai
-    if ($userRole === 'Super Admin') {
-        $bankAccounts = \App\Models\BankAccount::withoutGlobalScopes()
-            ->with(['created_by' => fn($q) => $q->withoutGlobalScopes()])
-            ->get();
+        if ($userRole === 'Super Admin') {
+            $bankAccounts = BankAccount::withoutGlobalScopes()
+                ->with(['created_by' => fn($q) => $q->withoutGlobalScopes()])
+                ->get();
+        } else {
+            $companyIds = $user->select_companies()->pluck('id')->toArray();
 
-    } else {
-        // 🟢 2️⃣ Admin / Branch / Same Company users
+            $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
+                $q->whereIn('add_businesses.id', $companyIds);
+            })->pluck('id')->toArray();
 
-        // Step 1️⃣ - Get all company IDs linked with this user
-        $companyIds = $user->select_companies()->pluck('id')->toArray();
+            $bankAccounts = BankAccount::with(['created_by'])
+                ->whereIn('created_by_id', $relatedUserIds)
+                ->get();
+        }
 
-        // Step 2️⃣ - Get all user IDs (Admin + Branch) under same company
-        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
-            $q->whereIn('add_businesses.id', $companyIds);
-        })->pluck('id')->toArray();
-
-        // Step 3️⃣ - Fetch all bank accounts created by users of same company
-        $bankAccounts = \App\Models\BankAccount::with(['created_by'])
-            ->whereIn('created_by_id', $relatedUserIds)
-            ->get();
+        return view('admin.bankAccounts.index', compact('bankAccounts'));
     }
-
-    return view('admin.bankAccounts.index', compact('bankAccounts'));
-}
-
-
-
 
     public function create()
     {
@@ -59,17 +49,21 @@ public function index()
         return view('admin.bankAccounts.create');
     }
 
-public function store(StoreBankAccountRequest $request)
-{
-    $data = $request->all();
-    $data['created_by_id'] = auth()->id(); // ✅ Logged-in user ka ID store karega
+    public function store(StoreBankAccountRequest $request)
+    {
+        $data = $request->all();
+        $data['created_by_id'] = auth()->id();
 
-    $bankAccount = BankAccount::create($data);
+        $bankAccount = BankAccount::create($data);
 
-    return redirect()->route('admin.bank-accounts.index')
-        ->with('success', 'Bank account created successfully!');
-}
+        /** ✅ SAVE UPI QR TO MEDIA LIBRARY */
+        if ($request->hasFile('upi_qr')) {
+            $bankAccount->addMedia($request->file('upi_qr'))->toMediaCollection('upi_qr');
+        }
 
+        return redirect()->route('admin.bank-accounts.index')
+            ->with('success', 'Bank account created successfully!');
+    }
 
     public function edit(BankAccount $bankAccount)
     {
@@ -84,7 +78,14 @@ public function store(StoreBankAccountRequest $request)
     {
         $bankAccount->update($request->all());
 
-        return redirect()->route('admin.bank-accounts.index');
+        /** ♻️ UPDATE UPI QR - Remove old & add new if uploaded */
+        if ($request->hasFile('upi_qr')) {
+            $bankAccount->clearMediaCollection('upi_qr'); // delete previous QR
+            $bankAccount->addMedia($request->file('upi_qr'))->toMediaCollection('upi_qr');
+        }
+
+        return redirect()->route('admin.bank-accounts.index')
+            ->with('success', 'Bank account updated successfully!');
     }
 
     public function show(BankAccount $bankAccount)
@@ -100,9 +101,12 @@ public function store(StoreBankAccountRequest $request)
     {
         abort_if(Gate::denies('bank_account_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        /** 🗑️ Delete QR from media when account deleted */
+        $bankAccount->clearMediaCollection('upi_qr');
+
         $bankAccount->delete();
 
-        return back();
+        return back()->with('success', 'Bank account deleted successfully!');
     }
 
     public function massDestroy(MassDestroyBankAccountRequest $request)
@@ -110,6 +114,7 @@ public function store(StoreBankAccountRequest $request)
         $bankAccounts = BankAccount::find(request('ids'));
 
         foreach ($bankAccounts as $bankAccount) {
+            $bankAccount->clearMediaCollection('upi_qr');
             $bankAccount->delete();
         }
 

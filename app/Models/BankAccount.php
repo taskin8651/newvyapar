@@ -3,18 +3,24 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
-use App\Traits\MultiTenantModelTrait;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class BankAccount extends Model
+class BankAccount extends Model implements HasMedia
 {
-    use SoftDeletes,  Auditable, HasFactory;
+    use SoftDeletes, Auditable, HasFactory, InteractsWithMedia;
 
     public $table = 'bank_accounts';
+
+    protected $appends = [
+        'upi_qr', // ⭐ Add accessor to include QR in JSON
+    ];
 
     protected $dates = [
         'as_of_date',
@@ -58,5 +64,25 @@ class BankAccount extends Model
     public function created_by()
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    /* ✅ Register Media Conversions (optional but recommended) */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')->fit('crop', 50, 50);
+        $this->addMediaConversion('preview')->fit('crop', 200, 200);
+    }
+
+    /* ✅ Add Accessor for UPI QR */
+    public function getUpiQrAttribute()
+    {
+        $files = $this->getMedia('upi_qr');
+        $files->each(function ($item) {
+            $item->url       = $item->getUrl();
+            $item->thumbnail = $item->getUrl('thumb');
+            $item->preview   = $item->getUrl('preview');
+        });
+
+        return $files;
     }
 }
