@@ -32,7 +32,7 @@ public function index()
             ->with([
                 'addItems' => fn($q) => $q->withoutGlobalScopes(),
                 'user' => fn($q) => $q->withoutGlobalScopes(),
-                'created_by' => fn($q) => $q->withoutGlobalScopes(),
+                'createdBy' => fn($q) => $q->withoutGlobalScopes(),
                 'party' => fn($q) => $q->withoutGlobalScopes(),
             ])
             ->latest()
