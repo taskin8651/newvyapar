@@ -317,7 +317,7 @@
                                     <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
                                 </h3>
                                 @foreach($terms as $term)
-                                    <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
+                                    
                                     <div class="bg-yellow-50 p-2 rounded border text-xs">
                                         <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
                                         <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
