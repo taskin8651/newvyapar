@@ -117,7 +117,7 @@ public function create()
 
 public function store(Request $request)
 {
-    // Basic required product_type variants
+    // Basic required product_type
     $request->validate([
         'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
     ]);
@@ -126,7 +126,7 @@ public function store(Request $request)
         $request->merge(['item_type' => 'raw_material']);
     }
 
-    // Full validation including arrays for raw materials composition
+    // Full validation including arrays
     $validated = $request->validate([
         'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
         'item_type' => 'required|string|in:raw_material,product,service',
@@ -154,11 +154,9 @@ public function store(Request $request)
         'online_store_description' => 'nullable|string',
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
 
-        // raw material composition inputs:
         'select_raw_materials' => 'nullable|array',
         'select_raw_materials.*' => 'integer|exists:add_items,id',
 
-        // keyed arrays: raw_qty[<material_id>], raw_sale_price[<material_id>], raw_purchase_price[<material_id>]
         'raw_qty' => 'nullable|array',
         'raw_qty.*' => 'nullable|numeric|min:0',
         'raw_sale_price' => 'nullable|array',
@@ -169,7 +167,7 @@ public function store(Request $request)
         'json_data' => 'nullable',
     ]);
 
-    // Handle image upload
+    // Handle image
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
     }
@@ -183,7 +181,7 @@ public function store(Request $request)
     }
     $validated['json_data'] = json_encode($fullData);
 
-    // Create AddItem
+    // Create Item
     $item = AddItem::create($validated);
 
     // Sync categories
@@ -191,20 +189,32 @@ public function store(Request $request)
         $item->select_categories()->sync($validated['select_category']);
     }
 
-    // If product_type is raw_material and opening stock provided, create current stock (unchanged)
-    if ($validated['product_type'] === 'raw_material' && !empty($validated['opening_stock']) && $validated['opening_stock'] > 0) {
+    /*
+    |--------------------------------------------------------------------------
+    | ✅ Always Create Current Stock Record (Except Service)
+    |--------------------------------------------------------------------------
+    */
+    if ($validated['item_type'] !== 'service') {
+
+        // If opening_stock null, blank or zero → default 0
+        $qty = !empty($validated['opening_stock']) ? $validated['opening_stock'] : 0;
+
         CurrentStock::create([
             'json_data' => json_encode($fullData),
             'user_id' => 1,
-            'qty' => $validated['opening_stock'],
-            'type' => 'Opening Stock',
+            'qty' => $qty,
+            'type' => $validated['product_type'] === 'finished_goods' ? 'Manufactured Stock' : 'Opening Stock',
             'created_by_id' => auth()->id(),
             'item_id' => $item->id,
-            'product_type' => 'raw_material',
+            'product_type' => $validated['product_type'],
         ]);
     }
 
-    // === FINISHED GOODS: Save composition but DO NOT DEDUCT FROM current_stocks ===
+    /*
+    |--------------------------------------------------------------------------
+    | FINISHED GOODS: Save Composition (No Stock Deduction)
+    |--------------------------------------------------------------------------
+    */
     if ($validated['product_type'] === 'finished_goods') {
         $rawMaterials = $request->input('select_raw_materials', []);
         $finishedGoodsQty = 0;
@@ -212,11 +222,8 @@ public function store(Request $request)
         $total_purchase_value_all = 0;
 
         foreach ($rawMaterials as $rawId) {
-            // qty used per finished good (sent as raw_qty[<id>])
             $usedQty = floatval($request->input("raw_qty.$rawId", 0));
-            if ($usedQty <= 0) {
-                continue; // skip zero usages
-            }
+            if ($usedQty <= 0) continue;
 
             $salePriceAtTime = floatval($request->input("raw_sale_price.$rawId", 0));
             $purchasePriceAtTime = floatval($request->input("raw_purchase_price.$rawId", 0));
@@ -228,9 +235,8 @@ public function store(Request $request)
             $total_sale_value_all += $totalSale;
             $total_purchase_value_all += $totalPurchase;
 
-            // Insert pivot/composition record
             DB::table('finished_goods_raw_material')->insert([
-                'item_id' => $item->id, // finished good id
+                'item_id' => $item->id,
                 'select_raw_material_id' => $rawId,
                 'qty' => $usedQty,
                 'sale_price_at_time' => $salePriceAtTime,
@@ -245,63 +251,24 @@ public function store(Request $request)
             ]);
         }
 
-        // Optionally: create a "manufactured stock" record for finished_good (quantity = finishedGoodsQty)
-        if ($finishedGoodsQty > 0) {
-            CurrentStock::create([
-                'json_data' => json_encode($fullData),
-                'user_id' => 1,
-                'qty' => $finishedGoodsQty,
-                'type' => 'Manufactured Stock',
-                'created_by_id' => auth()->id(),
-                'item_id' => $item->id,
-                'product_type' => 'finished_goods',
-            ]);
-        }
-
-        // Optionally save overall totals to AddItem json_data if desired:
-        $compositionSummary = [
+        // Save summary in json_data
+        $decodedJson = json_decode($item->json_data ?? '{}', true);
+        $decodedJson['composition_summary'] = [
             'finished_goods_composition' => [
                 'total_qty_used' => $finishedGoodsQty,
                 'total_sale_value' => $total_sale_value_all,
                 'total_purchase_value' => $total_purchase_value_all,
             ],
         ];
-
-        // append to json_data saved in item (update)
-        $decodedJson = json_decode($item->json_data ?? '{}', true);
-        $decodedJson['composition_summary'] = $compositionSummary;
         $item->json_data = json_encode($decodedJson);
         $item->save();
-    }
-
-    // Ready_made / single product opening stock (unchanged)
-    if (
-        in_array($validated['product_type'], ['ready_made', 'single']) &&
-        strtolower($validated['item_type']) === 'product' &&
-        !empty($validated['opening_stock']) &&
-        $validated['opening_stock'] > 0
-    ) {
-        $defaultPartyId = 1;
-
-        $stock = CurrentStock::create([
-            'json_data' => json_encode($fullData),
-            'user_id' => $defaultPartyId,
-            'qty' => $validated['opening_stock'],
-            'type' => 'Opening Stock',
-            'created_by_id' => auth()->id(),
-            'item_id' => $item->id,
-            'product_type' => $validated['product_type'],
-        ]);
-
-        if (method_exists($stock, 'items')) {
-            $stock->items()->attach($item->id);
-        }
     }
 
     return redirect()
         ->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
+
 
 
     public function edit(AddItem $addItem)
