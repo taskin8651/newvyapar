@@ -422,79 +422,33 @@ document.getElementById('confirmManufactureBtn').addEventListener('click', async
 
 // --- Render Profit/Loss Data ---
 function fmtRupee(n){return '₹'+(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:2})}
-
-function renderProfitLossModal(data) {
-    currentPLData = data;
-    const i = data.invoice;
-    const p = data.profit_loss;
-
-    // Header meta
-    const meta = [];
-    meta.push(`<strong>Customer:</strong> ${i?.select_customer?.party_name ?? i?.select_customer?.phone_number ?? '—'}`);
-    meta.push(`<strong>State:</strong> ${i?.select_customer?.state ?? '—'}`);
-    meta.push(`<strong>Docket No:</strong> ${i?.docket_no ?? '—'}`);
-    meta.push(`<strong>Billing Date:</strong> ${i?.billing_date ?? '—'}`);
-    meta.push(`<strong>Cost Center:</strong> ${i?.main_cost_center?.name ?? '—'}`);
-    meta.push(`<strong>Sub Cost Center:</strong> ${i?.sub_cost_center?.name ?? '—'}`);
-    document.getElementById('plInvoiceMeta').innerHTML = meta.join(' &nbsp;•&nbsp; ');
-
-    document.getElementById('plGeneratedAt').innerText =
-        `Sale Invoice #${i?.id ?? '—'} • Generated ${new Date().toLocaleString('en-IN')}`;
-
-    // Build table rows
-    const tbody = document.getElementById('plItemsBody');
-    tbody.innerHTML = '';
-    (p.composition_json || []).forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = 'odd:bg-white even:bg-gray-50';
-        tr.innerHTML = `
-            <td class="border px-2 py-[2px]">${item.product_name ?? '—'}</td>
-            <td class="border px-2 py-[2px] text-center">${item.qty ?? 0}</td>
-            <td class="border px-2 py-[2px] text-right">${fmtRupee(item.sale_price)}</td>
-            <td class="border px-2 py-[2px] text-right">${fmtRupee(item.purchase_price)}</td>
-            <td class="border px-2 py-[2px] text-right">${fmtRupee(item.total)}</td>
-        `;
-        tbody.appendChild(tr);
-
-        // Raw materials section
-        if (item.raw_materials && item.raw_materials.length > 0) {
-            const rmHeader = document.createElement('tr');
-            rmHeader.innerHTML = `
-                <td colspan="5" class="bg-gray-50 text-xs text-gray-600 px-2 py-1">
-                    <strong>Raw Materials Used:</strong>
-                </td>`;
-            tbody.appendChild(rmHeader);
-
-            item.raw_materials.forEach(rm => {
-                const rmTr = document.createElement('tr');
-                rmTr.className = 'text-xs text-gray-600';
-                rmTr.innerHTML = `
-                    <td class="border px-2 py-1 pl-6">- ${rm.raw_material_name ?? '—'}</td>
-                    <td class="border px-2 py-1 text-center">${rm.qty ?? 0}</td>
-                    <td class="border px-2 py-1 text-right">${fmtRupee(rm.sale_price)}</td>
-                    <td class="border px-2 py-1 text-right">${fmtRupee(rm.purchase_price)}</td>
-                    <td class="border px-2 py-1 text-right">${fmtRupee(rm.total_purchase_value)}</td>
-                `;
-                tbody.appendChild(rmTr);
-            });
-        }
+function renderProfitLossModal(data){
+    currentPLData=data;
+    const i=data.invoice, p=data.profit_loss;
+    document.getElementById('plInvoiceMeta').innerHTML=
+        `<strong>Customer:</strong> ${i?.select_customer?.party_name ?? '—'} &nbsp;•&nbsp;
+         <strong>PO No:</strong> ${i?.po_no ?? '—'} &nbsp;•&nbsp;
+         <strong>Date:</strong> ${i?.billing_date ?? '—'}`;
+    document.getElementById('plGeneratedAt').innerText=`Invoice #${i?.id ?? '—'} • ${new Date().toLocaleString()}`;
+    const tb=document.getElementById('plItemsBody');
+    tb.innerHTML='';
+    (p.composition_json||[]).forEach(it=>{
+        tb.insertAdjacentHTML('beforeend',`
+        <tr class="odd:bg-white even:bg-gray-50">
+            <td class="border px-2 py-[2px]">${it.product_name}</td>
+            <td class="border px-2 py-[2px] text-center">${it.qty}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(it.sale_price)}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(it.purchase_price)}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(it.total)}</td>
+        </tr>`);
     });
-
-    // Totals
-    document.getElementById('profitLossTotals').innerHTML = `
+    document.getElementById('profitLossTotals').innerHTML=`
         <div class="inline-grid grid-cols-3 gap-6 text-right text-[12px]">
             <div><span class="text-gray-500">Total Purchase:</span> <span class="font-semibold">${fmtRupee(p.total_purchase_value)}</span></div>
             <div><span class="text-gray-500">Total Sale:</span> <span class="font-semibold">${fmtRupee(p.total_sale_value)}</span></div>
-            <div>
-                <span class="text-gray-500">Result:</span>
-                <span class="${p.is_profit ? 'text-green-600' : 'text-red-600'} font-bold">
-                    ${p.is_profit ? 'Profit' : 'Loss'}: ${fmtRupee(p.profit_loss_amount)}
-                </span>
-            </div>
-        </div>
-    `;
-
-    destroyCharts(); // reset for fresh charts
+            <div><span class="text-gray-500">Result:</span>
+                 <span class="${p.is_profit?'text-green-600':'text-red-600'} font-bold">${p.is_profit?'Profit':'Loss'}: ${fmtRupee(p.profit_loss_amount)}</span></div>
+        </div>`;
 }
 
 // --- Charts ---
@@ -511,10 +465,10 @@ function ensureBarChart(height=200){
             {label:'Sale',data:sale,backgroundColor:'#6366f1'},
             {label:'Purchase',data:purchase,backgroundColor:'#a5b4fc'}
         ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}}}
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
     });
 }
-function ensurePieChart(height=130){
+function ensurePieChart(height=150){
     const p=currentPLData.profit_loss;
     const profit=Math.max(p.profit_loss_amount,0);
     const loss=Math.max(-p.profit_loss_amount,0);
@@ -523,33 +477,32 @@ function ensurePieChart(height=130){
     pieChartInstance=new Chart(ctx,{
         type:'pie',
         data:{labels:['Profit','Loss'],datasets:[{data:[profit,loss],backgroundColor:['#16a34a','#dc2626']}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}}}
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
     });
 }
 
-// --- Download PDF (Full Modal + Multi-page + Small Font) ---
+// --- Download PDF (Compact, Full Modal, Multi-page) ---
 document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
     try {
         const modal = document.getElementById('profitLossModal');
-        const content = modal.querySelector('.relative');
+        const content = modal.querySelector('.relative'); // full card content
 
-        // Loader
+        // ✅ Show loader
         const loader = document.createElement('div');
         loader.className = "absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-[99999]";
         loader.innerHTML = `<i class='fas fa-spinner fa-spin text-indigo-600 text-2xl mb-2'></i><p class='text-xs text-gray-600'>Generating PDF...</p>`;
         content.appendChild(loader);
 
-        // Compact charts
+        // ✅ Clean + small charts
         destroyCharts();
         ensureBarChart(160);
-        ensurePieChart(110);
+        ensurePieChart(120);
         await new Promise(res=>setTimeout(res,400));
 
-        // Clone for PDF
+        // ✅ PDF settings (auto-pagebreak + small text)
         const clone = content.cloneNode(true);
         clone.style.fontSize='10px';
         clone.style.lineHeight='1.3';
-
         const opt = {
             margin:[5,5,5,5],
             filename:`profit-loss-${selectedInvoiceId}.pdf`,
@@ -560,6 +513,7 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
 
         await html2pdf().set(opt).from(clone).save();
 
+        // ✅ Clean up
         loader.remove();
         destroyCharts();
         ensureBarChart();
@@ -570,7 +524,143 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
     }
 });
 </script>
+<script>
+let ss_invoiceId = null;
 
+function openStatusPanel(invoiceId, currentStatus) {
+    ss_invoiceId = invoiceId;
+    // Set meta
+    document.getElementById('ss_invoiceMeta').innerText = `Invoice #${invoiceId}`;
+    // Preselect current status
+    const sel = document.getElementById('ss_newStatus');
+    if ([...sel.options].some(o => o.value === currentStatus)) {
+        sel.value = currentStatus;
+    } else {
+        sel.value = 'Pending';
+    }
+    document.getElementById('ss_remark').value = '';
+    setStatusAlert(); // clear
+    // Load history
+    loadStatusHistory(invoiceId);
+    // Open
+    document.getElementById('statusSlideOver').classList.remove('hidden');
+}
+
+function closeStatusPanel() {
+    document.getElementById('statusSlideOver').classList.add('hidden');
+}
+
+function setStatusAlert(type = null, msg = '') {
+    const el = document.getElementById('ss_alert');
+    el.classList.add('hidden');
+    el.classList.remove('bg-red-50','text-red-700','bg-emerald-50','text-emerald-700');
+    if (!type) return;
+    el.classList.remove('hidden');
+    if (type === 'error') el.classList.add('bg-red-50','text-red-700');
+    if (type === 'success') el.classList.add('bg-emerald-50','text-emerald-700');
+    el.innerText = msg;
+}
+
+async function loadStatusHistory(invoiceId) {
+    const box = document.getElementById('ss_history');
+    box.innerHTML = `<div class="text-gray-400">Loading...</div>`;
+    try {
+        const res = await fetch(`{{ url('admin/sale-invoices') }}/${invoiceId}/status-history`);
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error('Failed');
+        const rows = json.data.history;
+        if (!rows.length) {
+            box.innerHTML = `<div class="text-gray-400">No history yet.</div>`;
+            return;
+        }
+        // Timeline (Modern vertical)
+        box.innerHTML = rows.map(r => `
+            <div class="flex gap-3">
+                <div class="pt-1">
+                    <span class="inline-block w-2 h-2 rounded-full ${colorDot(r.new_status)}"></span>
+                </div>
+                <div>
+                    <div class="font-medium">${escapeHtml(r.new_status)}</div>
+                    <div class="text-gray-600">${escapeHtml(r.changed_by)} • ${escapeHtml(r.changed_at)}</div>
+                    ${r.remark ? `<div class="mt-1 text-gray-700">Remark: ${escapeHtml(r.remark)}</div>` : ``}
+                    ${r.old_status ? `<div class="text-xs text-gray-500">From: ${escapeHtml(r.old_status)}</div>` : ``}
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        box.innerHTML = `<div class="text-red-600">Failed to load history.</div>`;
+    }
+}
+
+function colorDot(status) {
+    switch (status) {
+        case 'Approved': return 'bg-emerald-500';
+        case 'Rejected': return 'bg-red-500';
+        case 'Cancelled': return 'bg-orange-500';
+        case 'Pending': return 'bg-yellow-500';
+        default: return 'bg-gray-400';
+    }
+}
+
+function escapeHtml(s){ return (s ?? '').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+async function submitStatusChange() {
+    if (!ss_invoiceId) return;
+    const newStatus = document.getElementById('ss_newStatus').value;
+    const remark = document.getElementById('ss_remark').value;
+
+    setStatusAlert();
+    const btn = document.getElementById('ss_btnSave');
+    btn.disabled = true; btn.innerText = 'Updating...';
+
+    try {
+        const res = await fetch(`{{ url('admin/sale-invoices') }}/${ss_invoiceId}/status`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ new_status: newStatus, remark })
+        });
+        const json = await res.json();
+
+        if (res.status === 403) {
+            setStatusAlert('error', json.message || 'Not allowed.');
+            btn.disabled = false; btn.innerText = 'Update Status';
+            return;
+        }
+        if (json.status !== 'success') {
+            setStatusAlert('error', json.message || 'Failed to update.');
+            btn.disabled = false; btn.innerText = 'Update Status';
+            return;
+        }
+
+        // Update status text in table row without reload
+        const cell = document.querySelector(`tr[data-entry-id="${ss_invoiceId}"] td:nth-child(6)`);
+        if (cell) cell.innerHTML = `<span class="inline-flex items-center gap-2">${badgeFor(newStatus)}</span>`;
+
+        setStatusAlert('success', 'Status updated.');
+        await loadStatusHistory(ss_invoiceId);
+
+        // Optional: close after short delay
+        setTimeout(() => closeStatusPanel(), 800);
+    } catch (e) {
+        setStatusAlert('error', e.message);
+    }
+    btn.disabled = false; btn.innerText = 'Update Status';
+}
+
+function badgeFor(st) {
+    const base = 'text-xs font-semibold px-2 py-1 rounded-full';
+    switch (st) {
+        case 'Approved': return `<span class="${base} bg-emerald-100 text-emerald-700">Approved</span>`;
+        case 'Rejected': return `<span class="${base} bg-red-100 text-red-700">Rejected</span>`;
+        case 'Cancelled': return `<span class="${base} bg-orange-100 text-orange-700">Cancelled</span>`;
+        case 'Pending': return `<span class="${base} bg-yellow-100 text-yellow-700">Pending</span>`;
+        default: return `<span class="${base} bg-gray-100 text-gray-700">${st}</span>`;
+    }
+}
+</script>
 
 <style>
 #profitLossContent * {
