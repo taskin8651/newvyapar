@@ -35,34 +35,94 @@ public function index()
     abort_if(Gate::denies('sale_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
+    $userId = $user->id;
     $userRole = $user->roles->pluck('title')->first();
+
+    // ==============================================
+    // 🔥 STEP 1: Build Allowed User IDs (Hierarchy Based)
+    // ==============================================
+    $allowedUserIds = collect([$userId]);
+
+    $company = $user->select_companies()->first();
+    $companyId = $company?->id;
+
+    if ($companyId) {
+
+        // We need all company users (IDs)
+        $companyUserIds = DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
+
+        // Find company admin
+        $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
+            ->whereHas('roles', fn($q) => $q->where('title', 'Admin')) // Adjust if title differs
+            ->value('id');
+
+        if ($companyAdminId) {
+            $allowedUserIds->push($companyAdminId);
+        }
+
+        // If user was created by someone (branch/user)
+        $parentId = $user->created_by_id;
+
+        if ($parentId) {
+            $allowedUserIds->push($parentId);
+
+            // Get admin of parent too
+            $parent = \App\Models\User::find($parentId);
+            if ($parent) {
+                $parentCompanyId = $parent->select_companies()->first()?->id;
+
+                if ($parentCompanyId) {
+                    $parentCompanyUsers = DB::table('add_business_user')
+                        ->where('add_business_id', $parentCompanyId)
+                        ->pluck('user_id')
+                        ->toArray();
+
+                    $parentAdminId = \App\Models\User::whereIn('id', $parentCompanyUsers)
+                        ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+                        ->value('id');
+
+                    if ($parentAdminId) {
+                        $allowedUserIds->push($parentAdminId);
+                    }
+                }
+            }
+        }
+
+        // If logged-in = Admin → allow whole company users
+        if ($userRole === 'Admin') {
+            $allowedUserIds = collect($companyUserIds);
+        }
+    }
+
+    $allowedUserIds = $allowedUserIds->unique()->toArray();
+
+    // ==============================================
+    // 📍 STEP 2: Fetch Invoices Based on Allowed User IDs
+    // ==============================================
 
     if ($userRole === 'Super Admin') {
         $saleInvoices = SaleInvoice::withoutGlobalScopes()
             ->with([
-                'select_customer' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
+                'select_customer' => fn($q) => $q->withoutGlobalScopes(),
                 'items',
                 'created_by',
                 'media'
             ])
             ->latest()
-            ->paginate(10); // ✅ use paginate instead of get()
+            ->paginate(10);
     } else {
-        $saleInvoices = SaleInvoice::with([
-                'select_customer',
-                'items',
-                'created_by',
-                'media'
-            ])
-            ->where('created_by_id', $user->id)
+        $saleInvoices = SaleInvoice::with(['select_customer','items','created_by','media'])
+            ->whereIn('created_by_id', $allowedUserIds)
             ->latest()
-            ->paginate(10); // ✅
+            ->paginate(10);
     }
 
     return view('admin.saleInvoices.index', compact('saleInvoices'));
 }
+
 
 
 
@@ -260,31 +320,86 @@ public function create()
     $userId = $user->id;
     $userRole = $user->roles->pluck('title')->first();
 
-    // ✅ Fetch company_id from pivot table (add_business_user)
-    $companyId = $user->select_companies()->pluck('add_businesses.id')->first(); 
-    // or: $companyId = optional($user->select_companies->first())->id;
+    // ✅ Logged-in user's company
+    $company = $user->select_companies()->first();
+    $companyId = $company?->id;
 
-    /* ======================================================
-       1️⃣ CUSTOMERS DROPDOWN — SAME COMPANY USERS
-    ====================================================== */
-    if ($userRole === 'Super Admin') {
-        $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
-    } elseif ($companyId) {
-        $companyUserIds = \DB::table('add_business_user')
+    // ===========================
+    // 🔥 STEP 1: Identify Allowed User IDs (Hierarchy Based)
+    // ===========================
+
+    $allowedUserIds = collect([$userId]);
+
+    if ($companyId) {
+
+        // 1️⃣ All users of this company
+        $companyUserIds = DB::table('add_business_user')
             ->where('add_business_id', $companyId)
             ->pluck('user_id')
             ->toArray();
 
-        $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $companyUserIds)->get();
+        // Find admin of this company (role = Admin)
+        $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
+            ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+            ->value('id');
+
+        if ($companyAdminId) {
+            $allowedUserIds->push($companyAdminId);
+        }
+
+        // If logged-in user is Branch or User, add its parent chain
+        $parentId = $user->created_by_id; // Who created this user?
+
+        if ($parentId) {
+            $allowedUserIds->push($parentId);
+
+            // If parent is Branch and has an Admin above, include Admin
+            $parent = \App\Models\User::find($parentId);
+            if ($parent) {
+                $parentCompanyId = $parent->select_companies()->first()?->id;
+                if ($parentCompanyId) {
+                    $parentCompanyUsers = DB::table('add_business_user')
+                        ->where('add_business_id', $parentCompanyId)
+                        ->pluck('user_id')
+                        ->toArray();
+
+                    $parentAdminId = \App\Models\User::whereIn('id', $parentCompanyUsers)
+                        ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+                        ->value('id');
+
+                    if ($parentAdminId) {
+                        $allowedUserIds->push($parentAdminId);
+                    }
+                }
+            }
+        }
+
+        // If Admin logged in → allow whole company
+        if ($userRole === 'Admin') {
+            $allowedUserIds = collect($companyUserIds);
+        }
+    }
+
+    $allowedUserIds = $allowedUserIds->unique()->toArray();
+
+    // ===========================
+    // 📍 STEP 2: CUSTOMERS DROPDOWN
+    // ===========================
+
+    if ($userRole === 'Super Admin') {
+        $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
+    } elseif ($companyId) {
+        $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $allowedUserIds)->get();
     } else {
         $select_customers = \App\Models\PartyDetail::where('created_by_id', $userId)->get();
     }
 
-    // Format customer dropdown with balance info
+    // Format
     $select_customers = $select_customers->mapWithKeys(function ($customer) {
         $balance = $customer->current_balance ?? $customer->opening_balance ?? 0;
         $type = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
         $balanceFormatted = number_format($balance, 2);
+
         $display = $type === 'Debit'
             ? "₹{$balanceFormatted} Dr - Payable ↑"
             : "₹{$balanceFormatted} Cr - Receivable ↓";
@@ -292,56 +407,38 @@ public function create()
         return [$customer->id => "{$customer->party_name} ({$display})"];
     });
 
-    /* ======================================================
-       2️⃣ ITEMS DROPDOWN — SAME COMPANY USERS
-    ====================================================== */
+    // ===========================
+    // 📦 STEP 3: ITEMS DROPDOWN
+    // ===========================
+
     if ($userRole === 'Super Admin') {
         $items = \App\Models\AddItem::withoutGlobalScopes()
             ->whereIn('item_type', ['product', 'service'])
-            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
             ->with('select_unit')
             ->get();
     } elseif ($companyId) {
-        $companyUserIds = \DB::table('add_business_user')
-            ->where('add_business_id', $companyId)
-            ->pluck('user_id')
-            ->toArray();
-
-        $items = \App\Models\AddItem::whereIn('created_by_id', $companyUserIds)
+        $items = \App\Models\AddItem::whereIn('created_by_id', $allowedUserIds)
             ->whereIn('item_type', ['product', 'service'])
-            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
             ->with('select_unit')
             ->get();
     } else {
         $items = \App\Models\AddItem::where('created_by_id', $userId)
             ->whereIn('item_type', ['product', 'service'])
-            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
             ->with('select_unit')
             ->get();
     }
 
-    // Attach stock qty (only for products)
-    $items->map(function ($item) use ($userRole, $companyId, $userId) {
+    // Attach stock qty
+    $items->map(function ($item) use ($userRole, $companyId, $allowedUserIds, $userId) {
         if ($item->item_type === 'product') {
             if ($userRole === 'Super Admin') {
-                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
+                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)->sum('qty');
             } elseif ($companyId) {
-                $companyUserIds = \DB::table('add_business_user')
-                    ->where('add_business_id', $companyId)
-                    ->pluck('user_id')
-                    ->toArray();
-
-                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $companyUserIds)
-                    ->where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
+                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $allowedUserIds)
+                    ->where('item_id', $item->id)->sum('qty');
             } else {
                 $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
-                    ->where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
+                    ->where('item_id', $item->id)->sum('qty');
             }
         } else {
             $item->stock_qty = null;
@@ -349,36 +446,26 @@ public function create()
         return $item;
     });
 
-    /* ======================================================
-       3️⃣ COST & SUB COST CENTERS — SAME COMPANY USERS
-    ====================================================== */
-    $fetchDropdown = function ($model, $column) use ($userRole, $userId, $companyId) {
-        if ($userRole === 'Super Admin') {
-            return $model::withoutGlobalScopes()->pluck($column, 'id')->prepend(trans('global.pleaseSelect'), '');
-        } elseif ($companyId) {
-            $companyUserIds = \DB::table('add_business_user')
-                ->where('add_business_id', $companyId)
-                ->pluck('user_id')
-                ->toArray();
+    // ===========================
+    // 🧾 STEP 4: COST & SUB COST CENTERS
+    // ===========================
 
-            return $model::whereIn('created_by_id', $companyUserIds)
-                ->pluck($column, 'id')
-                ->prepend(trans('global.pleaseSelect'), '');
-        } else {
-            return $model::where('created_by_id', $userId)
-                ->pluck($column, 'id')
-                ->prepend(trans('global.pleaseSelect'), '');
-        }
-    };
+    $cost = \App\Models\MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-    $cost = $fetchDropdown(\App\Models\MainCostCenter::class, 'cost_center_name');
-    $sub_cost = $fetchDropdown(\App\Models\SubCostCenter::class, 'sub_cost_center_name');
+    $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-    /* ======================================================
-       4️⃣ RETURN VIEW
-    ====================================================== */
+    // ===========================
+    // ✅ RETURN VIEW
+    // ===========================
+
     return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
 }
+
+
 
 
 // use DB; at top
