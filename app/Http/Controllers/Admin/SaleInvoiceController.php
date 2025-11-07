@@ -106,14 +106,12 @@ public function updateProfitLoss(Request $request, SaleInvoice $saleInvoice)
 public function confirmManufacture($id)
 {
     try {
-        // 🔹 Fetch Sale Invoice with relationships
         $saleInvoice = SaleInvoice::with([
             'select_customer:id,party_name,state,gstin,phone_number',
             'main_cost_center:id,cost_center_name',
             'sub_cost_center:id,sub_cost_center_name'
         ])->findOrFail($id);
 
-        // 🔹 Fetch all sold items for this invoice
         $saleItems = DB::table('add_item_sale_invoice')
             ->join('add_items', 'add_item_sale_invoice.add_item_id', '=', 'add_items.id')
             ->where('add_item_sale_invoice.sale_invoice_id', $id)
@@ -121,8 +119,8 @@ public function confirmManufacture($id)
                 'add_items.id as item_id',
                 'add_items.item_name',
                 'add_item_sale_invoice.qty',
-                'add_item_sale_invoice.price',
-                'add_item_sale_invoice.amount',
+                'add_item_sale_invoice.price as sale_price',
+                'add_item_sale_invoice.amount as total_sale',
                 'add_items.purchase_price'
             )
             ->get();
@@ -134,21 +132,18 @@ public function confirmManufacture($id)
             ], 404);
         }
 
-        // 🔹 Initialize totals
         $totalSale = 0;
         $totalPurchase = 0;
         $itemDetails = [];
 
-        // 🔹 Loop through each sold product
         foreach ($saleItems as $item) {
-            $productTotalSale = $item->amount;
-            $productTotalPurchase = $item->purchase_price * $item->qty;
 
-            // 🔹 Add to totals
+            $productTotalSale = floatval($item->total_sale);
+            $productTotalPurchase = floatval($item->purchase_price) * floatval($item->qty);
+
             $totalSale += $productTotalSale;
             $totalPurchase += $productTotalPurchase;
 
-            // 🔹 Fetch raw materials used in manufacturing this product
             $rawMaterials = DB::table('finished_goods_raw_material')
                 ->join('add_items', 'finished_goods_raw_material.select_raw_material_id', '=', 'add_items.id')
                 ->where('finished_goods_raw_material.item_id', $item->item_id)
@@ -162,35 +157,32 @@ public function confirmManufacture($id)
                 )
                 ->get();
 
-            // 🔹 Add raw material totals to overall purchase/sale
+            // Add totals from raw materials
             $totalSale += $rawMaterials->sum('total_sale_value');
             $totalPurchase += $rawMaterials->sum('total_purchase_value');
 
-            // 🔹 Structure for frontend
             $itemDetails[] = [
                 'product_name' => $item->item_name,
-                'qty' => $item->qty,
-                'sale_price' => number_format($item->price, 2),
-                'purchase_price' => number_format($item->purchase_price, 2),
-                'total' => number_format($item->amount, 2),
+                'qty' => floatval($item->qty),
+                'sale_price' => floatval($item->sale_price),
+                'purchase_price' => floatval($item->purchase_price),
+                'total' => floatval($item->total_sale),
                 'raw_materials' => $rawMaterials->map(function ($r) {
                     return [
                         'raw_material_name' => $r->raw_material_name,
-                        'qty' => $r->qty,
-                        'sale_price' => number_format($r->sale_price_at_time, 2),
-                        'purchase_price' => number_format($r->purchase_price_at_time, 2),
-                        'total_sale_value' => number_format($r->total_sale_value, 2),
-                        'total_purchase_value' => number_format($r->total_purchase_value, 2),
+                        'qty' => floatval($r->qty),
+                        'sale_price' => floatval($r->sale_price_at_time),
+                        'purchase_price' => floatval($r->purchase_price_at_time),
+                        'total_sale_value' => floatval($r->total_sale_value),
+                        'total_purchase_value' => floatval($r->total_purchase_value),
                     ];
                 }),
             ];
         }
 
-        // 🔹 Calculate Profit or Loss
         $profitLossAmount = $totalSale - $totalPurchase;
         $isProfit = $profitLossAmount >= 0;
 
-        // 🔹 Insert or Update sale_profit_losses manually
         $existing = DB::table('sale_profit_losses')->where('sale_invoice_id', $id)->first();
 
         $data = [
@@ -214,42 +206,35 @@ public function confirmManufacture($id)
             DB::table('sale_profit_losses')->insert($data);
         }
 
-        // 🔹 Update Sale Invoice Status
-        DB::table('sale_invoices')->where('id', $id)
-            ->update(['status' => 'Manufacture Confirmed', 'updated_at' => now()]);
-
-        // 🔹 Prepare Response for frontend
-        $responseData = [
-            'invoice' => [
-                'id' => $saleInvoice->id,
-                'docket_no' => $saleInvoice->docket_no ?? '—',
-                'billing_date' => $saleInvoice->created_at ? $saleInvoice->created_at->format('d M Y') : '—',
-                'select_customer' => [
-                    'party_name' => $saleInvoice->select_customer->party_name ?? '—',
-                    'state' => $saleInvoice->select_customer->state ?? '—',
-                    'gstin' => $saleInvoice->select_customer->gstin ?? '—',
-                    'phone_number' => $saleInvoice->select_customer->phone_number ?? '—',
-                ],
-                'main_cost_center' => [
-                    'name' => $saleInvoice->main_cost_center->cost_center_name ?? '—',
-                ],
-                'sub_cost_center' => [
-                    'name' => $saleInvoice->sub_cost_center->sub_cost_center_name ?? '—',
-                ],
-            ],
-            'profit_loss' => [
-                'total_purchase_value' => number_format($totalPurchase, 2),
-                'total_sale_value' => number_format($totalSale, 2),
-                'profit_loss_amount' => number_format(abs($profitLossAmount), 2),
-                'is_profit' => $isProfit,
-                'composition_json' => $itemDetails,
-            ],
-        ];
-
         return response()->json([
             'status' => 'success',
             'message' => '✅ Manufacture confirmed and profit/loss calculated successfully (with raw materials).',
-            'data' => $responseData,
+            'data' => [
+                'invoice' => [
+                    'id' => $saleInvoice->id,
+                    'docket_no' => $saleInvoice->docket_no ?? '—',
+                    'billing_date' => $saleInvoice->created_at ? $saleInvoice->created_at->format('d M Y') : '—',
+                    'select_customer' => [
+                        'party_name' => $saleInvoice->select_customer->party_name ?? '—',
+                        'state' => $saleInvoice->select_customer->state ?? '—',
+                        'gstin' => $saleInvoice->select_customer->gstin ?? '—',
+                        'phone_number' => $saleInvoice->select_customer->phone_number ?? '—',
+                    ],
+                    'main_cost_center' => [
+                        'name' => $saleInvoice->main_cost_center->cost_center_name ?? '—',
+                    ],
+                    'sub_cost_center' => [
+                        'name' => $saleInvoice->sub_cost_center->sub_cost_center_name ?? '—',
+                    ],
+                ],
+                'profit_loss' => [
+                    'total_purchase_value' => $totalPurchase,
+                    'total_sale_value' => $totalSale,
+                    'profit_loss_amount' => abs($profitLossAmount),
+                    'is_profit' => $isProfit,
+                    'composition_json' => $itemDetails,
+                ],
+            ],
         ]);
 
     } catch (\Exception $e) {
