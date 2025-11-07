@@ -379,7 +379,7 @@
                                 @foreach($terms as $term)
                                     
                                     <div class="bg-yellow-50 p-2 rounded border text-xs">
-                                        <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
+                                        
                                         <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
                                     </div>
                                 @endforeach
