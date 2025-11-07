@@ -235,8 +235,8 @@
                             </table>
                         </td>
 
-                        <!-- Subtotal / Total -->
-          <td class="align-top w-1/2 pl-2">
+              <!-- Subtotal / Total -->
+<td class="align-top w-1/2 pl-2">
     <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
         <thead>
             <tr>
@@ -246,62 +246,55 @@
             </tr>
         </thead>
         @php
-    // Previous balance nikal rahe hain
-    $previous_balance = $saleInvoice->select_customer->current_balance 
-        ?? $saleInvoice->select_customer->opening_balance 
-        ?? 0;
+            // Previous balance (no longer displayed, but used in calculation if needed)
+            $previous_balance = $saleInvoice->select_customer->current_balance 
+                ?? $saleInvoice->select_customer->opening_balance 
+                ?? 0;
 
-    // Grand total (already calculated)
-    $grand_total = $saleInvoice->total ?? $total ?? 0;
+            // Grand total
+            $grand_total = $saleInvoice->total ?? $total ?? 0;
 
-    // Current balance = previous + grand total
-    $current_balance = $previous_balance + $grand_total;
-@endphp
+            // Current balance = previous + grand total
+            $current_balance = $previous_balance + $grand_total;
+        @endphp
 
-<tbody>
-    <tr class="bg-blue-100">
-        <td class="font-medium py-1 px-2">Subtotal</td>
-        <td class="text-right font-medium py-1 px-2">
-            Rs {{ number_format($total, 2) }}
-        </td>
-    </tr>
-    <tr>
-        <td class="font-medium py-1 px-2">
-            Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})
-        </td>
-        <td class="text-right py-1 px-2">
-            Rs {{ number_format($saleInvoice->discount ?? 0, 2) }}
-        </td>
-    </tr>
-    <tr>
-        <td class="font-medium py-1 px-2">GST ({{ $item->pivot->tax ?? 0 }}%)</td>
-        <td class="text-right py-1 px-2">
-            Rs {{ number_format($saleInvoice->tax ?? 0, 2) }}
-        </td>
-    </tr>
-    <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
-        <td class="py-1 px-2">Grand Total</td>
-        <td class="text-right py-1 px-2">
-            Rs {{ number_format($grand_total, 2) }}
-        </td>
-    </tr>
+        <tbody>
+            <tr class="bg-blue-100">
+                <td class="font-medium py-1 px-2">Subtotal</td>
+                <td class="text-right font-medium py-1 px-2">
+                    Rs {{ number_format($total, 2) }}
+                </td>
+            </tr>
+            <tr>
+                <td class="font-medium py-1 px-2">
+                    Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})
+                </td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($saleInvoice->discount ?? 0, 2) }}
+                </td>
+            </tr>
+            <tr>
+                <td class="font-medium py-1 px-2">GST ({{ $item->pivot->tax ?? 0 }}%)</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($saleInvoice->tax ?? 0, 2) }}
+                </td>
+            </tr>
+            <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
+                <td class="py-1 px-2">Grand Total</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($grand_total, 2) }}
+                </td>
+            </tr>
 
-    <tr class="border-t border-gray-200 bg-blue-50">
-        <td class="py-1 px-2">Previous Balance</td>
-        <td class="text-right py-1 px-2">
-            Rs {{ number_format($previous_balance, 2) }}
-            - {{ $saleInvoice->select_customer->current_balance_type ?? $saleInvoice->select_customer->opening_balance_type ?? '' }}
-        </td>
-    </tr>
+            <!-- Previous Balance row removed -->
 
-    <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
-        <td class="py-1 px-2">Current Balance</td>
-        <td class="text-right py-1 px-2">
-            Rs {{ number_format($current_balance, 2) }}
-        </td>
-    </tr>
-</tbody>
-
+            <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
+                <td class="py-1 px-2">Current Balance</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($current_balance, 2) }}
+                </td>
+            </tr>
+        </tbody>
     </table>
 </td>
 
