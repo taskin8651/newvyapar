@@ -2,83 +2,130 @@
 @section('content')
 <div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.edit') }} {{ trans('cruds.bankToCash.title_singular') }}
-                </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.bank-to-cashes.update", [$bankToCash->id]) }}" enctype="multipart/form-data">
-                        @method('PUT')
-                        @csrf
-                        <div class="form-group {{ $errors->has('from') ? 'has-error' : '' }}">
-                            <label class="required" for="from_id">{{ trans('cruds.bankToCash.fields.from') }}</label>
-                            <select class="form-control select2" name="from_id" id="from_id" required>
-                                @foreach($froms as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('from_id') ? old('from_id') : $bankToCash->from->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('from'))
-                                <span class="help-block" role="alert">{{ $errors->first('from') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankToCash.fields.from_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('to') ? 'has-error' : '' }}">
-                            <label for="to">{{ trans('cruds.bankToCash.fields.to') }}</label>
-                            <input class="form-control" type="text" name="to" id="to" value="{{ old('to', $bankToCash->to) }}">
-                            @if($errors->has('to'))
-                                <span class="help-block" role="alert">{{ $errors->first('to') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankToCash.fields.to_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('amount') ? 'has-error' : '' }}">
-                            <label class="required" for="amount">{{ trans('cruds.bankToCash.fields.amount') }}</label>
-                            <input class="form-control" type="number" name="amount" id="amount" value="{{ old('amount', $bankToCash->amount) }}" step="0.01" required>
-                            @if($errors->has('amount'))
-                                <span class="help-block" role="alert">{{ $errors->first('amount') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankToCash.fields.amount_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('adjustment_date') ? 'has-error' : '' }}">
-                            <label for="adjustment_date">{{ trans('cruds.bankToCash.fields.adjustment_date') }}</label>
-                            <input class="form-control date" type="text" name="adjustment_date" id="adjustment_date" value="{{ old('adjustment_date', $bankToCash->adjustment_date) }}">
-                            @if($errors->has('adjustment_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('adjustment_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankToCash.fields.adjustment_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.bankToCash.fields.description') }}</label>
-                            <textarea class="form-control ckeditor" name="description" id="description">{!! old('description', $bankToCash->description) !!}</textarea>
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankToCash.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('attechment') ? 'has-error' : '' }}">
-                            <label for="attechment">{{ trans('cruds.bankToCash.fields.attechment') }}</label>
-                            <div class="needsclick dropzone" id="attechment-dropzone">
-                            </div>
-                            @if($errors->has('attechment'))
-                                <span class="help-block" role="alert">{{ $errors->first('attechment') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.bankToCash.fields.attechment_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <div class="p-6 max-w-5xl mx-auto">
 
-
-
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="{{ route('admin.bank-to-cashes.index') }}" 
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                {{ trans('global.back_to_list') }}
+            </a>
         </div>
+
+        <!-- Edit Bank to Cash Card -->
+        <div class="bg-white shadow-lg rounded-xl p-6 text-sm">
+
+            <h2 class="text-2xl font-bold mb-6 text-blue-600">
+                {{ trans('global.edit') }} {{ trans('cruds.bankToCash.title_singular') }}
+            </h2>
+
+            <form method="POST" action="{{ route('admin.bank-to-cashes.update', [$bankToCash->id]) }}" enctype="multipart/form-data">
+                @method('PUT')
+                @csrf
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {{-- From --}}
+                    <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                        <label for="from_id" class="block font-semibold text-gray-700 mb-1 required">
+                            {{ trans('cruds.bankToCash.fields.from') }}
+                        </label>
+                        <select name="from_id" id="from_id" required
+                                class="w-full p-2 border rounded-md focus:ring focus:ring-blue-200">
+                            @foreach($froms as $id => $entry)
+                                <option value="{{ $id }}" {{ (old('from_id', $bankToCash->from->id ?? '') == $id) ? 'selected' : '' }}>{{ $entry }}</option>
+                            @endforeach
+                        </select>
+                        @error('from')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.bankToCash.fields.from_helper') }}</span>
+                    </div>
+
+                    {{-- To --}}
+                    <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                        <label for="to" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.bankToCash.fields.to') }}
+                        </label>
+                        <input type="text" name="to" id="to"
+                               value="{{ old('to', $bankToCash->to) }}"
+                               class="w-full p-2 border rounded-md focus:ring focus:ring-blue-200">
+                        @error('to')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.bankToCash.fields.to_helper') }}</span>
+                    </div>
+
+                    {{-- Amount --}}
+                    <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                        <label for="amount" class="block font-semibold text-gray-700 mb-1 required">
+                            {{ trans('cruds.bankToCash.fields.amount') }}
+                        </label>
+                        <input type="number" name="amount" id="amount" step="0.01"
+                               value="{{ old('amount', $bankToCash->amount) }}" required
+                               class="w-full p-2 border rounded-md focus:ring focus:ring-green-200">
+                        @error('amount')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.bankToCash.fields.amount_helper') }}</span>
+                    </div>
+
+                    {{-- Adjustment Date --}}
+                    <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                        <label for="adjustment_date" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.bankToCash.fields.adjustment_date') }}
+                        </label>
+                        <input type="text" name="adjustment_date" id="adjustment_date"
+                               value="{{ old('adjustment_date', $bankToCash->adjustment_date) }}"
+                               class="w-full p-2 border rounded-md focus:ring focus:ring-green-200 date">
+                        @error('adjustment_date')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.bankToCash.fields.adjustment_date_helper') }}</span>
+                    </div>
+
+                    {{-- Description --}}
+                    <div class="bg-pink-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                        <label for="description" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.bankToCash.fields.description') }}
+                        </label>
+                        <textarea name="description" id="description"
+                                  class="ckeditor w-full p-2 border rounded-md focus:ring focus:ring-pink-200">{!! old('description', $bankToCash->description) !!}</textarea>
+                        @error('description')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.bankToCash.fields.description_helper') }}</span>
+                    </div>
+
+                    {{-- Attachment --}}
+                    <div class="bg-yellow-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                        <label for="attechment" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.bankToCash.fields.attechment') }}
+                        </label>
+                        <div class="needsclick dropzone border-2 border-dashed border-yellow-300 p-4 rounded-lg" id="attechment-dropzone"></div>
+                        @error('attechment')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.bankToCash.fields.attechment_helper') }}</span>
+                    </div>
+
+                </div>
+
+                <!-- Save Button -->
+                <div class="mt-6">
+                    <button type="submit"
+                            class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg shadow hover:bg-red-600 transition">
+                        {{ trans('global.save') }}
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
     </div>
+
 </div>
+
 @endsection
 
 @section('scripts')

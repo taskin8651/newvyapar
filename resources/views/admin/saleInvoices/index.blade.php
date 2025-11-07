@@ -83,6 +83,12 @@
                                             class="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg">
                                         <i class="fas fa-industry mr-2"></i> Profit/Loss
                                     </button>
+                                    <!-- Inside the actions dropdown (below other <a> items) -->
+                                    <button 
+                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg"
+                                        onclick="openStatusPanel({{ $saleInvoice->id }}, '{{ $saleInvoice->status ?? 'Pending' }}')">
+                                        <i class="fas fa-toggle-on mr-2"></i> Change Status
+                                    </button>
 
                                     <a href="{{ route('admin.sale-invoices.pdf', $saleInvoice->id) }}" target="_blank"
                                        class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg">
@@ -99,6 +105,60 @@
         </div>
     </div>
 @endsection
+<!-- Slide-Over Panel -->
+<div id="statusSlideOver" class="fixed inset-0 z-[10000] hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeStatusPanel()"></div>
+
+  <!-- Panel -->
+  <div class="absolute top-0 right-0 h-full w-full sm:w-[420px] bg-white shadow-2xl overflow-y-auto">
+    <!-- Header -->
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold text-indigo-700">Change Invoice Status</h3>
+        <p class="text-xs text-gray-500" id="ss_invoiceMeta">—</p>
+      </div>
+      <button class="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200" onclick="closeStatusPanel()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-5 space-y-5">
+      <div>
+        <label class="text-sm font-medium text-gray-700">Select New Status</label>
+        <select id="ss_newStatus" class="mt-1 w-full border rounded-lg px-3 py-2">
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700">Remark (optional)</label>
+        <textarea id="ss_remark" rows="3" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="Write a note..."></textarea>
+      </div>
+
+      <div id="ss_alert" class="hidden text-sm rounded-lg px-3 py-2"></div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300" onclick="closeStatusPanel()">Cancel</button>
+        <button id="ss_btnSave" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+                onclick="submitStatusChange()">Update Status</button>
+      </div>
+
+      <!-- History -->
+      <div class="pt-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Status History</h4>
+        <div id="ss_history" class="space-y-3 text-sm">
+          <!-- timeline rows -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ✅ Profit/Loss Modal (All Sections Combined) -->
 <div id="profitLossModal" class="fixed inset-0 hidden items-center justify-center z-[9999]">
@@ -463,6 +523,143 @@ document.getElementById('btnDownloadPdf').addEventListener('click', async () => 
         alert("⚠️ Failed to generate PDF. Please try again.");
     }
 });
+</script>
+<script>
+let ss_invoiceId = null;
+
+function openStatusPanel(invoiceId, currentStatus) {
+    ss_invoiceId = invoiceId;
+    // Set meta
+    document.getElementById('ss_invoiceMeta').innerText = `Invoice #${invoiceId}`;
+    // Preselect current status
+    const sel = document.getElementById('ss_newStatus');
+    if ([...sel.options].some(o => o.value === currentStatus)) {
+        sel.value = currentStatus;
+    } else {
+        sel.value = 'Pending';
+    }
+    document.getElementById('ss_remark').value = '';
+    setStatusAlert(); // clear
+    // Load history
+    loadStatusHistory(invoiceId);
+    // Open
+    document.getElementById('statusSlideOver').classList.remove('hidden');
+}
+
+function closeStatusPanel() {
+    document.getElementById('statusSlideOver').classList.add('hidden');
+}
+
+function setStatusAlert(type = null, msg = '') {
+    const el = document.getElementById('ss_alert');
+    el.classList.add('hidden');
+    el.classList.remove('bg-red-50','text-red-700','bg-emerald-50','text-emerald-700');
+    if (!type) return;
+    el.classList.remove('hidden');
+    if (type === 'error') el.classList.add('bg-red-50','text-red-700');
+    if (type === 'success') el.classList.add('bg-emerald-50','text-emerald-700');
+    el.innerText = msg;
+}
+
+async function loadStatusHistory(invoiceId) {
+    const box = document.getElementById('ss_history');
+    box.innerHTML = `<div class="text-gray-400">Loading...</div>`;
+    try {
+        const res = await fetch(`{{ url('admin/sale-invoices') }}/${invoiceId}/status-history`);
+        const json = await res.json();
+        if (json.status !== 'success') throw new Error('Failed');
+        const rows = json.data.history;
+        if (!rows.length) {
+            box.innerHTML = `<div class="text-gray-400">No history yet.</div>`;
+            return;
+        }
+        // Timeline (Modern vertical)
+        box.innerHTML = rows.map(r => `
+            <div class="flex gap-3">
+                <div class="pt-1">
+                    <span class="inline-block w-2 h-2 rounded-full ${colorDot(r.new_status)}"></span>
+                </div>
+                <div>
+                    <div class="font-medium">${escapeHtml(r.new_status)}</div>
+                    <div class="text-gray-600">${escapeHtml(r.changed_by)} • ${escapeHtml(r.changed_at)}</div>
+                    ${r.remark ? `<div class="mt-1 text-gray-700">Remark: ${escapeHtml(r.remark)}</div>` : ``}
+                    ${r.old_status ? `<div class="text-xs text-gray-500">From: ${escapeHtml(r.old_status)}</div>` : ``}
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        box.innerHTML = `<div class="text-red-600">Failed to load history.</div>`;
+    }
+}
+
+function colorDot(status) {
+    switch (status) {
+        case 'Approved': return 'bg-emerald-500';
+        case 'Rejected': return 'bg-red-500';
+        case 'Cancelled': return 'bg-orange-500';
+        case 'Pending': return 'bg-yellow-500';
+        default: return 'bg-gray-400';
+    }
+}
+
+function escapeHtml(s){ return (s ?? '').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+async function submitStatusChange() {
+    if (!ss_invoiceId) return;
+    const newStatus = document.getElementById('ss_newStatus').value;
+    const remark = document.getElementById('ss_remark').value;
+
+    setStatusAlert();
+    const btn = document.getElementById('ss_btnSave');
+    btn.disabled = true; btn.innerText = 'Updating...';
+
+    try {
+        const res = await fetch(`{{ url('admin/sale-invoices') }}/${ss_invoiceId}/status`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ new_status: newStatus, remark })
+        });
+        const json = await res.json();
+
+        if (res.status === 403) {
+            setStatusAlert('error', json.message || 'Not allowed.');
+            btn.disabled = false; btn.innerText = 'Update Status';
+            return;
+        }
+        if (json.status !== 'success') {
+            setStatusAlert('error', json.message || 'Failed to update.');
+            btn.disabled = false; btn.innerText = 'Update Status';
+            return;
+        }
+
+        // Update status text in table row without reload
+        const cell = document.querySelector(`tr[data-entry-id="${ss_invoiceId}"] td:nth-child(6)`);
+        if (cell) cell.innerHTML = `<span class="inline-flex items-center gap-2">${badgeFor(newStatus)}</span>`;
+
+        setStatusAlert('success', 'Status updated.');
+        await loadStatusHistory(ss_invoiceId);
+
+        // Optional: close after short delay
+        setTimeout(() => closeStatusPanel(), 800);
+    } catch (e) {
+        setStatusAlert('error', e.message);
+    }
+    btn.disabled = false; btn.innerText = 'Update Status';
+}
+
+function badgeFor(st) {
+    const base = 'text-xs font-semibold px-2 py-1 rounded-full';
+    switch (st) {
+        case 'Approved': return `<span class="${base} bg-emerald-100 text-emerald-700">Approved</span>`;
+        case 'Rejected': return `<span class="${base} bg-red-100 text-red-700">Rejected</span>`;
+        case 'Cancelled': return `<span class="${base} bg-orange-100 text-orange-700">Cancelled</span>`;
+        case 'Pending': return `<span class="${base} bg-yellow-100 text-yellow-700">Pending</span>`;
+        default: return `<span class="${base} bg-gray-100 text-gray-700">${st}</span>`;
+    }
+}
 </script>
 
 <style>
