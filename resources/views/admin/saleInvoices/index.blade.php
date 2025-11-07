@@ -83,6 +83,12 @@
                                             class="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg">
                                         <i class="fas fa-industry mr-2"></i> Profit/Loss
                                     </button>
+                                    <!-- Inside the actions dropdown (below other <a> items) -->
+                                    <button 
+                                        class="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg"
+                                        onclick="openStatusPanel({{ $saleInvoice->id }}, '{{ $saleInvoice->status ?? 'Pending' }}')">
+                                        <i class="fas fa-toggle-on mr-2"></i> Change Status
+                                    </button>
 
                                     <a href="{{ route('admin.sale-invoices.pdf', $saleInvoice->id) }}" target="_blank"
                                        class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg">
@@ -99,6 +105,60 @@
         </div>
     </div>
 @endsection
+<!-- Slide-Over Panel -->
+<div id="statusSlideOver" class="fixed inset-0 z-[10000] hidden">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/50" onclick="closeStatusPanel()"></div>
+
+  <!-- Panel -->
+  <div class="absolute top-0 right-0 h-full w-full sm:w-[420px] bg-white shadow-2xl overflow-y-auto">
+    <!-- Header -->
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold text-indigo-700">Change Invoice Status</h3>
+        <p class="text-xs text-gray-500" id="ss_invoiceMeta">—</p>
+      </div>
+      <button class="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200" onclick="closeStatusPanel()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-5 space-y-5">
+      <div>
+        <label class="text-sm font-medium text-gray-700">Select New Status</label>
+        <select id="ss_newStatus" class="mt-1 w-full border rounded-lg px-3 py-2">
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-gray-700">Remark (optional)</label>
+        <textarea id="ss_remark" rows="3" class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="Write a note..."></textarea>
+      </div>
+
+      <div id="ss_alert" class="hidden text-sm rounded-lg px-3 py-2"></div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300" onclick="closeStatusPanel()">Cancel</button>
+        <button id="ss_btnSave" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+                onclick="submitStatusChange()">Update Status</button>
+      </div>
+
+      <!-- History -->
+      <div class="pt-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Status History</h4>
+        <div id="ss_history" class="space-y-3 text-sm">
+          <!-- timeline rows -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ✅ Profit/Loss Modal (All Sections Combined) -->
 <div id="profitLossModal" class="fixed inset-0 hidden items-center justify-center z-[9999]">
@@ -362,70 +422,167 @@ document.getElementById('confirmManufactureBtn').addEventListener('click', async
 
 // --- Render Profit/Loss Data ---
 function fmtRupee(n){return '₹'+(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:2})}
-function renderProfitLossModal(data){
-    currentPLData=data;
-    const i=data.invoice, p=data.profit_loss;
-    document.getElementById('plInvoiceMeta').innerHTML=
-        `<strong>Customer:</strong> ${i?.select_customer?.party_name ?? '—'} &nbsp;•&nbsp;
-         <strong>PO No:</strong> ${i?.po_no ?? '—'} &nbsp;•&nbsp;
-         <strong>Date:</strong> ${i?.billing_date ?? '—'}`;
-    document.getElementById('plGeneratedAt').innerText=`Invoice #${i?.id ?? '—'} • ${new Date().toLocaleString()}`;
-    const tb=document.getElementById('plItemsBody');
-    tb.innerHTML='';
-    (p.composition_json||[]).forEach(it=>{
-        tb.insertAdjacentHTML('beforeend',`
-        <tr class="odd:bg-white even:bg-gray-50">
-            <td class="border px-2 py-1">${it.product_name}</td>
-            <td class="border px-2 py-1 text-center">${it.qty}</td>
-            <td class="border px-2 py-1 text-right">${fmtRupee(it.sale_price)}</td>
-            <td class="border px-2 py-1 text-right">${fmtRupee(it.purchase_price)}</td>
-            <td class="border px-2 py-1 text-right">${fmtRupee(it.total)}</td>
-        </tr>`);
+
+function renderProfitLossModal(data) {
+    currentPLData = data;
+    const i = data.invoice;
+    const p = data.profit_loss;
+
+    // Header meta
+    const meta = [];
+    meta.push(`<strong>Customer:</strong> ${i?.select_customer?.party_name ?? i?.select_customer?.phone_number ?? '—'}`);
+    meta.push(`<strong>State:</strong> ${i?.select_customer?.state ?? '—'}`);
+    meta.push(`<strong>Docket No:</strong> ${i?.docket_no ?? '—'}`);
+    meta.push(`<strong>Billing Date:</strong> ${i?.billing_date ?? '—'}`);
+    meta.push(`<strong>Cost Center:</strong> ${i?.main_cost_center?.name ?? '—'}`);
+    meta.push(`<strong>Sub Cost Center:</strong> ${i?.sub_cost_center?.name ?? '—'}`);
+    document.getElementById('plInvoiceMeta').innerHTML = meta.join(' &nbsp;•&nbsp; ');
+
+    document.getElementById('plGeneratedAt').innerText =
+        `Sale Invoice #${i?.id ?? '—'} • Generated ${new Date().toLocaleString('en-IN')}`;
+
+    // Build table rows
+    const tbody = document.getElementById('plItemsBody');
+    tbody.innerHTML = '';
+    (p.composition_json || []).forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'odd:bg-white even:bg-gray-50';
+        tr.innerHTML = `
+            <td class="border px-2 py-[2px]">${item.product_name ?? '—'}</td>
+            <td class="border px-2 py-[2px] text-center">${item.qty ?? 0}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(item.sale_price)}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(item.purchase_price)}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(item.total)}</td>
+        `;
+        tbody.appendChild(tr);
+
+        // Raw materials section
+        if (item.raw_materials && item.raw_materials.length > 0) {
+            const rmHeader = document.createElement('tr');
+            rmHeader.innerHTML = `
+                <td colspan="5" class="bg-gray-50 text-xs text-gray-600 px-2 py-1">
+                    <strong>Raw Materials Used:</strong>
+                </td>`;
+            tbody.appendChild(rmHeader);
+
+            item.raw_materials.forEach(rm => {
+                const rmTr = document.createElement('tr');
+                rmTr.className = 'text-xs text-gray-600';
+                rmTr.innerHTML = `
+                    <td class="border px-2 py-1 pl-6">- ${rm.raw_material_name ?? '—'}</td>
+                    <td class="border px-2 py-1 text-center">${rm.qty ?? 0}</td>
+                    <td class="border px-2 py-1 text-right">${fmtRupee(rm.sale_price)}</td>
+                    <td class="border px-2 py-1 text-right">${fmtRupee(rm.purchase_price)}</td>
+                    <td class="border px-2 py-1 text-right">${fmtRupee(rm.total_purchase_value)}</td>
+                `;
+                tbody.appendChild(rmTr);
+            });
+        }
     });
-    document.getElementById('profitLossTotals').innerHTML=`
-        <div class="inline-grid grid-cols-3 gap-6 text-right">
+
+    // Totals
+    document.getElementById('profitLossTotals').innerHTML = `
+        <div class="inline-grid grid-cols-3 gap-6 text-right text-[12px]">
             <div><span class="text-gray-500">Total Purchase:</span> <span class="font-semibold">${fmtRupee(p.total_purchase_value)}</span></div>
             <div><span class="text-gray-500">Total Sale:</span> <span class="font-semibold">${fmtRupee(p.total_sale_value)}</span></div>
-            <div><span class="text-gray-500">Result:</span>
-                 <span class="${p.is_profit?'text-green-600':'text-red-600'} font-bold">${p.is_profit?'Profit':'Loss'}: ${fmtRupee(p.profit_loss_amount)}</span></div>
-        </div>`;
+            <div>
+                <span class="text-gray-500">Result:</span>
+                <span class="${p.is_profit ? 'text-green-600' : 'text-red-600'} font-bold">
+                    ${p.is_profit ? 'Profit' : 'Loss'}: ${fmtRupee(p.profit_loss_amount)}
+                </span>
+            </div>
+        </div>
+    `;
+
+    destroyCharts(); // reset for fresh charts
 }
 
 // --- Charts ---
-function ensureBarChart(){
+function ensureBarChart(height=200){
     const p=currentPLData.profit_loss;
     const labels=p.composition_json.map(x=>x.product_name);
     const sale=p.composition_json.map(x=>x.sale_price*x.qty);
     const purchase=p.composition_json.map(x=>x.purchase_price*x.qty);
-    barChartInstance=new Chart(document.getElementById('plBarChart'),{
+    const ctx=document.getElementById('plBarChart');
+    ctx.height=height;
+    barChartInstance=new Chart(ctx,{
         type:'bar',
-        data:{labels,datasets:[{label:'Sale',data:sale},{label:'Purchase',data:purchase}]},
-        options:{responsive:true,maintainAspectRatio:false}
+        data:{labels,datasets:[
+            {label:'Sale',data:sale,backgroundColor:'#6366f1'},
+            {label:'Purchase',data:purchase,backgroundColor:'#a5b4fc'}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}}}
     });
 }
-function ensurePieChart(){
+function ensurePieChart(height=130){
     const p=currentPLData.profit_loss;
     const profit=Math.max(p.profit_loss_amount,0);
     const loss=Math.max(-p.profit_loss_amount,0);
-    pieChartInstance=new Chart(document.getElementById('plPieChart'),{
+    const ctx=document.getElementById('plPieChart');
+    ctx.height=height;
+    pieChartInstance=new Chart(ctx,{
         type:'pie',
-        data:{labels:['Profit','Loss'],datasets:[{data:[profit,loss]}]},
-        options:{responsive:true,maintainAspectRatio:false}
+        data:{labels:['Profit','Loss'],datasets:[{data:[profit,loss],backgroundColor:['#16a34a','#dc2626']}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}}}
     });
 }
 
-// --- Download PDF ---
-document.getElementById('btnDownloadPdf').addEventListener('click',async()=>{
-    ensureBarChart(); ensurePieChart();
-    const clone=document.getElementById('profitLossContent').cloneNode(true);
-    const opt={margin:10,filename:`profit-loss-${selectedInvoiceId}.pdf`,
-        html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
-    await html2pdf().set(opt).from(clone).save();
+// --- Download PDF (Full Modal + Multi-page + Small Font) ---
+document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
+    try {
+        const modal = document.getElementById('profitLossModal');
+        const content = modal.querySelector('.relative');
+
+        // Loader
+        const loader = document.createElement('div');
+        loader.className = "absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-[99999]";
+        loader.innerHTML = `<i class='fas fa-spinner fa-spin text-indigo-600 text-2xl mb-2'></i><p class='text-xs text-gray-600'>Generating PDF...</p>`;
+        content.appendChild(loader);
+
+        // Compact charts
+        destroyCharts();
+        ensureBarChart(160);
+        ensurePieChart(110);
+        await new Promise(res=>setTimeout(res,400));
+
+        // Clone for PDF
+        const clone = content.cloneNode(true);
+        clone.style.fontSize='10px';
+        clone.style.lineHeight='1.3';
+
+        const opt = {
+            margin:[5,5,5,5],
+            filename:`profit-loss-${selectedInvoiceId}.pdf`,
+            html2canvas:{scale:2,useCORS:true,scrollY:0},
+            jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+            pagebreak:{mode:['avoid-all','css','legacy']},
+        };
+
+        await html2pdf().set(opt).from(clone).save();
+
+        loader.remove();
+        destroyCharts();
+        ensureBarChart();
+        ensurePieChart();
+    } catch (err) {
+        console.error("PDF generation error:", err);
+        alert("⚠️ Failed to generate PDF. Please try again.");
+    }
 });
 </script>
 
-<style>
-#plBarChart, #plPieChart { max-height:260px!important; height:260px!important; }
-#profitLossContent canvas { display:block!important; }
-</style>
 
+<style>
+#profitLossContent * {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+}
+#plBarChart, #plPieChart {
+    max-height: 180px !important;
+    height: 180px !important;
+}
+#profitLossContent table th,
+#profitLossContent table td {
+    padding: 2px 4px !important;
+}
+</style>

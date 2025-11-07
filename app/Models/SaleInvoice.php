@@ -138,6 +138,9 @@ class SaleInvoice extends Model implements HasMedia
         return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
     }
 
+public function statusHistories() {
+    return $this->hasMany(\App\Models\SaleInvoiceStatusHistory::class, 'sale_invoice_id')->latest();
+}
 
 
 
