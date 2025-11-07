@@ -398,7 +398,7 @@
         <!-- Footer -->
        <div class="mt-4 p-3 border-t border-gray-300 text-xs text-gray-600 space-y-1 text-center">
     <p class="italic text-gray-500">
-        This is a computer-generated purchase bill and does not require a physical signature.
+        This is a computer-generated sales bill and does not require a physical signature.
     </p>
 
     <div class="flex flex-col sm:flex-row justify-center sm:justify-between mt-2 space-y-1 sm:space-y-0 sm:space-x-4">
