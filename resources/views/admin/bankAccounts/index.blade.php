@@ -10,7 +10,6 @@
                 <i class="fas fa-plus mr-2"></i>
         {{ trans('global.add') }} {{ trans('cruds.bankAccount.title_singular') }}
     </a>
-
     <!-- CSV Import Button -->
     <button type="button" 
       class="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow-sm transition" data-toggle="modal" data-target="#csvImportModal">

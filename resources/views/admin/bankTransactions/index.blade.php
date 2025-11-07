@@ -14,12 +14,14 @@
         @endcan
     </div>
 
+
     {{-- Transactions Table --}}
     <div class="bg-white shadow rounded-xl overflow-hidden">
         <div class="p-6 overflow-x-auto">
-            <table class="min-w-full text-sm text-left text-gray-600 datatable datatable-BankTransaction">
-                <thead class="bg-gray-50 text-gray-700 text-xs uppercase tracking-wider">
+            <table class="min-w-full text-sm text-left text-gray-600 datatable datatable-BankTransaction p-2">
+                <thead class="bg-gradient-to-r from-blue-100 to-blue-200 text-gray-700 uppercase text-xs font-semibold">
                     <tr>
+                        <th class="px-4 py-3 text-center w-10 p-3">
                         <th class="px-4 py-3">#</th>
                         <th class="px-4 py-3">Party</th>
                         <th class="px-4 py-3">Payment Type</th>
