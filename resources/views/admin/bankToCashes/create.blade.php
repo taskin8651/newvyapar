@@ -1,110 +1,121 @@
 @extends('layouts.admin')
 @section('content')
-<div class="p-6 bg-gray-100 min-h-screen">
-    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md border border-gray-200">
-
-        {{-- Header --}}
-        <div class="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-gray-800 flex items-center space-x-2">
-                <i class="fas fa-exchange-alt text-indigo-600"></i>
-                <span>{{ trans('global.create') }} {{ trans('cruds.bankToCash.title_singular') }}</span>
+<div class="max-w-5xl mx-auto py-8">
+    <div class="bg-white shadow-lg rounded-2xl p-8">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b pb-4 mb-6">
+            <h2 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
+                <i class="fas fa-exchange-alt"></i>
+                {{ trans('global.create') }} {{ trans('cruds.bankToCash.title_singular') }}
             </h2>
             <a href="{{ route('admin.bank-to-cashes.index') }}" 
-               class="text-sm text-gray-500 hover:text-indigo-600 transition flex items-center gap-1">
-                <i class="fas fa-arrow-left"></i> {{ trans('global.back_to_list') }}
+               class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm transition">
+                ← {{ trans('global.back_to_list') }}
             </a>
         </div>
 
-        {{-- Progress Bar --}}
-        <div class="px-6 pt-4">
-            <div class="flex justify-between items-center text-sm text-gray-500 mb-2">
-                <span>Form Completion Progress</span>
-                <span id="progress-text">0%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-4">
-                <div id="progress-bar" class="bg-indigo-600 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-            </div>
-        </div>
+        <!-- Form -->
+        <form method="POST" action="{{ route('admin.bank-to-cashes.store') }}" enctype="multipart/form-data">
+            @csrf
 
-        {{-- Form --}}
-        <div class="px-6 py-6">
-            <form method="POST" action="{{ route('admin.bank-to-cashes.store') }}" enctype="multipart/form-data" class="space-y-6">
-                @csrf
+            <!-- Grid Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                {{-- From --}}
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToCash.fields.from') }} <span class="text-red-500">*</span></label>
-                    <select name="from_id" id="from_id" data-required="1" required
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <!-- From -->
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="from_id" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.bankToCash.fields.from') }} <span class="text-red-500">*</span>
+                    </label>
+                    <select name="from_id" id="from_id" required
+                            class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                         @foreach($froms as $id => $entry)
                             <option value="{{ $id }}" {{ old('from_id') == $id ? 'selected' : '' }}>{{ $entry }}</option>
                         @endforeach
                     </select>
                     @error('from_id')
-                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- To --}}
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToCash.fields.to') }}</label>
-                    <input type="text" name="to" id="to" data-required="1" value="{{ old('to', 'Cash') }}"
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <!-- To -->
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="to" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.bankToCash.fields.to') }}
+                    </label>
+                    <input type="text" name="to" id="to" value="{{ old('to', 'Cash') }}"
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                     @error('to')
-                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Amount --}}
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToCash.fields.amount') }} <span class="text-red-500">*</span></label>
-                    <input type="number" name="amount" id="amount" data-required="1" step="0.01" value="{{ old('amount', '') }}" 
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <!-- Amount -->
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="amount" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.bankToCash.fields.amount') }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="amount" id="amount" step="0.01" value="{{ old('amount', '') }}" required
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                     @error('amount')
-                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Adjustment Date --}}
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToCash.fields.adjustment_date') }}</label>
-                    <input type="date" name="adjustment_date" id="adjustment_date" data-required="1" value="{{ old('adjustment_date') }}"
-                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <!-- Adjustment Date -->
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="adjustment_date" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.bankToCash.fields.adjustment_date') }}
+                    </label>
+                    <input type="date" name="adjustment_date" id="adjustment_date" value="{{ old('adjustment_date') }}"
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                     @error('adjustment_date')
-                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Description --}}
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToCash.fields.description') }}</label>
-                    <textarea name="description" id="description" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 ckeditor">{!! old('description') !!}</textarea>
+                <!-- Description -->
+                <div class="md:col-span-2 bg-yellow-50 p-4 rounded-lg shadow-inner">
+                    <label for="description" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.bankToCash.fields.description') }}
+                    </label>
+                    <textarea name="description" id="description" 
+                              class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 ckeditor">{!! old('description') !!}</textarea>
                     @error('description')
-                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Attachment --}}
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-gray-700">{{ trans('cruds.bankToCash.fields.attechment') }}</label>
-                    <div class="needsclick dropzone" id="attechment-dropzone"></div>
+                <!-- Attachment -->
+                <div class="md:col-span-2 bg-yellow-50 p-4 rounded-lg shadow-inner">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        {{ trans('cruds.bankToCash.fields.attechment') }}
+                    </label>
+                    <div class="needsclick dropzone border-2 border-dashed rounded-lg p-6 text-center text-gray-500" id="attechment-dropzone"></div>
                     @error('attechment')
-                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Submit --}}
-                <div class="flex justify-end pt-4">
-                    <button type="submit" 
-                            class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i> {{ trans('global.save') }}
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
 
+            <!-- Actions -->
+            <div class="flex justify-end gap-3 pt-6 border-t mt-6">
+                <a href="{{ route('admin.bank-to-cashes.index') }}" 
+                   class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-sm hover:bg-gray-200 transition">
+                    {{ trans('global.cancel') }}
+                </a>
+                <button type="submit" 
+                        class="px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 transition">
+                    <i class="fas fa-save mr-1"></i> {{ trans('global.save') }}
+                </button>
+            </div>
+        </form>
     </div>
 </div>
+
+
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const inputs = document.querySelectorAll('input[data-required], select[data-required], textarea[data-required]');
