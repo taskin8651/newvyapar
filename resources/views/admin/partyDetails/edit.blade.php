@@ -135,7 +135,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 required">Pincode</label>
-                            <input type="text" name="pincode" id="pincode" required
+                            <input type="text" name="pin_code" id="pincode" required
                                    value="{{ old('pincode', $partyDetail->pincode) }}"
                                    class="w-full rounded-md border border-gray-300 px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 mt-1">
                         </div>

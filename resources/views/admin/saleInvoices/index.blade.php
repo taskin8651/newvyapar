@@ -3,7 +3,6 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-6">
     <div class="bg-white shadow-lg rounded-2xl p-6">
-
         <!-- Header -->
         <div class="flex justify-between items-center mb-6 border-b pb-4">
             <h2 class="text-xl font-bold text-indigo-700 flex items-center gap-2">
@@ -58,13 +57,12 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->select_customer->party_name ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->po_no ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->po_date ?? '—' }}</td>
-
-                            <td class="px-4 py-3 text-sm text-center">
-                                {{ $saleInvoice->status ?? '—' }}
-                            </td>
+                            <td class="px-4 py-3 text-sm text-center">{{ $saleInvoice->status ?? '—' }}</td>
 
                             <td class="px-4 py-3 text-center relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
-                                <button class="text-gray-600 hover:text-gray-900"><i class="fa-solid fa-ellipsis-vertical text-lg"></i></button>
+                                <button class="text-gray-600 hover:text-gray-900">
+                                    <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+                                </button>
 
                                 <div x-show="open" x-transition
                                      class="absolute top-full left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
@@ -80,9 +78,10 @@
                                         <i class="fas fa-edit mr-2"></i> Edit
                                     </a>
 
+                                    <!-- Profit/Loss Button -->
                                     <button onclick="openManufactureModal({{ $saleInvoice->id }})"
                                             class="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg">
-                                        <i class="fas fa-industry mr-2"></i> Confirm Manufacture
+                                        <i class="fas fa-industry mr-2"></i> Profit/Loss
                                     </button>
 
                                     <a href="{{ route('admin.sale-invoices.pdf', $saleInvoice->id) }}" target="_blank"
@@ -99,25 +98,95 @@
             <div class="mt-4">{{ $saleInvoices->links() }}</div>
         </div>
     </div>
-</div>
+@endsection
 
-<!-- Profit/Loss Modal -->
-<div id="profitLossModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl p-6 relative overflow-y-auto max-h-[90vh]">
-        <h2 class="text-lg font-semibold text-indigo-700 mb-3">Profit & Loss Details</h2>
-        <div id="profitLossContent" class="text-sm text-gray-700 space-y-4"></div>
-        <div class="flex justify-end mt-6">
-            <button onclick="closeProfitLossModal()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Close</button>
+<!-- ✅ Profit/Loss Modal (All Sections Combined) -->
+<div id="profitLossModal" class="fixed inset-0 hidden items-center justify-center z-[9999]">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeProfitLossModal()"></div>
+
+    <!-- Modal Card -->
+    <div class="relative w-full max-w-5xl mx-4 rounded-2xl shadow-2xl overflow-hidden bg-white/80 backdrop-blur-xl border border-white/60">
+        <!-- Gradient Top Bar -->
+        <div class="h-2 w-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-500"></div>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 bg-white">
+            <div>
+                <h2 class="text-lg font-semibold text-indigo-700">Profit &amp; Loss Details</h2>
+                <p class="text-xs text-gray-500" id="plInvoiceMeta">—</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnDownloadPdf"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow">
+                    <i class="fas fa-file-download"></i> Download PDF
+                </button>
+                <button onclick="closeProfitLossModal()"
+                        class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 shadow">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div id="profitLossContent" class="px-6 py-4 max-h-[67vh] overflow-y-auto text-sm text-gray-700">
+            <div id="plTabsContainer" class="space-y-4">
+                <!-- Header Band -->
+                <div id="plHeaderBand" class="rounded-xl border bg-white/70 p-4">
+                    <h3 class="text-xl font-bold text-indigo-700">Profit &amp; Loss Report</h3>
+                    <p class="text-xs text-gray-500" id="plGeneratedAt">—</p>
+                </div>
+
+                <!-- Table Section -->
+                <section id="tab-table" class="plTabPane">
+                    <div class="rounded-xl border overflow-hidden">
+                        <h4 class="text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-2">Items Table</h4>
+                        <table class="min-w-full border text-sm">
+                            <thead class="bg-gradient-to-r from-indigo-50 to-cyan-50">
+                                <tr>
+                                    <th class="border px-2 py-2 text-left">Product</th>
+                                    <th class="border px-2 py-2 text-center">Qty</th>
+                                    <th class="border px-2 py-2 text-right">Sale Price</th>
+                                    <th class="border px-2 py-2 text-right">Purchase Price</th>
+                                    <th class="border px-2 py-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plItemsBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Bar Chart Section -->
+                <section id="tab-bar" class="plTabPane">
+                    <div class="rounded-xl border p-4 bg-white/70 h-[310px]">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Sale vs Purchase (Bar Chart)</h4>
+                        <div class="h-[260px]"><canvas id="plBarChart"></canvas></div>
+                    </div>
+                </section>
+
+                <!-- Pie Chart Section -->
+                <section id="tab-pie" class="plTabPane">
+                    <div class="rounded-xl border p-4 bg-white/70 h-[310px]">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Profit vs Loss (Pie Chart)</h4>
+                        <div class="h-[260px]"><canvas id="plPieChart"></canvas></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-white border-t">
+            <div id="profitLossTotals" class="text-right text-sm">—</div>
         </div>
     </div>
 </div>
 
 <!-- Manufacture Modal -->
-<div id="manufactureModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+<div id="manufactureModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden items-center justify-center z-[9998]">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
         <h2 class="text-lg font-semibold text-indigo-700 mb-3">Confirm Manufacture</h2>
-        <p class="text-sm text-gray-600 mb-6">Confirming manufacture will update Profit & Loss details automatically.</p>
-        <div id="loadingSpinner" class="hidden absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center rounded-2xl">
+        <p class="text-sm text-gray-600 mb-6">Confirming manufacture will update Profit &amp; Loss details automatically.</p>
+        <div id="loadingSpinner" class="hidden absolute inset-0 bg-white/80 flex items-center justify-center rounded-2xl">
             <i class="fas fa-spinner fa-spin text-indigo-600 text-2xl"></i>
         </div>
         <div class="flex justify-end gap-3">
@@ -126,133 +195,237 @@
         </div>
     </div>
 </div>
-@endsection
 
-@section('scripts')
-@parent
+<!-- Chart.js + html2pdf bundle -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+<!-- ✅ Profit/Loss Modal (All Sections Visible) -->
+<div id="profitLossModal" class="fixed inset-0 hidden items-center justify-center z-[9999]">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeProfitLossModal()"></div>
+
+    <!-- Modal Card -->
+    <div class="relative w-full max-w-5xl mx-4 rounded-2xl shadow-2xl overflow-hidden
+                bg-white/80 backdrop-blur-xl border border-white/60"
+         style="box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);">
+
+        <!-- Gradient Top Bar -->
+        <div class="h-2 w-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-500"></div>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 bg-white">
+            <div>
+                <h2 class="text-lg font-semibold text-indigo-700">Profit &amp; Loss Details</h2>
+                <p class="text-xs text-gray-500" id="plInvoiceMeta">—</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnDownloadPdf"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+                               bg-emerald-600 hover:bg-emerald-700 text-white shadow">
+                    <i class="fas fa-file-download"></i>
+                    Download PDF
+                </button>
+                <button onclick="closeProfitLossModal()"
+                        class="inline-flex items-center justify-center w-9 h-9 rounded-xl
+                               bg-gray-100 hover:bg-gray-200 text-gray-700 shadow">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Body (All Sections Visible) -->
+        <div id="profitLossContent" class="px-6 py-4 max-h-[67vh] overflow-y-auto text-sm text-gray-700">
+            <div id="plTabsContainer" class="space-y-4">
+                
+                <!-- Header Band -->
+                <div id="plHeaderBand" class="rounded-xl border bg-white/70 p-4">
+                    <h3 class="text-xl font-bold text-indigo-700">Profit &amp; Loss Report</h3>
+                    <p class="text-xs text-gray-500" id="plGeneratedAt">—</p>
+                </div>
+
+                <!-- TABLE SECTION -->
+                <section id="tab-table" class="plTabPane">
+                    <div class="rounded-xl border overflow-hidden">
+                        <h4 class="text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-2">Items Table</h4>
+                        <table class="min-w-full border text-sm">
+                            <thead class="bg-gradient-to-r from-indigo-50 to-cyan-50">
+                                <tr>
+                                    <th class="border px-2 py-2 text-left">Product</th>
+                                    <th class="border px-2 py-2 text-center">Qty</th>
+                                    <th class="border px-2 py-2 text-right">Sale Price</th>
+                                    <th class="border px-2 py-2 text-right">Purchase Price</th>
+                                    <th class="border px-2 py-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plItemsBody"><!-- rows inject dynamically --></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- BAR CHART SECTION -->
+                <section id="tab-bar" class="plTabPane">
+                    <div class="rounded-xl border p-4 bg-white/70 h-[310px]">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Sale vs Purchase (Bar Chart)</h4>
+                        <div class="h-[260px]">
+                            <canvas id="plBarChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PIE CHART SECTION -->
+                <section id="tab-pie" class="plTabPane">
+                    <div class="rounded-xl border p-4 bg-white/70 h-[310px]">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Profit vs Loss (Pie Chart)</h4>
+                        <div class="h-[260px]">
+                            <canvas id="plPieChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- Footer Summary -->
+        <div class="px-6 py-4 bg-white border-t">
+            <div id="profitLossTotals" class="text-right text-sm">—</div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Manufacture Modal -->
+<div id="manufactureModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden items-center justify-center z-[9998]">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+        <h2 class="text-lg font-semibold text-indigo-700 mb-3">Confirm Manufacture</h2>
+        <p class="text-sm text-gray-600 mb-6">Confirming manufacture will update Profit &amp; Loss details automatically.</p>
+        <div id="loadingSpinner" class="hidden absolute inset-0 bg-white/80 flex items-center justify-center rounded-2xl">
+            <i class="fas fa-spinner fa-spin text-indigo-600 text-2xl"></i>
+        </div>
+        <div class="flex justify-end gap-3">
+            <button onclick="closeManufactureModal()" class="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+            <button id="confirmManufactureBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
 <script>
-let selectedInvoiceId = null;
+let selectedInvoiceId = null, currentPLData = null, barChartInstance = null, pieChartInstance = null;
 
+// --- Modal Controls ---
 function openManufactureModal(id) {
     selectedInvoiceId = id;
-    document.getElementById('manufactureModal').classList.remove('hidden');
-    document.getElementById('manufactureModal').classList.add('flex');
+    document.getElementById('manufactureModal').classList.replace('hidden', 'flex');
 }
-
 function closeManufactureModal() {
-    document.getElementById('manufactureModal').classList.add('hidden');
-    document.getElementById('manufactureModal').classList.remove('flex');
+    document.getElementById('manufactureModal').classList.replace('flex', 'hidden');
 }
-
+function openProfitLossModal() {
+    document.getElementById('profitLossModal').classList.replace('hidden', 'flex');
+}
 function closeProfitLossModal() {
-    document.getElementById('profitLossModal').classList.add('hidden');
-    document.getElementById('profitLossModal').classList.remove('flex');
+    destroyCharts();
+    document.getElementById('profitLossModal').classList.replace('flex', 'hidden');
+}
+function destroyCharts() {
+    if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+    if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
 }
 
+// --- Confirm Manufacture ---
 document.getElementById('confirmManufactureBtn').addEventListener('click', async function() {
     if (!selectedInvoiceId) return;
     const spinner = document.getElementById('loadingSpinner');
     spinner.classList.remove('hidden');
     try {
-        const url = `{{ url('admin/sale-invoices') }}/${selectedInvoiceId}/confirm-manufacture`;
-        const res = await fetch(url, {
+        const res = await fetch(`{{ url('admin/sale-invoices') }}/${selectedInvoiceId}/confirm-manufacture`, {
             method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-            },
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' }
         });
         const result = await res.json();
         if (result.status === 'success') {
             closeManufactureModal();
             renderProfitLossModal(result.data);
+            ensureBarChart();
+            ensurePieChart();
+            openProfitLossModal();
         } else {
             alert(result.message || 'Error occurred');
         }
-    } catch (e) {
-        alert('⚠️ ' + e.message);
-    } finally {
-        spinner.classList.add('hidden');
-    }
+    } catch (e) { alert('⚠️ ' + e.message); }
+    spinner.classList.add('hidden');
 });
 
-function renderProfitLossModal(data) {
-    const i = data.invoice;
-    const p = data.profit_loss;
-    let html = `
-        <div class="grid grid-cols-2 gap-4 border-b pb-3">
-            <p><strong>Customer:</strong> ${i.select_customer?.party_name ?? i.select_customer?.phone_number ?? '—'}</p>
-            <p><strong>State:</strong> ${i.select_customer?.state ?? '—'}</p>
-            <p><strong>Docket No:</strong> ${i.docket_no ?? '—'}</p>
-            <p><strong>Billing Date:</strong> ${i.billing_date ?? '—'}</p>
-            <p><strong>Cost Center:</strong> ${i.main_cost_center?.name ?? '—'}</p>
-            <p><strong>Sub Cost Center:</strong> ${i.sub_cost_center?.name ?? '—'}</p>
-        </div>
-        <h3 class="text-indigo-700 font-semibold mt-4 mb-2">Items Sold</h3>
-        <table class="min-w-full border text-sm">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="border px-2 py-1">Product</th>
-                    <th class="border px-2 py-1">Qty</th>
-                    <th class="border px-2 py-1">Sale Price</th>
-                    <th class="border px-2 py-1">Purchase Price</th>
-                    <th class="border px-2 py-1">Total</th>
-                </tr>
-            </thead><tbody>`;
-
-    p.composition_json.forEach(item => {
-        html += `
-            <tr>
-                <td class="border px-2 py-1">${item.product_name}</td>
-                <td class="border px-2 py-1 text-center">${item.qty}</td>
-                <td class="border px-2 py-1 text-right">₹${item.sale_price}</td>
-                <td class="border px-2 py-1 text-right">₹${item.purchase_price}</td>
-                <td class="border px-2 py-1 text-right">₹${item.total}</td>
-            </tr>`;
-
-        if (item.raw_materials && item.raw_materials.length > 0) {
-            html += `
-                <tr><td colspan="5" class="bg-gray-50 text-xs text-gray-600 px-2 py-1">
-                    <strong>Raw Materials Used:</strong>
-                </td></tr>`;
-            item.raw_materials.forEach(rm => {
-                html += `
-                    <tr class="text-xs text-gray-500">
-                        <td class="border px-2 py-1 pl-6">- ${rm.raw_material_name}</td>
-                        <td class="border px-2 py-1 text-center">${rm.qty}</td>
-                        <td class="border px-2 py-1 text-right">₹${rm.sale_price}</td>
-                        <td class="border px-2 py-1 text-right">₹${rm.purchase_price}</td>
-                        <td class="border px-2 py-1 text-right">₹${rm.total_purchase_value}</td>
-                    </tr>`;
-            });
-        }
+// --- Render Profit/Loss Data ---
+function fmtRupee(n){return '₹'+(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:2})}
+function renderProfitLossModal(data){
+    currentPLData=data;
+    const i=data.invoice, p=data.profit_loss;
+    document.getElementById('plInvoiceMeta').innerHTML=
+        `<strong>Customer:</strong> ${i?.select_customer?.party_name ?? '—'} &nbsp;•&nbsp;
+         <strong>PO No:</strong> ${i?.po_no ?? '—'} &nbsp;•&nbsp;
+         <strong>Date:</strong> ${i?.billing_date ?? '—'}`;
+    document.getElementById('plGeneratedAt').innerText=`Invoice #${i?.id ?? '—'} • ${new Date().toLocaleString()}`;
+    const tb=document.getElementById('plItemsBody');
+    tb.innerHTML='';
+    (p.composition_json||[]).forEach(it=>{
+        tb.insertAdjacentHTML('beforeend',`
+        <tr class="odd:bg-white even:bg-gray-50">
+            <td class="border px-2 py-1">${it.product_name}</td>
+            <td class="border px-2 py-1 text-center">${it.qty}</td>
+            <td class="border px-2 py-1 text-right">${fmtRupee(it.sale_price)}</td>
+            <td class="border px-2 py-1 text-right">${fmtRupee(it.purchase_price)}</td>
+            <td class="border px-2 py-1 text-right">${fmtRupee(it.total)}</td>
+        </tr>`);
     });
-
-    html += `
-        </tbody></table>
-        <div class="mt-4 border-t pt-3 text-right">
-            <p><strong>Total Purchase:</strong> ₹${p.total_purchase_value}</p>
-            <p><strong>Total Sale:</strong> ₹${p.total_sale_value}</p>
-            <p class="${p.is_profit ? 'text-green-600' : 'text-red-600'} font-bold">
-                ${p.is_profit ? 'Profit' : 'Loss'}: ₹${p.profit_loss_amount}
-            </p>
+    document.getElementById('profitLossTotals').innerHTML=`
+        <div class="inline-grid grid-cols-3 gap-6 text-right">
+            <div><span class="text-gray-500">Total Purchase:</span> <span class="font-semibold">${fmtRupee(p.total_purchase_value)}</span></div>
+            <div><span class="text-gray-500">Total Sale:</span> <span class="font-semibold">${fmtRupee(p.total_sale_value)}</span></div>
+            <div><span class="text-gray-500">Result:</span>
+                 <span class="${p.is_profit?'text-green-600':'text-red-600'} font-bold">${p.is_profit?'Profit':'Loss'}: ${fmtRupee(p.profit_loss_amount)}</span></div>
         </div>`;
-
-    document.getElementById('profitLossContent').innerHTML = html;
-    document.getElementById('profitLossModal').classList.remove('hidden');
-    document.getElementById('profitLossModal').classList.add('flex');
 }
 
-// DataTable Live Search
-$(function () {
-    let table = $('.datatable-SaleInvoice:not(.ajaxTable)').DataTable({
-        order: [[1, 'desc']],
-        dom: 'lrtip',
-        pageLength: 10,
+// --- Charts ---
+function ensureBarChart(){
+    const p=currentPLData.profit_loss;
+    const labels=p.composition_json.map(x=>x.product_name);
+    const sale=p.composition_json.map(x=>x.sale_price*x.qty);
+    const purchase=p.composition_json.map(x=>x.purchase_price*x.qty);
+    barChartInstance=new Chart(document.getElementById('plBarChart'),{
+        type:'bar',
+        data:{labels,datasets:[{label:'Sale',data:sale},{label:'Purchase',data:purchase}]},
+        options:{responsive:true,maintainAspectRatio:false}
     });
-    $('#saleInvoiceSearch').on('keyup', function () {
-        table.search(this.value).draw();
+}
+function ensurePieChart(){
+    const p=currentPLData.profit_loss;
+    const profit=Math.max(p.profit_loss_amount,0);
+    const loss=Math.max(-p.profit_loss_amount,0);
+    pieChartInstance=new Chart(document.getElementById('plPieChart'),{
+        type:'pie',
+        data:{labels:['Profit','Loss'],datasets:[{data:[profit,loss]}]},
+        options:{responsive:true,maintainAspectRatio:false}
     });
+}
+
+// --- Download PDF ---
+document.getElementById('btnDownloadPdf').addEventListener('click',async()=>{
+    ensureBarChart(); ensurePieChart();
+    const clone=document.getElementById('profitLossContent').cloneNode(true);
+    const opt={margin:10,filename:`profit-loss-${selectedInvoiceId}.pdf`,
+        html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
+    await html2pdf().set(opt).from(clone).save();
 });
 </script>
-@endsection
+
+<style>
+#plBarChart, #plPieChart { max-height:260px!important; height:260px!important; }
+#profitLossContent canvas { display:block!important; }
+</style>
+

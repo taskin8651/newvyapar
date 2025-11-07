@@ -75,34 +75,51 @@
             <td class="px-4 py-3 text-center">
                 <input type="checkbox" disabled {{ $bankAccount->print_bank_details ? 'checked' : '' }} class="accent-green-500 w-5 h-5">
             </td>
-            <td class="px-4 py-3 flex gap-2">
-                @can('bank_account_show')
-                   
-                    <a href="{{ route('admin.bank-accounts.show', $bankAccount->id) }}"
-                                           class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">
-                                           <i class="fas fa-eye mr-1"></i>{{ trans('global.view') }}
-                                        </a>
-                @endcan
-                @can('bank_account_edit')
-                    {{-- <a class="px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition" href="{{ route('admin.bank-accounts.edit', $bankAccount->id) }}">
-                        Edit
-                    </a> --}}
-                     <a href="{{ route('admin.bank-accounts.edit', $bankAccount->id) }}"
-                                          class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                                           <i class="fas fa-edit mr-1"></i>{{ trans('global.edit') }}
-                                        </a>
-                @endcan
-                @can('bank_account_delete')
-                    <form action="{{ route('admin.bank-accounts.destroy', $bankAccount->id) }}" method="POST" onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                        <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
-                                                <i class="fas fa-trash mr-1"></i>{{ trans('global.delete') }}
-                                            </button>
-                    </form>
-                @endcan
-            </td>
+            <td class="px-4 py-3 text-center relative" x-data="{ open: false }">
+    <!-- Ellipsis Button -->
+    <button @click="open = !open" class="text-gray-600 hover:text-gray-900 focus:outline-none">
+        <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+    </button>
+
+    <!-- Dropdown Menu -->
+    <div x-show="open"
+         @click.away="open = false"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95"
+         class="absolute right-0 mt-2 w-max bg-white border border-gray-200 rounded-lg shadow-lg z-20 flex flex-col gap-1 p-1">
+
+        @can('bank_account_show')
+            <a href="{{ route('admin.bank-accounts.show', $bankAccount->id) }}"
+               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
+                <i class="fas fa-eye mr-1"></i> {{ trans('global.view') }}
+            </a>
+        @endcan
+
+        @can('bank_account_edit')
+            <a href="{{ route('admin.bank-accounts.edit', $bankAccount->id) }}"
+               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition">
+                <i class="fas fa-edit mr-1"></i> {{ trans('global.edit') }}
+            </a>
+        @endcan
+
+        @can('bank_account_delete')
+            <form action="{{ route('admin.bank-accounts.destroy', $bankAccount->id) }}" method="POST"
+                  onsubmit="return confirm('{{ trans('global.areYouSure') }}');" class="inline-block">
+                @method('DELETE')
+                @csrf
+                <button type="submit"
+                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition">
+                    <i class="fas fa-trash mr-1"></i> {{ trans('global.delete') }}
+                </button>
+            </form>
+        @endcan
+    </div>
+</td>
+
         </tr>
     @endforeach
 </tbody>

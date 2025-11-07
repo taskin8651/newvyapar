@@ -169,10 +169,19 @@
         <!-- Navbar -->
         <!-- Navbar -->
 <header class="flex items-center justify-between bg-white shadow px-6 py-3">
-    <div>
-        <img src="{{ asset('logo.png') }}" alt="" class="h-10 w-100 inline-block">
-        <button class="md:hidden text-gray-600"><i class="fas fa-bars"></i></button>
-    </div>
+<div>
+    @php
+        $user = auth()->user();
+        $company = $user->select_companies()->first();
+        $logoUrl = $company && $company->getFirstMediaUrl('logo_upload')
+                    ? $company->getFirstMediaUrl('logo_upload')
+                    : asset('logo.png'); // fallback logo
+    @endphp
+
+    <img src="{{ $logoUrl }}" alt="Company Logo" class="h-12 w-100   inline-block">
+    <button class="md:hidden text-gray-600"><i class="fas fa-bars"></i></button>
+</div>
+
 
     {{-- 🔹 USER DROPDOWN MENU --}}
     <div class="relative" x-data="{ open: false }">

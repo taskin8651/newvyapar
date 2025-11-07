@@ -3,18 +3,24 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
-use App\Traits\MultiTenantModelTrait;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class BankAccount extends Model
+class BankAccount extends Model implements HasMedia
 {
-    use SoftDeletes,  Auditable, HasFactory;
+    use SoftDeletes, Auditable, HasFactory, InteractsWithMedia;
 
     public $table = 'bank_accounts';
+
+    protected $appends = [
+        'upi_qr', // ✅ Will return UPI QR URL
+    ];
 
     protected $dates = [
         'as_of_date',
@@ -34,9 +40,6 @@ class BankAccount extends Model
         'upi',
         'print_upi_qr',
         'print_bank_details',
-        'created_at',
-        'updated_at',
-        'deleted_at',
         'created_by_id',
     ];
 
@@ -52,11 +55,26 @@ class BankAccount extends Model
 
     public function setAsOfDateAttribute($value)
     {
-        $this->attributes['as_of_date'] = $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
+        $this->attributes['as_of_date'] = $value
+            ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d')
+            : null;
     }
 
     public function created_by()
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    /* ✅ UPI QR Accessor: returns only URL string */
+    public function getUpiQrAttribute()
+    {
+        $media = $this->getFirstMedia('upi_qr');
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')->fit('crop', 50, 50);
+        $this->addMediaConversion('preview')->fit('crop', 200, 200);
     }
 }

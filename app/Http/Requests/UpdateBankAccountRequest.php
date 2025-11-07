@@ -49,6 +49,13 @@ class UpdateBankAccountRequest extends FormRequest
                 'string',
                 'nullable',
             ],
+            'upi_qr' => [
+                'nullable',
+                 'image', 
+                 'mimes:jpg,jpeg,png,webp', 
+                 'max:2048'
+                ],
+
         ];
     }
 }

@@ -35,34 +35,94 @@ public function index()
     abort_if(Gate::denies('sale_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
     $user = auth()->user();
+    $userId = $user->id;
     $userRole = $user->roles->pluck('title')->first();
+
+    // ==============================================
+    // 🔥 STEP 1: Build Allowed User IDs (Hierarchy Based)
+    // ==============================================
+    $allowedUserIds = collect([$userId]);
+
+    $company = $user->select_companies()->first();
+    $companyId = $company?->id;
+
+    if ($companyId) {
+
+        // We need all company users (IDs)
+        $companyUserIds = DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
+
+        // Find company admin
+        $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
+            ->whereHas('roles', fn($q) => $q->where('title', 'Admin')) // Adjust if title differs
+            ->value('id');
+
+        if ($companyAdminId) {
+            $allowedUserIds->push($companyAdminId);
+        }
+
+        // If user was created by someone (branch/user)
+        $parentId = $user->created_by_id;
+
+        if ($parentId) {
+            $allowedUserIds->push($parentId);
+
+            // Get admin of parent too
+            $parent = \App\Models\User::find($parentId);
+            if ($parent) {
+                $parentCompanyId = $parent->select_companies()->first()?->id;
+
+                if ($parentCompanyId) {
+                    $parentCompanyUsers = DB::table('add_business_user')
+                        ->where('add_business_id', $parentCompanyId)
+                        ->pluck('user_id')
+                        ->toArray();
+
+                    $parentAdminId = \App\Models\User::whereIn('id', $parentCompanyUsers)
+                        ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+                        ->value('id');
+
+                    if ($parentAdminId) {
+                        $allowedUserIds->push($parentAdminId);
+                    }
+                }
+            }
+        }
+
+        // If logged-in = Admin → allow whole company users
+        if ($userRole === 'Admin') {
+            $allowedUserIds = collect($companyUserIds);
+        }
+    }
+
+    $allowedUserIds = $allowedUserIds->unique()->toArray();
+
+    // ==============================================
+    // 📍 STEP 2: Fetch Invoices Based on Allowed User IDs
+    // ==============================================
 
     if ($userRole === 'Super Admin') {
         $saleInvoices = SaleInvoice::withoutGlobalScopes()
             ->with([
-                'select_customer' => function ($query) {
-                    $query->withoutGlobalScopes();
-                },
+                'select_customer' => fn($q) => $q->withoutGlobalScopes(),
                 'items',
                 'created_by',
                 'media'
             ])
             ->latest()
-            ->paginate(10); // ✅ use paginate instead of get()
+            ->paginate(10);
     } else {
-        $saleInvoices = SaleInvoice::with([
-                'select_customer',
-                'items',
-                'created_by',
-                'media'
-            ])
-            ->where('created_by_id', $user->id)
+        $saleInvoices = SaleInvoice::with(['select_customer','items','created_by','media'])
+            ->whereIn('created_by_id', $allowedUserIds)
             ->latest()
-            ->paginate(10); // ✅
+            ->paginate(10);
     }
 
     return view('admin.saleInvoices.index', compact('saleInvoices'));
 }
+
 
 
 
@@ -106,14 +166,12 @@ public function updateProfitLoss(Request $request, SaleInvoice $saleInvoice)
 public function confirmManufacture($id)
 {
     try {
-        // 🔹 Fetch Sale Invoice with relationships
         $saleInvoice = SaleInvoice::with([
             'select_customer:id,party_name,state,gstin,phone_number',
             'main_cost_center:id,cost_center_name',
             'sub_cost_center:id,sub_cost_center_name'
         ])->findOrFail($id);
 
-        // 🔹 Fetch all sold items for this invoice
         $saleItems = DB::table('add_item_sale_invoice')
             ->join('add_items', 'add_item_sale_invoice.add_item_id', '=', 'add_items.id')
             ->where('add_item_sale_invoice.sale_invoice_id', $id)
@@ -121,8 +179,8 @@ public function confirmManufacture($id)
                 'add_items.id as item_id',
                 'add_items.item_name',
                 'add_item_sale_invoice.qty',
-                'add_item_sale_invoice.price',
-                'add_item_sale_invoice.amount',
+                'add_item_sale_invoice.price as sale_price',
+                'add_item_sale_invoice.amount as total_sale',
                 'add_items.purchase_price'
             )
             ->get();
@@ -134,21 +192,18 @@ public function confirmManufacture($id)
             ], 404);
         }
 
-        // 🔹 Initialize totals
         $totalSale = 0;
         $totalPurchase = 0;
         $itemDetails = [];
 
-        // 🔹 Loop through each sold product
         foreach ($saleItems as $item) {
-            $productTotalSale = $item->amount;
-            $productTotalPurchase = $item->purchase_price * $item->qty;
 
-            // 🔹 Add to totals
+            $productTotalSale = floatval($item->total_sale);
+            $productTotalPurchase = floatval($item->purchase_price) * floatval($item->qty);
+
             $totalSale += $productTotalSale;
             $totalPurchase += $productTotalPurchase;
 
-            // 🔹 Fetch raw materials used in manufacturing this product
             $rawMaterials = DB::table('finished_goods_raw_material')
                 ->join('add_items', 'finished_goods_raw_material.select_raw_material_id', '=', 'add_items.id')
                 ->where('finished_goods_raw_material.item_id', $item->item_id)
@@ -162,35 +217,32 @@ public function confirmManufacture($id)
                 )
                 ->get();
 
-            // 🔹 Add raw material totals to overall purchase/sale
+            // Add totals from raw materials
             $totalSale += $rawMaterials->sum('total_sale_value');
             $totalPurchase += $rawMaterials->sum('total_purchase_value');
 
-            // 🔹 Structure for frontend
             $itemDetails[] = [
                 'product_name' => $item->item_name,
-                'qty' => $item->qty,
-                'sale_price' => number_format($item->price, 2),
-                'purchase_price' => number_format($item->purchase_price, 2),
-                'total' => number_format($item->amount, 2),
+                'qty' => floatval($item->qty),
+                'sale_price' => floatval($item->sale_price),
+                'purchase_price' => floatval($item->purchase_price),
+                'total' => floatval($item->total_sale),
                 'raw_materials' => $rawMaterials->map(function ($r) {
                     return [
                         'raw_material_name' => $r->raw_material_name,
-                        'qty' => $r->qty,
-                        'sale_price' => number_format($r->sale_price_at_time, 2),
-                        'purchase_price' => number_format($r->purchase_price_at_time, 2),
-                        'total_sale_value' => number_format($r->total_sale_value, 2),
-                        'total_purchase_value' => number_format($r->total_purchase_value, 2),
+                        'qty' => floatval($r->qty),
+                        'sale_price' => floatval($r->sale_price_at_time),
+                        'purchase_price' => floatval($r->purchase_price_at_time),
+                        'total_sale_value' => floatval($r->total_sale_value),
+                        'total_purchase_value' => floatval($r->total_purchase_value),
                     ];
                 }),
             ];
         }
 
-        // 🔹 Calculate Profit or Loss
         $profitLossAmount = $totalSale - $totalPurchase;
         $isProfit = $profitLossAmount >= 0;
 
-        // 🔹 Insert or Update sale_profit_losses manually
         $existing = DB::table('sale_profit_losses')->where('sale_invoice_id', $id)->first();
 
         $data = [
@@ -214,42 +266,35 @@ public function confirmManufacture($id)
             DB::table('sale_profit_losses')->insert($data);
         }
 
-        // 🔹 Update Sale Invoice Status
-        DB::table('sale_invoices')->where('id', $id)
-            ->update(['status' => 'Manufacture Confirmed', 'updated_at' => now()]);
-
-        // 🔹 Prepare Response for frontend
-        $responseData = [
-            'invoice' => [
-                'id' => $saleInvoice->id,
-                'docket_no' => $saleInvoice->docket_no ?? '—',
-                'billing_date' => $saleInvoice->created_at ? $saleInvoice->created_at->format('d M Y') : '—',
-                'select_customer' => [
-                    'party_name' => $saleInvoice->select_customer->party_name ?? '—',
-                    'state' => $saleInvoice->select_customer->state ?? '—',
-                    'gstin' => $saleInvoice->select_customer->gstin ?? '—',
-                    'phone_number' => $saleInvoice->select_customer->phone_number ?? '—',
-                ],
-                'main_cost_center' => [
-                    'name' => $saleInvoice->main_cost_center->cost_center_name ?? '—',
-                ],
-                'sub_cost_center' => [
-                    'name' => $saleInvoice->sub_cost_center->sub_cost_center_name ?? '—',
-                ],
-            ],
-            'profit_loss' => [
-                'total_purchase_value' => number_format($totalPurchase, 2),
-                'total_sale_value' => number_format($totalSale, 2),
-                'profit_loss_amount' => number_format(abs($profitLossAmount), 2),
-                'is_profit' => $isProfit,
-                'composition_json' => $itemDetails,
-            ],
-        ];
-
         return response()->json([
             'status' => 'success',
             'message' => '✅ Manufacture confirmed and profit/loss calculated successfully (with raw materials).',
-            'data' => $responseData,
+            'data' => [
+                'invoice' => [
+                    'id' => $saleInvoice->id,
+                    'docket_no' => $saleInvoice->docket_no ?? '—',
+                    'billing_date' => $saleInvoice->created_at ? $saleInvoice->created_at->format('d M Y') : '—',
+                    'select_customer' => [
+                        'party_name' => $saleInvoice->select_customer->party_name ?? '—',
+                        'state' => $saleInvoice->select_customer->state ?? '—',
+                        'gstin' => $saleInvoice->select_customer->gstin ?? '—',
+                        'phone_number' => $saleInvoice->select_customer->phone_number ?? '—',
+                    ],
+                    'main_cost_center' => [
+                        'name' => $saleInvoice->main_cost_center->cost_center_name ?? '—',
+                    ],
+                    'sub_cost_center' => [
+                        'name' => $saleInvoice->sub_cost_center->sub_cost_center_name ?? '—',
+                    ],
+                ],
+                'profit_loss' => [
+                    'total_purchase_value' => $totalPurchase,
+                    'total_sale_value' => $totalSale,
+                    'profit_loss_amount' => abs($profitLossAmount),
+                    'is_profit' => $isProfit,
+                    'composition_json' => $itemDetails,
+                ],
+            ],
         ]);
 
     } catch (\Exception $e) {
@@ -275,31 +320,86 @@ public function create()
     $userId = $user->id;
     $userRole = $user->roles->pluck('title')->first();
 
-    // ✅ Fetch company_id from pivot table (add_business_user)
-    $companyId = $user->select_companies()->pluck('add_businesses.id')->first(); 
-    // or: $companyId = optional($user->select_companies->first())->id;
+    // ✅ Logged-in user's company
+    $company = $user->select_companies()->first();
+    $companyId = $company?->id;
 
-    /* ======================================================
-       1️⃣ CUSTOMERS DROPDOWN — SAME COMPANY USERS
-    ====================================================== */
-    if ($userRole === 'Super Admin') {
-        $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
-    } elseif ($companyId) {
-        $companyUserIds = \DB::table('add_business_user')
+    // ===========================
+    // 🔥 STEP 1: Identify Allowed User IDs (Hierarchy Based)
+    // ===========================
+
+    $allowedUserIds = collect([$userId]);
+
+    if ($companyId) {
+
+        // 1️⃣ All users of this company
+        $companyUserIds = DB::table('add_business_user')
             ->where('add_business_id', $companyId)
             ->pluck('user_id')
             ->toArray();
 
-        $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $companyUserIds)->get();
+        // Find admin of this company (role = Admin)
+        $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
+            ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+            ->value('id');
+
+        if ($companyAdminId) {
+            $allowedUserIds->push($companyAdminId);
+        }
+
+        // If logged-in user is Branch or User, add its parent chain
+        $parentId = $user->created_by_id; // Who created this user?
+
+        if ($parentId) {
+            $allowedUserIds->push($parentId);
+
+            // If parent is Branch and has an Admin above, include Admin
+            $parent = \App\Models\User::find($parentId);
+            if ($parent) {
+                $parentCompanyId = $parent->select_companies()->first()?->id;
+                if ($parentCompanyId) {
+                    $parentCompanyUsers = DB::table('add_business_user')
+                        ->where('add_business_id', $parentCompanyId)
+                        ->pluck('user_id')
+                        ->toArray();
+
+                    $parentAdminId = \App\Models\User::whereIn('id', $parentCompanyUsers)
+                        ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+                        ->value('id');
+
+                    if ($parentAdminId) {
+                        $allowedUserIds->push($parentAdminId);
+                    }
+                }
+            }
+        }
+
+        // If Admin logged in → allow whole company
+        if ($userRole === 'Admin') {
+            $allowedUserIds = collect($companyUserIds);
+        }
+    }
+
+    $allowedUserIds = $allowedUserIds->unique()->toArray();
+
+    // ===========================
+    // 📍 STEP 2: CUSTOMERS DROPDOWN
+    // ===========================
+
+    if ($userRole === 'Super Admin') {
+        $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
+    } elseif ($companyId) {
+        $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $allowedUserIds)->get();
     } else {
         $select_customers = \App\Models\PartyDetail::where('created_by_id', $userId)->get();
     }
 
-    // Format customer dropdown with balance info
+    // Format
     $select_customers = $select_customers->mapWithKeys(function ($customer) {
         $balance = $customer->current_balance ?? $customer->opening_balance ?? 0;
         $type = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
         $balanceFormatted = number_format($balance, 2);
+
         $display = $type === 'Debit'
             ? "₹{$balanceFormatted} Dr - Payable ↑"
             : "₹{$balanceFormatted} Cr - Receivable ↓";
@@ -307,56 +407,38 @@ public function create()
         return [$customer->id => "{$customer->party_name} ({$display})"];
     });
 
-    /* ======================================================
-       2️⃣ ITEMS DROPDOWN — SAME COMPANY USERS
-    ====================================================== */
+    // ===========================
+    // 📦 STEP 3: ITEMS DROPDOWN
+    // ===========================
+
     if ($userRole === 'Super Admin') {
         $items = \App\Models\AddItem::withoutGlobalScopes()
             ->whereIn('item_type', ['product', 'service'])
-            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
             ->with('select_unit')
             ->get();
     } elseif ($companyId) {
-        $companyUserIds = \DB::table('add_business_user')
-            ->where('add_business_id', $companyId)
-            ->pluck('user_id')
-            ->toArray();
-
-        $items = \App\Models\AddItem::whereIn('created_by_id', $companyUserIds)
+        $items = \App\Models\AddItem::whereIn('created_by_id', $allowedUserIds)
             ->whereIn('item_type', ['product', 'service'])
-            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
             ->with('select_unit')
             ->get();
     } else {
         $items = \App\Models\AddItem::where('created_by_id', $userId)
             ->whereIn('item_type', ['product', 'service'])
-            ->select('id', 'item_name', 'purchase_price', 'select_unit_id', 'item_hsn', 'item_code', 'item_type')
             ->with('select_unit')
             ->get();
     }
 
-    // Attach stock qty (only for products)
-    $items->map(function ($item) use ($userRole, $companyId, $userId) {
+    // Attach stock qty
+    $items->map(function ($item) use ($userRole, $companyId, $allowedUserIds, $userId) {
         if ($item->item_type === 'product') {
             if ($userRole === 'Super Admin') {
-                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
+                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)->sum('qty');
             } elseif ($companyId) {
-                $companyUserIds = \DB::table('add_business_user')
-                    ->where('add_business_id', $companyId)
-                    ->pluck('user_id')
-                    ->toArray();
-
-                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $companyUserIds)
-                    ->where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
+                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $allowedUserIds)
+                    ->where('item_id', $item->id)->sum('qty');
             } else {
                 $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
-                    ->where('item_id', $item->id)
-                    ->whereIn('product_type', ['finished_goods', 'ready_made'])
-                    ->sum('qty');
+                    ->where('item_id', $item->id)->sum('qty');
             }
         } else {
             $item->stock_qty = null;
@@ -364,36 +446,26 @@ public function create()
         return $item;
     });
 
-    /* ======================================================
-       3️⃣ COST & SUB COST CENTERS — SAME COMPANY USERS
-    ====================================================== */
-    $fetchDropdown = function ($model, $column) use ($userRole, $userId, $companyId) {
-        if ($userRole === 'Super Admin') {
-            return $model::withoutGlobalScopes()->pluck($column, 'id')->prepend(trans('global.pleaseSelect'), '');
-        } elseif ($companyId) {
-            $companyUserIds = \DB::table('add_business_user')
-                ->where('add_business_id', $companyId)
-                ->pluck('user_id')
-                ->toArray();
+    // ===========================
+    // 🧾 STEP 4: COST & SUB COST CENTERS
+    // ===========================
 
-            return $model::whereIn('created_by_id', $companyUserIds)
-                ->pluck($column, 'id')
-                ->prepend(trans('global.pleaseSelect'), '');
-        } else {
-            return $model::where('created_by_id', $userId)
-                ->pluck($column, 'id')
-                ->prepend(trans('global.pleaseSelect'), '');
-        }
-    };
+    $cost = \App\Models\MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-    $cost = $fetchDropdown(\App\Models\MainCostCenter::class, 'cost_center_name');
-    $sub_cost = $fetchDropdown(\App\Models\SubCostCenter::class, 'sub_cost_center_name');
+    $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-    /* ======================================================
-       4️⃣ RETURN VIEW
-    ====================================================== */
+    // ===========================
+    // ✅ RETURN VIEW
+    // ===========================
+
     return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
 }
+
+
 
 
 // use DB; at top
@@ -1040,13 +1112,13 @@ public function update(Request $request, SaleInvoice $saleInvoice)
 
 public function pdf(SaleInvoice $saleInvoice)
 {
-    // ✅ Only bank accounts where print_bank_details = 1
+    // ✅ Fetch banks where bank details should be printed
     $bankDetails = BankAccount::where('print_bank_details', 1)->get();
 
-    // ✅ Only active terms
+    // ✅ Active terms
     $terms = TermAndCondition::where('status', 'active')->get();
 
-    // ✅ Load all relationships with pivot details
+    // ✅ Load relations
     $saleInvoice->load([
         'select_customer',
         'items' => function ($query) {
@@ -1069,19 +1141,18 @@ public function pdf(SaleInvoice $saleInvoice)
         'sub_cost_center',
     ]);
 
-    // ✅ Get company through pivot table
+    // ✅ Logged-in user company
     $user = auth()->user();
-    $company = $user->select_companies()->first(); // get first linked business
+    $company = $user->select_companies()->first();
 
-    // ✅ Get logo if available
-    $logoUrl = null;
-    if ($company && $company->getFirstMediaUrl('logo_upload')) {
-        $logoUrl = $company->getFirstMediaUrl('logo_upload');
-    }
-    
-    // ✅ Return view
+    // ✅ Company logo
+    $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+
     return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
 }
+
+
+
 
 
 }

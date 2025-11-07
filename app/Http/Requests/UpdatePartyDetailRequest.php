@@ -45,12 +45,12 @@ class UpdatePartyDetailRequest extends FormRequest
                 'string',
                 'nullable',
             ],
-            'pincode' => [
+            'pin_code' => [
                 'string',
                 'min:6',
                 'max:6',
                 'required',
-                'unique:party_details,pincode,' . request()->route('party_detail')->id,
+                'unique:party_details,pin_code,' . request()->route('party_detail')->id,
             ],
             'state' => [
                 'string',
