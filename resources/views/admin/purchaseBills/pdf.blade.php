@@ -155,7 +155,7 @@
     @forelse($purchaseBill->items as $key => $item)
         @php
             $qty = $item->pivot->qty ?? 1;
-            $rate = $item->pivot->rate ?? ($item->sale_price ?? 0);
+            $rate = $item->pivot->price ?? ($item->sale_price ?? 0);
             $amount = $qty * $rate;
             $total += $amount;
         @endphp
