@@ -197,111 +197,142 @@
             <div class="p-4 border-b border-gray-200 overflow-x-auto text-xs">
                 <table class="w-full text-xs">
                     <tr>
-                        <td class="align-top w-1/2 pr-2">
-                            <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
-                                            <i class="fas fa-receipt mr-1"></i> Amount in Words
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="bg-blue-100 font-medium py-1 px-2 text-center">
-                                            {{ \App\Helpers\NumberHelper::toWords($total) }}
-                                        </td>
-                                    </tr>
-
-                                     <tr>
-                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
-                                            <i class="fas fa-receipt mr-1"></i> Payment Mode
-                                        </th>
-                                    </tr>
-
-                                     <tr>
-                                        <td class="bg-blue-100 font-medium py-7 px-2 text-center">
-                                            {{ $purchaseBill->payment_mode ?? 'N/A' }}
-                                        </td>
-                                    </tr>
-                                </tbody>
+                        <td class="w-1/2 pr-2 align-top">
+                            <table class="w-full border rounded-lg border-blue-200 bg-blue-50">
+                                <tr>
+                                    <th colspan="2" class="text-center text-blue-700 font-semibold py-1 text-sm">
+                                        <i class="fas fa-receipt mr-1"></i> Amount in Words
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="bg-blue-100 font-medium py-1 px-2 text-center">
+                                        {{ \App\Helpers\NumberHelper::toWords($total) }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-center text-blue-700 font-semibold py-1 text-sm w-1/2 border-r border-blue-200">
+                                        Payment Mode
+                                    </th>
+                                    <th class="text-center text-blue-700 font-semibold py-1 text-sm w-1/2">
+                                        Notes
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <td class="bg-blue-100 font-medium py-2 px-2 text-center border-r border-blue-200">
+                                        {{ $purchaseBill->payment_mode ?? 'N/A' }}
+                                    </td>
+                                    <td class="bg-blue-100 font-medium py-2 px-2 text-center">
+                                        {{ $purchaseBill->notes ?? 'N/A' }}
+                                    </td>
+                                </tr>
                             </table>
                         </td>
 
-                        <td class="align-top w-1/2 pl-2">
-                            <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
-                                            <i class="fas fa-calculator mr-1"></i> Amount Summary
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr class="bg-blue-100">
-                                        <td class="font-medium py-1 px-2">Subtotal</td>
-                                        <td class="text-right font-medium py-1 px-2">Rs {{ number_format($total, 2) }}</td>
-                                    </tr>
-                                    <tr>
-                                      <td class="font-medium py-1 px-2">Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})</td>
-                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->discount ?? 0, 2) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-medium py-1 px-2">GST({{ $item->pivot->tax ?? 0 }}%)</td>
-                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->tax ?? 0, 2) }}</td>
-                                    </tr>
-                                    <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
-                                        <td class="py-1 px-2">Grand Total</td>
-                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->total ?? $total, 2) }}</td>
-                                    </tr>
+                       <td class="align-top w-1/2 pl-2">
+    <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
+        <thead>
+            <tr>
+                <th colspan="2" class="text-center text-blue-700 font-semibold py-1 text-sm">
+                    <i class="fas fa-calculator mr-1"></i> Amount Summary
+                </th>
+            </tr>
+        </thead>
 
-                                    <tr class="border-t border-gray-200 bg-blue-50">
-                                        <td class="py-1 px-2">Current Balance</td>
-                                        <td class="text-right py-1 px-2">Rs {{ number_format($purchaseBill->select_customer->opening_balance ?? 0, 2) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
+        @php
+            // 🔹 Previous balance from supplier
+            $previous_balance = $purchaseBill->select_customer->current_balance 
+                ?? $purchaseBill->select_customer->opening_balance 
+                ?? 0;
+
+            // 🔹 Grand total
+            $grand_total = $purchaseBill->total ?? $total ?? 0;
+
+            // 🔹 Current balance = previous + grand total
+            $current_balance = $previous_balance + $grand_total;
+        @endphp
+
+        <tbody>
+            <tr class="bg-blue-100">
+                <td class="font-medium py-1 px-2">Subtotal</td>
+                <td class="text-right font-medium py-1 px-2">
+                    Rs {{ number_format($total, 2) }}
+                </td>
+            </tr>
+
+            <tr>
+                <td class="font-medium py-1 px-2">
+                    Discount ({{ $item->pivot->discount_type ?? 0 }} {{ $item->pivot->discount ?? 0 }})
+                </td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($purchaseBill->discount ?? 0, 2) }}
+                </td>
+            </tr>
+
+            <tr>
+                <td class="font-medium py-1 px-2">GST ({{ $item->pivot->tax ?? 0 }}%)</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($purchaseBill->tax ?? 0, 2) }}
+                </td>
+            </tr>
+
+            <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
+                <td class="py-1 px-2">Grand Total</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($grand_total, 2) }}
+                </td>
+            </tr>
+
+            <tr class="border-t border-gray-200 bg-blue-50">
+                <td class="py-1 px-2">Previous Balance</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($previous_balance, 2) }}
+                    - {{ $purchaseBill->select_customer->current_balance_type ?? $purchaseBill->select_customer->opening_balance_type ?? '' }}
+                </td>
+            </tr>
+
+            <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
+                <td class="py-1 px-2">Current Balance</td>
+                <td class="text-right py-1 px-2">
+                    Rs {{ number_format($current_balance, 2) }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</td>
+
                     </tr>
                 </table>
             </div>
 
-            <!-- Bank, Terms & Signatory -->
-            <div class="p-4 border-b border-gray-200 overflow-x-auto text-xs">
-                <table class="w-full text-xs border border-gray-200 rounded-lg">
-                   <tbody>
-    <tr class="align-top">
-        <!-- Terms -->
-        <td class="p-2 w-1/2 border-r border-gray-200">
-            <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
-                <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
-            </h3>
-            @forelse($terms as $term)
-                <p class="text-blue-600 mb-1 text-xs">{{ $term->title }}</p>
-                <div class="bg-yellow-50 p-2 rounded border text-xs mb-1">
-                    <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
-                    <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
-                </div>
-            @empty
-                <p class="italic text-gray-500">No terms available</p>
-            @endforelse
-        </td>
-
-        <!-- Authorized Signatory -->
-        <td class="p-2 w-1/2 text-center align-top">
-            <div class="flex flex-col justify-end h-full" style="height: 120px;">
-                <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
-                    <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
-                </div>
-                <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
-            </div>
-        </td>
-    </tr>
-</tbody>
-
+          <!-- Terms & Signatory -->
+            <div class="p-4 border-b border-gray-200 text-xs">
+                <table class="w-full border border-gray-200 rounded-lg">
+                    <tr class="align-top">
+                        <td class="p-2 w-1/2 border-r border-gray-200">
+                            <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
+                                <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
+                            </h3>
+                            <p class="text-blue-600 mb-1 text-xs">{{ $purchaseBill->description }}</p>
+                            <div class="bg-yellow-50 p-2 rounded border text-xs mb-1">
+                                <h4 class="font-semibold text-orange-700 mb-1 text-xs">DETAILS:</h4>
+                                @forelse($terms as $term)
+                                    <p class="text-orange-800 text-xs">{!! $term->description !!}</p>
+                                    @empty
+                                        <p class="italic text-gray-500">No terms available</p>
+                                    @endforelse
+                                </div>
+                        </td>
+                        <td class="p-2 w-1/2 text-center align-top">
+                            <div class="flex flex-col justify-end h-full" style="height: 120px;">
+                                <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
+                                    <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
+                                </div>
+                                <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
+                            </div>
+                        </td>
+                    </tr>
                 </table>
             </div>
-
         </div>
 
         <!-- Footer -->

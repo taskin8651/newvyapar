@@ -198,44 +198,40 @@
                     <tr>
                        <td class="align-top w-1/2 pl-2">
                             <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
-                                            <i class="fas fa-receipt mr-1"></i> Amount in Words
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="bg-blue-100 font-medium py-1 px-2 rounded mb-1 text-center">
-                                            {{ \App\Helpers\NumberHelper::toWords($total) }}
-                                        </td>
-                                    </tr>
+                               
+                               <tbody>
+    <!-- 🔹 Amount in Words -->
+    <tr>
+        <th colspan="2" class="text-center text-blue-700 font-semibold py-1 text-sm">
+            <i class="fas fa-rupee-sign mr-1"></i> Amount in Words
+        </th>
+    </tr>
+    <tr>
+        <td colspan="2" class="bg-blue-100 font-medium py-2 px-2 text-center rounded">
+            {{ \App\Helpers\NumberHelper::toWords($total) }}
+        </td>
+    </tr>
 
-                                     <tr>
-                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
-                                            <i class="fas fa-receipt mr-1"></i> Payment Mode
-                                        </th>
-                                    </tr>
+    <!-- 🔹 Payment Mode & Notes in One Row -->
+    <tr>
+        <th class="text-center text-blue-700 font-semibold py-1 text-sm w-1/2 border-r border-blue-200">
+            <i class="fas fa-receipt mr-1"></i> Payment Mode
+        </th>
+        <th class="text-center text-blue-700 font-semibold py-1 text-sm w-1/2">
+            <i class="fas fa-sticky-note mr-1"></i> Notes
+        </th>
+    </tr>
 
-                                     <tr>
-                                        <td class="bg-blue-100 font-medium py-7 px-2 text-center">
-                                            {{ $saleInvoice->payment_mode ?? 'N/A' }}
-                                        </td>
-                                    </tr>
+    <tr>
+        <td class="bg-blue-100 font-medium py-2 px-2 text-center border-r border-blue-200">
+            {{ $saleInvoice->payment_mode ?? 'N/A' }}
+        </td>
+        <td class="bg-blue-100 font-medium py-2 px-2 text-center">
+            {{ $saleInvoice->notes ?? 'N/A' }}
+        </td>
+    </tr>
+</tbody>
 
-                                    <tr>
-                                        <th class="text-center text-blue-700 font-semibold py-1 text-sm">
-                                            <i class="fas fa-receipt mr-1"></i> Notes
-                                        </th>
-                                    </tr>
-
-                                     <tr>
-                                        <td class="bg-blue-100 font-medium py-7 px-2 text-center">
-                                            {{ $saleInvoice->notes ?? 'N/A' }}
-                                        </td>
-                                    </tr>
-                                </tbody>
                             </table>
                         </td>
 
