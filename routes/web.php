@@ -95,6 +95,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::resource('tax-rates', 'TaxRateController');
 
     // Sale Invoice
+    Route::patch('sale-invoices/{saleInvoice}/status', [SaleInvoiceController::class, 'AupdateStatus'])->name('sale-invoices.update-status');
+    Route::put('sale-invoices/{saleInvoice}/status', [\App\Http\Controllers\Admin\SaleInvoiceController::class, 'AupdateStatus'])
+        ->name('sale-invoices.status.update');
+
+    Route::get('sale-invoices/{saleInvoice}/status-history', [\App\Http\Controllers\Admin\SaleInvoiceController::class, 'getStatusHistory'])
+        ->name('sale-invoices.status.history');
     Route::delete('sale-invoices/destroy', 'SaleInvoiceController@massDestroy')->name('sale-invoices.massDestroy');
     Route::post('sale-invoices/media', 'SaleInvoiceController@storeMedia')->name('sale-invoices.storeMedia');
     Route::post('sale-invoices/ckmedia', 'SaleInvoiceController@storeCKEditorImages')->name('sale-invoices.storeCKEditorImages');
