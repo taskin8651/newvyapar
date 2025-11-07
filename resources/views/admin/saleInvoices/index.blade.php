@@ -375,15 +375,15 @@ function renderProfitLossModal(data){
     (p.composition_json||[]).forEach(it=>{
         tb.insertAdjacentHTML('beforeend',`
         <tr class="odd:bg-white even:bg-gray-50">
-            <td class="border px-2 py-1">${it.product_name}</td>
-            <td class="border px-2 py-1 text-center">${it.qty}</td>
-            <td class="border px-2 py-1 text-right">${fmtRupee(it.sale_price)}</td>
-            <td class="border px-2 py-1 text-right">${fmtRupee(it.purchase_price)}</td>
-            <td class="border px-2 py-1 text-right">${fmtRupee(it.total)}</td>
+            <td class="border px-2 py-[2px]">${it.product_name}</td>
+            <td class="border px-2 py-[2px] text-center">${it.qty}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(it.sale_price)}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(it.purchase_price)}</td>
+            <td class="border px-2 py-[2px] text-right">${fmtRupee(it.total)}</td>
         </tr>`);
     });
     document.getElementById('profitLossTotals').innerHTML=`
-        <div class="inline-grid grid-cols-3 gap-6 text-right">
+        <div class="inline-grid grid-cols-3 gap-6 text-right text-[12px]">
             <div><span class="text-gray-500">Total Purchase:</span> <span class="font-semibold">${fmtRupee(p.total_purchase_value)}</span></div>
             <div><span class="text-gray-500">Total Sale:</span> <span class="font-semibold">${fmtRupee(p.total_sale_value)}</span></div>
             <div><span class="text-gray-500">Result:</span>
@@ -392,40 +392,90 @@ function renderProfitLossModal(data){
 }
 
 // --- Charts ---
-function ensureBarChart(){
+function ensureBarChart(height=200){
     const p=currentPLData.profit_loss;
     const labels=p.composition_json.map(x=>x.product_name);
     const sale=p.composition_json.map(x=>x.sale_price*x.qty);
     const purchase=p.composition_json.map(x=>x.purchase_price*x.qty);
-    barChartInstance=new Chart(document.getElementById('plBarChart'),{
+    const ctx=document.getElementById('plBarChart');
+    ctx.height=height;
+    barChartInstance=new Chart(ctx,{
         type:'bar',
-        data:{labels,datasets:[{label:'Sale',data:sale},{label:'Purchase',data:purchase}]},
-        options:{responsive:true,maintainAspectRatio:false}
+        data:{labels,datasets:[
+            {label:'Sale',data:sale,backgroundColor:'#6366f1'},
+            {label:'Purchase',data:purchase,backgroundColor:'#a5b4fc'}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
     });
 }
-function ensurePieChart(){
+function ensurePieChart(height=150){
     const p=currentPLData.profit_loss;
     const profit=Math.max(p.profit_loss_amount,0);
     const loss=Math.max(-p.profit_loss_amount,0);
-    pieChartInstance=new Chart(document.getElementById('plPieChart'),{
+    const ctx=document.getElementById('plPieChart');
+    ctx.height=height;
+    pieChartInstance=new Chart(ctx,{
         type:'pie',
-        data:{labels:['Profit','Loss'],datasets:[{data:[profit,loss]}]},
-        options:{responsive:true,maintainAspectRatio:false}
+        data:{labels:['Profit','Loss'],datasets:[{data:[profit,loss],backgroundColor:['#16a34a','#dc2626']}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
     });
 }
 
-// --- Download PDF ---
-document.getElementById('btnDownloadPdf').addEventListener('click',async()=>{
-    ensureBarChart(); ensurePieChart();
-    const clone=document.getElementById('profitLossContent').cloneNode(true);
-    const opt={margin:10,filename:`profit-loss-${selectedInvoiceId}.pdf`,
-        html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}};
-    await html2pdf().set(opt).from(clone).save();
+// --- Download PDF (Compact, Full Modal, Multi-page) ---
+document.getElementById('btnDownloadPdf').addEventListener('click', async () => {
+    try {
+        const modal = document.getElementById('profitLossModal');
+        const content = modal.querySelector('.relative'); // full card content
+
+        // ✅ Show loader
+        const loader = document.createElement('div');
+        loader.className = "absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-[99999]";
+        loader.innerHTML = `<i class='fas fa-spinner fa-spin text-indigo-600 text-2xl mb-2'></i><p class='text-xs text-gray-600'>Generating PDF...</p>`;
+        content.appendChild(loader);
+
+        // ✅ Clean + small charts
+        destroyCharts();
+        ensureBarChart(160);
+        ensurePieChart(120);
+        await new Promise(res=>setTimeout(res,400));
+
+        // ✅ PDF settings (auto-pagebreak + small text)
+        const clone = content.cloneNode(true);
+        clone.style.fontSize='10px';
+        clone.style.lineHeight='1.3';
+        const opt = {
+            margin:[5,5,5,5],
+            filename:`profit-loss-${selectedInvoiceId}.pdf`,
+            html2canvas:{scale:2,useCORS:true,scrollY:0},
+            jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+            pagebreak:{mode:['avoid-all','css','legacy']},
+        };
+
+        await html2pdf().set(opt).from(clone).save();
+
+        // ✅ Clean up
+        loader.remove();
+        destroyCharts();
+        ensureBarChart();
+        ensurePieChart();
+    } catch (err) {
+        console.error("PDF generation error:", err);
+        alert("⚠️ Failed to generate PDF. Please try again.");
+    }
 });
 </script>
 
 <style>
-#plBarChart, #plPieChart { max-height:260px!important; height:260px!important; }
-#profitLossContent canvas { display:block!important; }
+#profitLossContent * {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+}
+#plBarChart, #plPieChart {
+    max-height: 180px !important;
+    height: 180px !important;
+}
+#profitLossContent table th,
+#profitLossContent table td {
+    padding: 2px 4px !important;
+}
 </style>
-
