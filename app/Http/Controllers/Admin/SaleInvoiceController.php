@@ -1277,7 +1277,7 @@ public function getCustomerDetails($id)
         ->where('user_id', $mainAdminId)
         ->pluck('user_id')
         ->toArray();
-    dd($branchUserIds);
+    
     // Add main admin id also
     $allRelatedUsers = array_merge([$mainAdminId], $branchUserIds);
 
@@ -1285,7 +1285,7 @@ public function getCustomerDetails($id)
     $bankDetails = BankAccount::whereIn('created_by_id', $allRelatedUsers)
         ->where('print_bank_details', 1)
         ->get();
-
+    dd($bankDetails);
     // ✅ Fetch terms also by same admin concept (if needed)
     $terms = TermAndCondition::where('status', 'active')
        
