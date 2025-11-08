@@ -1289,10 +1289,10 @@ public function pdf(SaleInvoice $saleInvoice)
     $bankDetails = BankAccount::whereIn('created_by_id', $allRelatedUsers)
         ->where('print_bank_details', 1)
         ->get();
-    
+
     // ✅ Terms also based on main admin only
     $terms = TermAndCondition::where('status', 'active')
-        ->where('created_by_id', $mainAdminId)
+        
         ->get();
 
     return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
