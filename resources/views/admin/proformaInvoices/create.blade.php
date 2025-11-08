@@ -5,7 +5,7 @@
 
 <div class="bg-gray-100 min-h-screen py-8">
     <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
-        <form id="saleForm" action="{{ route('admin.sale-invoices.store') }}" method="POST" enctype="multipart/form-data">
+        <form id="saleForm" action="{{ route('admin.proforma-invoices.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <!-- Header -->
@@ -140,7 +140,7 @@
 
                         <div class="flex flex-col">
                             <label for="due_date" class="mb-1 font-semibold"> Bill Date</label>
-                            <input type="date" id="due_date" name="due_date" class="w-full rounded-md border px-3 py-2">
+                            <input type="date" id="due_date" name="due_date" class="w-full rounded-md border px-3 py-2" value="{{ date('Y-m-d') }}">
                         </div>
                     </div>
 
