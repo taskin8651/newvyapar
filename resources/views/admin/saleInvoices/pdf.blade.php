@@ -287,13 +287,13 @@
             </tr>
 
             <!-- Previous Balance row removed -->
-
+<!-- 
             <tr class="border-t border-gray-200 bg-blue-50 font-semibold">
                 <td class="py-1 px-2">Current Balance</td>
                 <td class="text-right py-1 px-2">
                     Rs {{ number_format($previous_balance, 2) }}
                 </td>
-            </tr>
+            </tr> -->
         </tbody>
     </table>
 </td>
