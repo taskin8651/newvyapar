@@ -44,6 +44,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PO No</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">PO Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
@@ -57,6 +58,7 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->select_customer->party_name ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->po_no ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->po_date ?? '—' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->total ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-center">{{ $saleInvoice->status ?? '—' }}</td>
 
                             <td class="px-4 py-3 text-center relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
