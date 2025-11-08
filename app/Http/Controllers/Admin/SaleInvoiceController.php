@@ -451,7 +451,7 @@ public function getCustomerDetails($id)
     $cost = \App\Models\MainCostCenter::whereIn('created_by_id', $allowedUserIds)
         ->pluck('cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
-
+    dd($cost->toArray());
     $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
         ->pluck('sub_cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
