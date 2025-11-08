@@ -55,7 +55,7 @@
                         <tr data-entry-id="{{ $saleInvoice->id }}" class="hover:bg-gray-50 transition">
                             <td class="px-4 py-3"></td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->id }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->select_customer->party_name ?? '—' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->select_customer->party_name ?? '—' }} ( {{$saleInvoice->created_by->name}} )</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->po_no ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->po_date ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $saleInvoice->total ?? '—' }}</td>
