@@ -46,17 +46,12 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.billing_name') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.select_customer') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.gstin') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.phone_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.pan_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.phone_number') }}</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.e_way_bill_no') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.po_no') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.po_date') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.item') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.qty') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.image') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.purchaseBill.fields.document') }}</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ trans('global.actions') }}</th>
                     </tr>
                 </thead>
@@ -70,11 +65,8 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->id ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->purchase_invoice_number ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->party_name ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->gstin ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->phone_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->pan_number ?? '' }}</td>
                             
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->phone_number ?? '' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->total ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->e_way_bill_no ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->po_no ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->po_date ?? '' }}</td>
@@ -97,24 +89,7 @@
                                 @endforeach
                             </td>
 
-                            <!-- Image -->
-                            <td class="px-4 py-3">
-                                @if($purchaseBill->image)
-                                    <a href="{{ $purchaseBill->image->getUrl() }}" target="_blank" class="inline-block">
-                                        <img src="{{ $purchaseBill->image->getUrl('thumb') }}" class="h-10 w-10 rounded border">
-                                    </a>
-                                @endif
-                            </td>
-
-                            <!-- Document -->
-                            <td class="px-4 py-3">
-                                @if($purchaseBill->document)
-                                    <a href="{{ $purchaseBill->document->getUrl() }}" target="_blank" class="text-blue-600 hover:underline">
-                                        {{ trans('global.view_file') }}
-                                    </a>
-                                @endif
-                            </td>
-
+                            
                             <!-- Actions -->
                             <td class="px-4 py-3 text-center relative"
                                 x-data="{ open: false }"
