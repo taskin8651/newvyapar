@@ -1226,28 +1226,65 @@ public function getCustomerDetails($id)
     // PDF
     // -----------------------------
     public function pdf(SaleInvoice $saleInvoice)
-    {
+{
+    $saleInvoice->load([
+        'select_customer',
+        'items' => function ($query) {
+            $query->withPivot([
+                'description','qty','unit','price','discount_type','discount','tax_type','tax','amount','created_by_id','json_data',
+            ]);
+        },
+        'created_by',
+        'main_cost_center',
+        'sub_cost_center',
+    ]);
+
+    $user = auth()->user();
+    $company = $user->select_companies()->first();
+    $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+
+    // ✅ Identify Main Admin
+    if ($user->roles->first()->title === 'Admin') {
+        // Logged-in user is Admin → He is the main admin
+        $mainAdminId = $user->id;
+    } elseif ($user->roles->first()->title === 'Super Admin') {
+        // Super Admin → Show all bank accounts
         $bankDetails = BankAccount::where('print_bank_details', 1)->get();
-        $terms       = TermAndCondition::where('status', 'active')->get();
+        $terms = TermAndCondition::where('status', 'active')->get();
+        
+        return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
+    } else {
+        // Logged-in user is Branch User → find main admin
+        $mainAdminId = \DB::table('add_business_user')
+            ->where('user_id', $user->id)
+            ->value('created_by');  // created_by = admin who created this branch
 
-        $saleInvoice->load([
-            'select_customer',
-            'items' => function ($query) {
-                $query->withPivot([
-                    'description','qty','unit','price','discount_type','discount','tax_type','tax','amount','created_by_id','json_data',
-                ]);
-            },
-            'created_by',
-            'main_cost_center',
-            'sub_cost_center',
-        ]);
-
-        $user    = auth()->user();
-        $company = $user->select_companies()->first();
-        $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
-
-        return view('admin.saleInvoices.pdf', compact('saleInvoice','bankDetails','terms','company','logoUrl'));
+        if (!$mainAdminId) {
+            $mainAdminId = $user->id; // fallback safety
+        }
     }
+   
+    // ✅ Fetch all users created by this admin (branches)
+    $branchUserIds = \DB::table('add_business_user')
+        ->where('user_id', $mainAdminId)
+        ->pluck('user_id')
+        ->toArray();
+
+    // Add main admin id also
+    $allRelatedUsers = array_merge([$mainAdminId], $branchUserIds);
+
+    // ✅ Fetch bank accounts of main admin + all his branch users
+    $bankDetails = BankAccount::whereIn('created_by_id', $allRelatedUsers)
+        ->where('print_bank_details', 1)
+        ->get();
+
+    // ✅ Fetch terms also by same admin concept (if needed)
+    $terms = TermAndCondition::where('status', 'active')
+       
+        ->get();
+
+    return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
+}
 
     // =========================================================================
     //                      ADMIN-ONLY STATUS UPDATE (Option B)
