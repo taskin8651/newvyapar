@@ -178,17 +178,9 @@
                         </thead>
                         <tbody>
                             @php $rowIndex = 0; @endphp
-                            @foreach($items as $choice)
-                                @php
-                                    // for option tags later
-                                @endphp
-                            @endforeach
 
                             @forelse($saleInvoice->items as $pivotItem)
-                                @php
-                                    $i = $rowIndex++;
-                                    $choiceOptions = '';
-                                @endphp
+                                @php $i = $rowIndex++; @endphp
                                 <tr class="item-row">
                                     <td class="px-1 py-1">
                                         <select name="items[{{ $i }}][add_item_id]" class="form-select item-select select2">
@@ -217,16 +209,21 @@
                                             @endforeach
                                         </select>
                                     </td>
+
                                     <td class="px-1 py-1 description"></td>
+
                                     <td class="px-1 py-1">
                                         <input type="number" name="items[{{ $i }}][qty]" class="qty w-full border px-2 py-1" min="1" 
                                                value="{{ (float) ($pivotItem->pivot->qty ?? 1) }}">
                                     </td>
+
                                     <td class="px-1 py-1 unit"></td>
+
                                     <td class="px-1 py-1">
                                         <input type="number" name="items[{{ $i }}][price]" class="price w-full border px-2 py-1" step="0.01"
                                                value="{{ number_format((float) ($pivotItem->pivot->price ?? $pivotItem->sale_price ?? 0), 2, '.', '') }}">
                                     </td>
+
                                     <td class="px-1 py-1">
                                         <select name="items[{{ $i }}][discount_type]" class="discount_type w-full select2">
                                             <option value="value" {{ ($pivotItem->pivot->discount_type ?? 'value') === 'value' ? 'selected' : '' }}>Value</option>
@@ -235,25 +232,39 @@
                                         <input type="number" name="items[{{ $i }}][discount]" class="discount w-full mt-1 border px-2 py-1" 
                                                value="{{ (float) ($pivotItem->pivot->discount ?? 0) }}" step="0.01">
                                     </td>
+
                                     <td class="px-1 py-1">
                                         <select name="items[{{ $i }}][tax_type]" class="tax_type w-full select2">
                                             <option value="without" {{ ($pivotItem->pivot->tax_type ?? 'without') === 'without' ? 'selected' : '' }}>Without Tax</option>
                                             <option value="with" {{ ($pivotItem->pivot->tax_type ?? '') === 'with' ? 'selected' : '' }}>With Tax</option>
                                         </select>
-                                        <input type="number" name="items[{{ $i }}][tax]" class="tax_rate w-full mt-1 border px-2 py-1" 
-                                               value="{{ number_format((float) ($pivotItem->pivot->tax ?? 0), 2, '.', '') }}" step="0.01" placeholder="Tax %"
-                                               style="{{ ($pivotItem->pivot->tax_type ?? 'without') === 'with' ? '' : 'display:none;' }}">
+
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" name="items[{{ $i }}][tax]" class="tax_rate w-full mt-1 border px-2 py-1" 
+                                                   value="{{ number_format((float) ($pivotItem->pivot->tax ?? 0), 2, '.', '') }}" step="0.01" placeholder="Tax %"
+                                                   style="{{ ($pivotItem->pivot->tax_type ?? 'without') === 'with' ? '' : 'display:none;' }}">
+                                            <!-- GST Applied indicator -->
+                                            <span class="gst-applied text-green-600 text-xs font-medium hidden">GST Applied ✅</span>
+                                        </div>
                                     </td>
+
                                     <td class="px-1 py-1">
                                         <input type="text" name="items[{{ $i }}][amount]" class="amount w-full border px-2 py-1"
                                                value="{{ number_format((float) ($pivotItem->pivot->amount ?? 0), 2, '.', '') }}" readonly>
+
+                                        <!-- Base & GST lines (shown under amount) -->
+                                        <div class="text-xs text-gray-500 leading-tight mt-1 base-gst-lines">
+                                            <div class="base-line">Base Price: ₹ <span class="base-val">0.00</span></div>
+                                            <div class="gst-line">GST: ₹ <span class="gst-val">0.00</span></div>
+                                        </div>
                                     </td>
+
                                     <td class="px-1 py-1 text-center">
                                         <button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button>
                                     </td>
                                 </tr>
                             @empty
-                                <!-- Fallback single row if no items (rare) -->
+                                <!-- Fallback single row if no items -->
                                 <tr class="item-row">
                                     <td class="px-1 py-1">
                                         <select name="items[0][add_item_id]" class="form-select item-select select2">
@@ -297,9 +308,18 @@
                                             <option value="without">Without Tax</option>
                                             <option value="with">With Tax</option>
                                         </select>
-                                        <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                                        <div class="flex items-center gap-2">
+                                            <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                                            <span class="gst-applied text-green-600 text-xs font-medium hidden">GST Applied ✅</span>
+                                        </div>
                                     </td>
-                                    <td class="px-1 py-1"><input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly></td>
+                                    <td class="px-1 py-1">
+                                        <input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly>
+                                        <div class="text-xs text-gray-500 leading-tight mt-1 base-gst-lines">
+                                            <div class="base-line">Base Price: ₹ <span class="base-val">0.00</span></div>
+                                            <div class="gst-line">GST: ₹ <span class="gst-val">0.00</span></div>
+                                        </div>
+                                    </td>
                                     <td class="px-1 py-1 text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
                                 </tr>
                             @endforelse
@@ -430,7 +450,7 @@
     </div>
 </div>
 
-<!-- Modal (same markup for future use) -->
+<!-- Modal (for future use) -->
 <div id="invoiceDetailsModal" class="fixed inset-0 z-50 items-center justify-center hidden">
   <div class="absolute inset-0 bg-black opacity-40"></div>
   <div class="relative bg-white max-w-3xl mx-auto rounded p-6 z-50 overflow-auto" style="max-height:90vh;">
@@ -446,7 +466,7 @@
 $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
 
-    // Composition toggle (Slide default)
+    // Composition toggle
     $('#toggleComp').on('click', function(){
         const c = $('#compositionContainer');
         const isHidden = c.is(':hidden');
@@ -454,11 +474,11 @@ $(document).ready(function() {
         $(this).text(isHidden ? 'Hide' : 'Show');
     });
 
-    // 🔹 Save master options to clone rows dynamically
+    // Save master options for dynamic rows
     const masterItemOptions = $('#itemsTable tbody tr.item-row')
         .first().find('.item-select').html();
 
-    // 🔹 Customer selection → fetch & fill details (same as create)
+    // Fetch & fill customer details
     $('#customer_id').on('change', function() {
         const customerId = $(this).val();
         if (!customerId) return $('#customerDetailsCard').addClass('hidden');
@@ -504,10 +524,9 @@ $(document).ready(function() {
         $('#customer_id').trigger('change');
     }
 
-    // 🔹 Cache for product compositions
+    // Composition cache
     let compositionCache = {};
 
-    // 🔹 Render composition (same util)
     function renderComposition(rows, finishedQty, finishedSalePrice) {
         if (!rows || !rows.length) {
             $('#compositionPlaceholder').show();
@@ -533,8 +552,8 @@ $(document).ready(function() {
                 <tr>
                     <td>${r.name}</td>
                     <td>${usedQty}</td>
-                    <td>₹ ${parseFloat(r.sale_price).toFixed(2)}</td>
-                    <td>₹ ${parseFloat(r.purchase_price).toFixed(2)}</td>
+                    <td>₹ ${parseFloat(r.sale_price || 0).toFixed(2)}</td>
+                    <td>₹ ${parseFloat(r.purchase_price || 0).toFixed(2)}</td>
                     <td>₹ ${sale.toFixed(2)}</td>
                     <td>₹ ${purchase.toFixed(2)}</td>
                     <td class="${diff >= 0 ? 'text-green-600' : 'text-red-600'}">₹ ${diff.toFixed(2)}</td>
@@ -552,7 +571,91 @@ $(document).ready(function() {
             .toggleClass('text-red-600', profit < 0);
     }
 
-    // 🔹 Stock + composition + row calc (same as create)
+    // ✅ Reverse GST helper: from GST-included unit price => base & gst per unit
+    function reverseGST(priceIncl, taxRate) {
+        priceIncl = parseFloat(priceIncl) || 0;
+        taxRate = parseFloat(taxRate) || 0;
+        if (taxRate <= 0) return { basePerUnit: priceIncl, gstPerUnit: 0 };
+        const divisor = 1 + (taxRate / 100);
+        const base = priceIncl / divisor;
+        const gst = priceIncl - base;
+        return { basePerUnit: base, gstPerUnit: gst };
+    }
+
+    // 🔄 Recalculate single row with reverse-GST logic (GST included in price)
+    function calculateRow(row) {
+        const qty = parseFloat(row.find('.qty').val()) || 0;
+        const priceIncl = parseFloat(row.find('.price').val()) || 0; // GST included per-unit price
+        const discountVal = parseFloat(row.find('.discount').val()) || 0;
+        const discountType = row.find('.discount_type').val();
+        const taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
+        const taxType = row.find('.tax_type').val();
+
+        // Step 1: reverse GST per-unit if taxType = 'with'
+        let basePerUnit = priceIncl, gstPerUnit = 0;
+        if (taxType === 'with') {
+            const rev = reverseGST(priceIncl, taxRate);
+            basePerUnit = rev.basePerUnit;
+            gstPerUnit = rev.gstPerUnit;
+        }
+
+        // Step 2: amounts before discount (base & gst)
+        let baseTotal = basePerUnit * qty;
+        // Discount is applied on base (common practice)
+        let discAmt = discountType === 'percentage' ? baseTotal * (discountVal / 100) : discountVal;
+        discAmt = Math.min(discAmt, baseTotal);
+        const baseAfterDisc = baseTotal - discAmt;
+
+        // Recompute GST on discounted base
+        const taxAmt = (taxType === 'with') ? (baseAfterDisc * (taxRate / 100)) : 0;
+
+        // Final amount (should equal qty*priceIncl when discount==0)
+        const final = baseAfterDisc + taxAmt;
+
+        // UI fields
+        row.find('.amount').val(final.toFixed(2));
+        row.find('.base-val').text(baseAfterDisc.toFixed(2));
+        row.find('.gst-val').text(taxAmt.toFixed(2));
+
+        // Save for totals
+        row.data({
+            base: baseAfterDisc,
+            discAmt: discAmt,
+            taxAmt: taxAmt,
+            gross: final
+        });
+    }
+
+    // 🔢 Totals
+    function calculateTotals() {
+        let subtotal = 0, discountTotal = 0, taxTotal = 0, grossTotal = 0;
+
+        $('#itemsTable tbody tr').each(function() {
+            const d = $(this).data();
+            subtotal += (d.base || 0);
+            discountTotal += (d.discAmt || 0);
+            taxTotal += (d.taxAmt || 0);
+            grossTotal += (d.gross || 0);
+        });
+
+        const overallDiscount = parseFloat($('#overall_discount').val()) || 0;
+        const total = Math.max(grossTotal - overallDiscount, 0);
+
+        $('#subtotal_display').text(subtotal.toFixed(2));
+        $('#tax_display').text(taxTotal.toFixed(2));
+        $('#discount_display').text((discountTotal + overallDiscount).toFixed(2));
+        $('#total_display').text(total.toFixed(2));
+
+        $('#subtotal').val(subtotal.toFixed(2));
+        $('#tax_input').val(taxTotal.toFixed(2));
+        $('#discount_input').val((discountTotal + overallDiscount).toFixed(2));
+        $('#total_input').val(total.toFixed(2));
+
+        // update composition only when visible
+        if ($('#compositionContainer').is(':visible')) updateOverallComposition();
+    }
+
+    // 📦 Item select change → Auto GST 18% (editable), stock checks, composition
     $(document).on('change', '.item-select', function() {
         const row = $(this).closest('tr');
         const sel = $(this).find(':selected');
@@ -570,41 +673,42 @@ $(document).ready(function() {
         const hsn = sel.data('hsn') || '';
         const code = sel.data('code') || '';
 
-        // keep existing pivot price if already typed; else fill
-        if(!row.find('.price').val()) {
+        // Set/keep price; if empty, fill from item
+        if (!row.find('.price').val()) {
             row.find('.price').val(salePrice.toFixed(2));
         }
         row.find('.unit').text(unit);
         row.find('.description').text(`Type: ${type} | HSN: ${hsn} | Code: ${code}`);
-        // don't force tax_type to 'without' because edit must preserve — do nothing
 
+        // 🔥 Auto GST 18% Applied (but editable)
+        row.find('.tax_type').val('with').trigger('change');
+        row.find('.tax_rate').val(18).show();
+
+        // tiny green indicator for 2.5s
+        const badge = row.find('.gst-applied');
+        badge.removeClass('hidden');
+        setTimeout(() => badge.addClass('hidden'), 2500);
+
+        // Stock controls
         if (type === 'product') {
             const stockQty = parseFloat(sel.data('stock')) || 0;
             if (stockQty > 0) {
-                row.find('.qty')
-                    .attr('min', 1)
-                    .attr('max', stockQty)
-                    .attr('placeholder', `Max: ${stockQty}`)
-                    .prop('readonly', false);
+                row.find('.qty').attr({ min: 1, max: stockQty }).attr('placeholder', `Max: ${stockQty}`).prop('readonly', false);
+                if (!row.find('.qty').val() || parseFloat(row.find('.qty').val()) <= 0) row.find('.qty').val(1);
             } else {
-                row.find('.qty')
-                    .attr('min', 0)
-                    .removeAttr('max')
-                    .attr('placeholder', 'Out of stock')
-                    .prop('readonly', true);
-                alert(`⚠️ This item is out of stock and cannot be sold.`);
+                row.find('.qty').attr({ min: 0 }).removeAttr('max').attr('placeholder', 'Out of stock').val(0).prop('readonly', true);
+                alert('⚠️ This item is out of stock and cannot be sold.');
             }
         } else {
-            row.find('.qty')
-                .removeAttr('max')
-                .removeAttr('min')
-                .removeAttr('placeholder')
-                .prop('readonly', false);
+            row.find('.qty').removeAttr('max').removeAttr('min').removeAttr('placeholder').prop('readonly', false);
+            if (!row.find('.qty').val() || parseFloat(row.find('.qty').val()) <= 0) row.find('.qty').val(1);
         }
 
+        // Recalculate & totals
         calculateRow(row);
         calculateTotals();
 
+        // Composition
         if (type === 'product') {
             if (compositionCache[itemId]) {
                 renderComposition(compositionCache[itemId], parseFloat(row.find('.qty').val()) || 1, parseFloat(row.find('.price').val()) || salePrice);
@@ -612,7 +716,7 @@ $(document).ready(function() {
                 $.get("{{ route('admin.saleInvoice.getItemComposition', '') }}/" + itemId, function(resp) {
                     compositionCache[itemId] = resp.composition || [];
                     renderComposition(resp.composition, parseFloat(row.find('.qty').val()) || 1, parseFloat(row.find('.price').val()) || salePrice);
-                }).fail(() => renderComposition([], 1, salePrice));
+                }).fail(() => renderComposition([], parseFloat(row.find('.qty').val()) || 1, parseFloat(row.find('.price').val()) || salePrice));
             }
         } else {
             renderComposition([
@@ -621,51 +725,7 @@ $(document).ready(function() {
         }
     });
 
-    function calculateRow(row) {
-        const qty = parseFloat(row.find('.qty').val()) || 0;
-        const price = parseFloat(row.find('.price').val()) || 0;
-        const discountVal = parseFloat(row.find('.discount').val()) || 0;
-        const discountType = row.find('.discount_type').val();
-        const taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
-        const taxType = row.find('.tax_type').val();
-
-        let base = qty * price;
-        let discAmt = discountType === 'percentage' ? base * (discountVal / 100) : discountVal;
-        let afterDisc = base - discAmt;
-        let taxAmt = taxType === 'with' ? afterDisc * (taxRate / 100) : 0;
-        let final = afterDisc + taxAmt;
-
-        row.find('.amount').val(final.toFixed(2));
-        row.data({ base, discAmt, taxAmt });
-    }
-
-    function calculateTotals() {
-        let subtotal = 0, discountTotal = 0, taxTotal = 0;
-        $('#itemsTable tbody tr').each(function() {
-            const d = $(this).data();
-            subtotal += (d.base || 0) - (d.discAmt || 0);
-            discountTotal += d.discAmt || 0;
-            taxTotal += d.taxAmt || 0;
-        });
-
-        const overallDiscount = parseFloat($('#overall_discount').val()) || 0;
-        const total = subtotal + taxTotal - overallDiscount;
-
-        $('#subtotal_display').text(subtotal.toFixed(2));
-        $('#tax_display').text(taxTotal.toFixed(2));
-        $('#discount_display').text((discountTotal + overallDiscount).toFixed(2));
-        $('#total_display').text(total.toFixed(2));
-
-        $('#subtotal').val(subtotal.toFixed(2));
-        $('#tax_input').val(taxTotal.toFixed(2));
-        $('#discount_input').val((discountTotal + overallDiscount).toFixed(2));
-        $('#total_input').val(total.toFixed(2));
-
-        // keep composition collapsed by default; don't auto-open
-        // update overall composition numbers in background
-        updateOverallComposition();
-    }
-
+    // Inputs recalc
     $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function() {
         const row = $(this).closest('tr');
         if (row.find('.tax_type').val() === 'with') row.find('.tax_rate').show(); else row.find('.tax_rate').hide().val(0);
@@ -673,6 +733,7 @@ $(document).ready(function() {
         calculateTotals();
     });
 
+    // Add new row
     $('#addRow').click(function() {
         const tbody = $('#itemsTable tbody');
         const count = tbody.find('tr').length;
@@ -689,9 +750,18 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <select name="items[${count}][tax_type]" class="tax_type select2 w-full"><option value="without">Without Tax</option><option value="with">With Tax</option></select>
-                    <input type="number" name="items[${count}][tax]" class="tax_rate mt-1 border px-2 py-1 w-full" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="items[${count}][tax]" class="tax_rate mt-1 border px-2 py-1 w-full" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                        <span class="gst-applied text-green-600 text-xs font-medium hidden">GST Applied ✅</span>
+                    </div>
                 </td>
-                <td><input type="text" name="items[${count}][amount]" class="amount border px-2 py-1 w-full" readonly></td>
+                <td>
+                    <input type="text" name="items[${count}][amount]" class="amount border px-2 py-1 w-full" readonly>
+                    <div class="text-xs text-gray-500 leading-tight mt-1 base-gst-lines">
+                        <div class="base-line">Base Price: ₹ <span class="base-val">0.00</span></div>
+                        <div class="gst-line">GST: ₹ <span class="gst-val">0.00</span></div>
+                    </div>
+                </td>
                 <td class="text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
             </tr>
         `);
@@ -699,6 +769,7 @@ $(document).ready(function() {
         row.find('.select2').select2({ width: '100%' });
     });
 
+    // Remove row
     $(document).on('click', '.removeRow', function() {
         const tbody = $('#itemsTable tbody');
         if (tbody.find('tr').length > 1) {
@@ -709,6 +780,7 @@ $(document).ready(function() {
         }
     });
 
+    // Overall composition updater
     function updateOverallComposition() {
         let rows = [], totalSale = 0, totalPurchase = 0;
         $('#itemsTable tbody tr').each(function() {
@@ -725,7 +797,7 @@ $(document).ready(function() {
                     const used = (parseFloat(c.qty_used) || 0) * qty;
                     const cost = used * (parseFloat(c.purchase_price) || 0);
                     totalPurchase += cost;
-                    rows.push({ ...c, usedQty: used, itemPurchaseTotal: cost, itemSaleTotal: used * c.sale_price });
+                    rows.push({ ...c, usedQty: used, itemPurchaseTotal: cost, itemSaleTotal: used * (parseFloat(c.sale_price)||0) });
                 });
             } else {
                 const cost = purchasePrice * qty;
@@ -733,13 +805,12 @@ $(document).ready(function() {
                 rows.push({ id, name: sel.text(), usedQty: qty, sale_price: salePrice, purchase_price: purchasePrice, itemPurchaseTotal: cost, itemSaleTotal: salePrice * qty });
             }
         });
-        // keep details hidden unless user opens
         if ($('#compositionContainer').is(':visible')) {
             renderComposition(rows, 1, totalSale - totalPurchase);
         }
     }
 
-    // Sub Cost Center AJAX (same route used in your create)
+    // Sub Cost Center AJAX
     $('#main_cost_center_id').on('change', function() {
         const id = $(this).val();
         const subSelect = $('#sub_cost_center_id');
@@ -749,20 +820,31 @@ $(document).ready(function() {
             $.each(data, function(k, v) {
                 subSelect.append('<option value="' + k + '">' + v + '</option>');
             });
-            // keep previously selected if matches
             const current = "{{ (string) old('sub_cost_center_id', $saleInvoice->sub_cost_center_id) }}";
             if (current) subSelect.val(current).trigger('change');
         });
     });
 
-    // Initialize calculations for all prefilled rows
+    // ======= INITIALIZE ALL PRE-FILLED ROWS (Edit Mode) =======
     $('#itemsTable tbody tr').each(function(){
-        // Fire change to set description/unit/stock rules and composition cache fill on first row
-        const sel = $(this).find('.item-select');
-        sel.trigger('change');
-
         const row = $(this);
+        const sel = row.find('.item-select');
+
+        // Set description/unit from selected
+        const selected = sel.find(':selected');
+        if (selected.length) {
+            const unit = selected.data('unit') || '';
+            const type = selected.data('item-type') || 'product';
+            const hsn = selected.data('hsn') || '';
+            const code = selected.data('code') || '';
+            row.find('.unit').text(unit);
+            row.find('.description').text(`Type: ${type} | HSN: ${hsn} | Code: ${code}`);
+        }
+
+        // Ensure tax input visibility
         if (row.find('.tax_type').val() === 'with') row.find('.tax_rate').show();
+
+        // Calculate lines
         calculateRow(row);
     });
     calculateTotals();
