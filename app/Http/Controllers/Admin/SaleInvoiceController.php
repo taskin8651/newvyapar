@@ -1292,7 +1292,7 @@ public function pdf(SaleInvoice $saleInvoice)
 
     // ✅ Terms also based on main admin only
     $terms = TermAndCondition::where('status', 'active')
-        ->where('created_by_id', $mainAdminId)
+        
         ->get();
 
     return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
