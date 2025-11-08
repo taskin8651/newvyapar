@@ -54,106 +54,75 @@ $payment_types = \App\Models\BankAccount::where('created_by_id', $userId)
 
 public function store(StorePaymentInRequest $request)
 {
-    // Step 1️⃣: Add created_by and updated_by
-    $requestData = $request->all();
-    $requestData['created_by_id'] = auth()->id();
-    $requestData['updated_by_id'] = auth()->id();
+    // Step 1: Add created_by and updated_by
+    $data = $request->all();
+    $data['created_by_id'] = auth()->id();
+    $data['updated_by_id'] = auth()->id();
 
-    // Step 2️⃣: Create PaymentIn
-    $paymentIn = PaymentIn::create($requestData);
+    // Step 2: Create PaymentIn
+    $paymentIn = PaymentIn::create($data);
 
-    // Step 3️⃣: Save attachment
+    // Step 3: Save attachment
     if ($request->input('attechment', false)) {
         $paymentIn->addMedia(storage_path('tmp/uploads/' . basename($request->input('attechment'))))
                   ->toMediaCollection('attechment');
     }
 
-    // Step 4️⃣: Handle CKEditor media
+    // Step 4: Handle CKEditor media
     if ($media = $request->input('ck-media', false)) {
         Media::whereIn('id', $media)->update(['model_id' => $paymentIn->id]);
     }
 
-    // Step 5️⃣: Fetch related models
+    // Step 5: Fetch related models
     $party = $paymentIn->parties;
     $bank  = $paymentIn->payment_type;
 
-    // Step 6️⃣: Insert in BankTransaction
+    // Step 6: Add Bank Transaction Entry
     if ($party && $bank) {
-        $transactionData = [
-            'payment_in_id'         => $paymentIn->id,
-            'party_id'              => $party->id,
-            'party_name'            => $party->party_name,
-            'opening_balance_type'  => $bank->opening_balance_type ?? null,
-            'opening_balance'       => $bank->opening_balance ?? 0,
-            'current_balance'       => $party->current_balance ?? 0,
-            'current_balance_type'  => $party->current_balance_type ?? null,
-            'payment_type_id'       => $bank->id,
-            'amount'                => $paymentIn->amount,
-            'created_by_id'         => auth()->id(),
-            'updated_by_id'         => auth()->id(),
-            'description'           => $paymentIn->description,
-            'json' => json_encode([
+        BankTransaction::create([
+            'payment_in_id' => $paymentIn->id,
+            'party_id'      => $party->id,
+            'party_name'    => $party->party_name,
+            'payment_type_id' => $bank->id,
+            'amount'        => $paymentIn->amount,
+            'created_by_id' => auth()->id(),
+            'updated_by_id' => auth()->id(),
+            'description'   => $paymentIn->description,
+            'json'          => json_encode([
                 'payment_in' => $paymentIn->toArray(),
                 'party'      => $party->toArray(),
                 'bank'       => $bank->toArray(),
                 'user'       => auth()->user()->only(['id', 'name', 'email']),
             ]),
-        ];
-
-        BankTransaction::create($transactionData);
+        ]);
     }
 
-    // Step 7️⃣: BANK BALANCE UPDATE
+    // ✅ Step 7: BANK BALANCE UPDATE (Always +)
     if ($bank) {
-        $bankOpeningBalance = $bank->opening_balance ?? 0;
-        $bankOpeningType    = $bank->opening_balance_type ?? 'debit'; // default
+        $bankBalance = $bank->opening_balance ?? 0;
+        $bankBalance = $bankBalance + $paymentIn->amount; // Always increase
 
-        // 🧮 Payment In increases bank balance
-        if ($bankOpeningType == 'debit') {
-            $bankOpeningBalance += $paymentIn->amount;
-        } else {
-            $bankOpeningBalance -= $paymentIn->amount;
-        }
-
-        // Auto adjust type if balance becomes negative
-        if ($bankOpeningBalance < 0) {
-            $bankOpeningBalance = abs($bankOpeningBalance);
-            $bankOpeningType = ($bankOpeningType == 'debit') ? 'credit' : 'debit';
-        }
-
-        $bank->opening_balance = $bankOpeningBalance;
-        $bank->opening_balance_type = $bankOpeningType;
+        $bank->opening_balance = $bankBalance;
         $bank->save();
     }
 
-    // Step 8️⃣: PARTY BALANCE UPDATE
+    // ✅ Step 8: PARTY BALANCE UPDATE (Always -)
     if ($party) {
-        // If current balance/type is null, use opening values
+        // If current balance null, use opening balance
         $partyBalance = $party->current_balance ?? $party->opening_balance ?? 0;
-        $partyType    = $party->current_balance_type ?? $party->opening_balance_type ?? 'debit';
 
-        // 🧮 Payment In: party pays money, so DECREASE their debit, or INCREASE their credit
-        if ($partyType == 'debit') {
-            $partyBalance -= $paymentIn->amount;
-        } else {
-            $partyBalance += $paymentIn->amount;
-        }
-
-        // Auto adjust type if balance flips
-        if ($partyBalance < 0) {
-            $partyBalance = abs($partyBalance);
-            $partyType = ($partyType == 'debit') ? 'credit' : 'debit';
-        }
+        // Always minus on Payment In
+        $partyBalance = $partyBalance - $paymentIn->amount;
 
         $party->current_balance = $partyBalance;
-        $party->current_balance_type = $partyType;
         $party->save();
     }
 
-    // Step 9️⃣: Redirect success
+    // Step 9: Redirect success
     return redirect()->route('admin.payment-ins.index')
-                     ->with('success', '✅ Payment In successfully recorded with proper debit/credit adjustments for Party & Bank.');
+                     ->with('success', '✅ Payment In successfully recorded. Party balance decreased and Bank balance increased.');
 }
+
 
     public function show(PaymentIn $paymentIn)
     {
