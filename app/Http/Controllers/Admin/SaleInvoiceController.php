@@ -416,7 +416,7 @@ class SaleInvoiceController extends Controller
         $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
             ->pluck('sub_cost_center_name', 'id')
             ->prepend(trans('global.pleaseSelect'), '');
-
+        // dd($sub_cost);
         return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
     }
 

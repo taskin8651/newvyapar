@@ -423,8 +423,8 @@ return [
         ],
     ],
     'proformaInvoice' => [
-        'title'          => 'Proforma Invoice',
-        'title_singular' => 'Proforma Invoice',
+        'title'          => 'Delevery Challan',
+        'title_singular' => 'Delevery Challan',
         'fields'         => [
             'id'                      => 'ID',
             'id_helper'               => ' ',
