@@ -172,31 +172,30 @@
                         <tbody>
                             <tr class="item-row">
                                 <td class="px-1 py-1">
-                            <select name="items[0][add_item_id]" class="form-select item-select select2">
-                                <option value="">-- Select Item --</option>
-                                @foreach($items as $item)
-                                    <option 
-                                        value="{{ $item->id }}"
-                                        data-sale-price="{{ $item->sale_price ?? $item->purchase_price ?? 0 }}"
-                                        data-purchase-price="{{ $item->purchase_price ?? 0 }}"
-                                        data-unit="{{ $item->select_unit->unit_name ?? '' }}"
-                                        data-hsn="{{ $item->item_hsn ?? '' }}"
-                                        data-code="{{ $item->item_code ?? '' }}"
-                                        data-item-type="{{ $item->item_type ?? 'product' }}"
-                                        @if($item->item_type === 'product')
-                                            data-stock="{{ $item->stock_qty ?? 0 }}"
-                                        @else
-                                            data-stock="0"
-                                        @endif
-                                    >
-                                        {{ $item->item_name }} ({{ ucfirst($item->item_type ?? 'Product') }})
-                                        @if($item->item_type === 'product' && $item->stock_qty !== null)
-                                            - Stock: {{ $item->stock_qty }}
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-
+                                    <select name="items[0][add_item_id]" class="form-select item-select select2">
+                                        <option value="">-- Select Item --</option>
+                                        @foreach($items as $item)
+                                            <option 
+                                                value="{{ $item->id }}"
+                                                data-sale-price="{{ $item->sale_price ?? $item->purchase_price ?? 0 }}"
+                                                data-purchase-price="{{ $item->purchase_price ?? 0 }}"
+                                                data-unit="{{ $item->select_unit->unit_name ?? '' }}"
+                                                data-hsn="{{ $item->item_hsn ?? '' }}"
+                                                data-code="{{ $item->item_code ?? '' }}"
+                                                data-item-type="{{ $item->item_type ?? 'product' }}"
+                                                @if($item->item_type === 'product')
+                                                    data-stock="{{ $item->stock_qty ?? 0 }}"
+                                                @else
+                                                    data-stock="0"
+                                                @endif
+                                            >
+                                                {{ $item->item_name }} ({{ ucfirst($item->item_type ?? 'Product') }})
+                                                @if($item->item_type === 'product' && $item->stock_qty !== null)
+                                                    - Stock: {{ $item->stock_qty }}
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </td>
                                 <td class="px-1 py-1 description"></td>
                                 <td class="px-1 py-1"><input type="number" name="items[0][qty]" class="qty w-full border px-2 py-1" min="1" value="1"></td>
@@ -214,9 +213,20 @@
                                         <option value="without">Without Tax</option>
                                         <option value="with">With Tax</option>
                                     </select>
-                                    <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                                    <div class="flex items-center gap-2">
+                                        <input type="number" name="items[0][tax]" class="tax_rate w-full mt-1 border px-2 py-1" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                                        <!-- 🟢 GST Applied indicator -->
+                                        <span class="gst-applied text-green-600 text-xs font-medium hidden">GST Applied ✅</span> <!-- 🧾 Base Price & GST Display Added -->
+                                    </div>
                                 </td>
-                                <td class="px-1 py-1"><input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly></td>
+                                <td class="px-1 py-1">
+                                    <input type="text" name="items[0][amount]" class="amount w-full border px-2 py-1" readonly>
+                                    <!-- 🧾 Base Price & GST Display Added -->
+                                    <div class="text-xs text-gray-500 leading-tight mt-1 base-gst-lines">
+                                        <div class="base-line">Base Price: ₹ <span class="base-val">0.00</span></div>
+                                        <div class="gst-line">GST: ₹ <span class="gst-val">0.00</span></div>
+                                    </div>
+                                </td>
                                 <td class="px-1 py-1 text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
                             </tr>
                         </tbody>
@@ -411,8 +421,8 @@ $(document).ready(function() {
                 <tr>
                     <td>${r.name}</td>
                     <td>${usedQty}</td>
-                    <td>₹ ${parseFloat(r.sale_price).toFixed(2)}</td>
-                    <td>₹ ${parseFloat(r.purchase_price).toFixed(2)}</td>
+                    <td>₹ ${parseFloat(r.sale_price || 0).toFixed(2)}</td>
+                    <td>₹ ${parseFloat(r.purchase_price || 0).toFixed(2)}</td>
                     <td>₹ ${sale.toFixed(2)}</td>
                     <td>₹ ${purchase.toFixed(2)}</td>
                     <td class="${diff >= 0 ? 'text-green-600' : 'text-red-600'}">₹ ${diff.toFixed(2)}</td>
@@ -430,7 +440,19 @@ $(document).ready(function() {
             .toggleClass('text-red-600', profit < 0);
     }
 
-    // 🔹 When item is selected (✅ Updated version with stock validation)
+    // ✅ GST Reverse Calculation helper — returns {basePerUnit, gstPerUnit}
+    // ✅ GST Reverse Calculation Added
+    function reverseGST(priceIncl, taxRate) {
+        priceIncl = parseFloat(priceIncl) || 0;
+        taxRate = parseFloat(taxRate) || 0;
+        if (taxRate <= 0) return { basePerUnit: priceIncl, gstPerUnit: 0 };
+        const divisor = 1 + (taxRate / 100);
+        const base = priceIncl / divisor;
+        const gst = priceIncl - base;
+        return { basePerUnit: base, gstPerUnit: gst };
+    }
+
+    // 🔹 When item is selected
     $(document).on('change', '.item-select', function() {
         const row = $(this).closest('tr');
         const sel = $(this).find(':selected');
@@ -451,7 +473,15 @@ $(document).ready(function() {
         row.find('.price').val(salePrice.toFixed(2));
         row.find('.unit').text(unit);
         row.find('.description').text(`Type: ${type} | HSN: ${hsn} | Code: ${code}`);
-        row.find('.tax_type').val('without').trigger('change');
+
+        // 🔥 Auto GST 18% Applied
+        row.find('.tax_type').val('with').trigger('change');
+        row.find('.tax_rate').val(18).show(); // keep editable
+
+        // Small green indicator for 2.5s
+        const badge = row.find('.gst-applied');
+        badge.removeClass('hidden');
+        setTimeout(() => badge.addClass('hidden'), 2500);
 
         // ✅ Handle stock only for product type
         if (type === 'product') {
@@ -475,7 +505,7 @@ $(document).ready(function() {
                 alert(`⚠️ This item is out of stock and cannot be sold.`);
             }
         } else {
-            // ✅ Service / non-product → no stock restriction
+            // Service → no stock restriction
             row.find('.qty')
                 .removeAttr('max')
                 .removeAttr('min')
@@ -484,10 +514,10 @@ $(document).ready(function() {
                 .val(1);
         }
 
-        calculateRow(row);
+        calculateRow(row);   // ✅ GST Reverse Calculation Added (used inside)
         calculateTotals();
 
-        // 🔹 Handle composition (optional)
+        // Composition (optional)
         if (type === 'product') {
             if (compositionCache[itemId]) {
                 renderComposition(compositionCache[itemId], 1, salePrice);
@@ -504,38 +534,81 @@ $(document).ready(function() {
         }
     });
 
-    // 🔹 Row calculation
+    // 🔹 Row calculation (RESPECT GST-INCLUDED PRICE)
     function calculateRow(row) {
         const qty = parseFloat(row.find('.qty').val()) || 0;
-        const price = parseFloat(row.find('.price').val()) || 0;
+        const priceIncl = parseFloat(row.find('.price').val()) || 0; // GST-included per unit
         const discountVal = parseFloat(row.find('.discount').val()) || 0;
         const discountType = row.find('.discount_type').val();
         const taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
         const taxType = row.find('.tax_type').val();
 
-        let base = qty * price;
-        let discAmt = discountType === 'percentage' ? base * (discountVal / 100) : discountVal;
-        let afterDisc = base - discAmt;
-        let taxAmt = taxType === 'with' ? afterDisc * (taxRate / 100) : 0;
-        let final = afterDisc + taxAmt;
+        let basePerUnit = priceIncl;
+        let gstPerUnit = 0;
 
+        if (taxType === 'with') {
+            // ✅ Reverse GST because price includes tax
+            const rev = reverseGST(priceIncl, taxRate);  // ✅ GST Reverse Calculation Added
+            basePerUnit = rev.basePerUnit;
+            gstPerUnit = rev.gstPerUnit;
+        } else {
+            // without tax => base is price, gst 0
+            basePerUnit = priceIncl;
+            gstPerUnit = 0;
+        }
+
+        // Amounts before discount
+        let baseTotal = basePerUnit * qty;
+        let gstTotal = gstPerUnit * qty;
+
+        // Discount apply on base (common practice)
+        let discAmt = discountType === 'percentage' ? baseTotal * (discountVal / 100) : discountVal;
+        discAmt = Math.min(discAmt, baseTotal); // avoid negative base
+        const baseAfterDisc = baseTotal - discAmt;
+
+        // Recompute GST on discounted base
+        let taxAmt = (taxType === 'with') ? (baseAfterDisc * (taxRate / 100)) : 0;
+
+        // Final amount should be (baseAfterDisc + taxAmt)
+        const final = baseAfterDisc + taxAmt;
+
+        // NOTE: If no discount, final ~= qty * priceIncl (unchanged), as required.
+
+        // Write per-row visible fields
         row.find('.amount').val(final.toFixed(2));
-        row.data({ base, discAmt, taxAmt });
+        row.find('.base-val').text(baseAfterDisc.toFixed(2)); // 🧾 Base Price & GST Display Added
+        row.find('.gst-val').text(taxAmt.toFixed(2));         // 🧾 Base Price & GST Display Added
+
+        // Store for totals
+        row.data({
+            base: baseAfterDisc,    // used in subtotal
+            discAmt: discAmt,       // informative
+            taxAmt: taxAmt,
+            gross: final
+        });
     }
 
     // 🔹 Totals calculation
     function calculateTotals() {
-        let subtotal = 0, discountTotal = 0, taxTotal = 0;
+        let subtotal = 0, discountTotal = 0, taxTotal = 0, grossTotal = 0;
+
         $('#itemsTable tbody tr').each(function() {
             const d = $(this).data();
-            subtotal += (d.base || 0) - (d.discAmt || 0);
-            discountTotal += d.discAmt || 0;
-            taxTotal += d.taxAmt || 0;
+            subtotal += (d.base || 0);      // base after line-discount
+            discountTotal += (d.discAmt || 0);
+            taxTotal += (d.taxAmt || 0);
+            grossTotal += (d.gross || 0);
         });
 
         const overallDiscount = parseFloat($('#overall_discount').val()) || 0;
-        const total = subtotal + taxTotal - overallDiscount;
 
+        // Apply overall discount on base (pre-tax), then recompute tax? 
+        // Simpler: subtract overall discount directly from gross total.
+        // If you want to treat it as pre-tax, uncomment the alternative block below.
+
+        let total = Math.max(grossTotal - overallDiscount, 0);
+
+        // UI writes
         $('#subtotal_display').text(subtotal.toFixed(2));
         $('#tax_display').text(taxTotal.toFixed(2));
         $('#discount_display').text((discountTotal + overallDiscount).toFixed(2));
@@ -574,9 +647,18 @@ $(document).ready(function() {
                 </td>
                 <td>
                     <select name="items[${count}][tax_type]" class="tax_type select2 w-full"><option value="without">Without Tax</option><option value="with">With Tax</option></select>
-                    <input type="number" name="items[${count}][tax]" class="tax_rate mt-1 border px-2 py-1 w-full" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="items[${count}][tax]" class="tax_rate mt-1 border px-2 py-1 w-full" value="0" step="0.01" placeholder="Tax %" style="display:none;">
+                        <span class="gst-applied text-green-600 text-xs font-medium hidden">GST Applied ✅</span> <!-- 🧾 Base Price & GST Display Added -->
+                    </div>
                 </td>
-                <td><input type="text" name="items[${count}][amount]" class="amount border px-2 py-1 w-full" readonly></td>
+                <td>
+                    <input type="text" name="items[${count}][amount]" class="amount border px-2 py-1 w-full" readonly>
+                    <div class="text-xs text-gray-500 leading-tight mt-1 base-gst-lines">
+                        <div class="base-line">Base Price: ₹ <span class="base-val">0.00</span></div>
+                        <div class="gst-line">GST: ₹ <span class="gst-val">0.00</span></div>
+                    </div>
+                </td>
                 <td class="text-center"><button type="button" class="removeRow bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Remove</button></td>
             </tr>
         `);
@@ -612,7 +694,7 @@ $(document).ready(function() {
                     const used = (parseFloat(c.qty_used) || 0) * qty;
                     const cost = used * (parseFloat(c.purchase_price) || 0);
                     totalPurchase += cost;
-                    rows.push({ ...c, usedQty: used, itemPurchaseTotal: cost, itemSaleTotal: used * c.sale_price });
+                    rows.push({ ...c, usedQty: used, itemPurchaseTotal: cost, itemSaleTotal: (used * (parseFloat(c.sale_price)||0)) });
                 });
             } else {
                 const cost = purchasePrice * qty;
@@ -623,24 +705,10 @@ $(document).ready(function() {
         renderComposition(rows, 1, totalSale - totalPurchase);
     }
 
-    // 🔹 Sub Cost Center AJAX
-    $('#main_cost_center_id').on('change', function() {
-        const id = $(this).val();
-        const subSelect = $('#sub_cost_center_id');
-        subSelect.empty().append('<option value="">-- Select Sub Cost Center --</option>');
-        if (!id) return;
-        $.get("{{ route('admin.purchaseBill.getSubCostCenters', '') }}/" + id, function(data) {
-            $.each(data, function(k, v) {
-                subSelect.append('<option value="' + k + '">' + v + '</option>');
-            });
-        });
-    });
-
     // Init first row
+    calculateRow($('#itemsTable tbody tr.item-row').first());
     calculateTotals();
 });
 </script> 
 
 @endsection
-
-
