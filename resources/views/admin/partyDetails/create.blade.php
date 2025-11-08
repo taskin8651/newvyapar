@@ -284,7 +284,7 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 required">IFSC Code</label>
+                                <label class="block text-sm font-medium text-gray-700 ">IFSC Code</label>
                                 <input type="text" name="ifsc_code" id="ifsc_code" x-model="ifsc_code"
                                        @blur="fetchBankDetails()"
                                        placeholder="Enter IFSC code (e.g., SBIN0000456)"
