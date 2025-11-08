@@ -291,6 +291,38 @@ class SaleInvoiceController extends Controller
             ], 500);
         }
     }
+public function getCustomerDetails($id)
+{
+    $customer = \App\Models\PartyDetail::withoutGlobalScopes()->find($id);
+
+    if (!$customer) {
+        return response()->json(['error' => 'Customer not found'], 404);
+    }
+
+    return response()->json([
+        'party_name'            => $customer->party_name,
+        'phone_number'          => $customer->phone_number,
+        'email'                 => $customer->email,
+        'gstin'                 => $customer->gstin,
+        'pan_number'            => $customer->pan_number,
+        'billing_address'       => $customer->billing_address,
+        'shipping_address'      => $customer->shipping_address,
+        'state'                 => $customer->state,
+        'city'                  => $customer->city,
+        'pincode'               => $customer->pincode,
+        'credit_limit'          => $customer->credit_limit,
+        'payment_terms'         => $customer->payment_terms,
+
+        // Opening & Current Balance
+        'opening_balance'       => $customer->opening_balance,
+        'opening_balance_type'  => $customer->opening_balance_type,
+        'opening_balance_date'  => $customer->opening_balance_date,
+
+        'current_balance'       => $customer->current_balance,
+        'current_balance_type'  => $customer->current_balance_type,
+        'current_balance_date'  => $customer->updated_at,
+    ]);
+}
 
     // -----------------------------
     // Create (unchanged logic you shared)
