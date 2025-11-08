@@ -226,8 +226,8 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 required">Opening Balance</label>
-                                <input type="number" step="0.01" name="opening_balance" required
+                                <label class="block text-sm font-medium text-gray-700 ">Opening Balance</label>
+                                <input type="number" step="0.01" name="opening_balance" 
                                     class="w-full rounded-md border border-gray-300 px-4 py-3 focus:border-indigo-500 mt-1">
                             </div>
                             <div>
