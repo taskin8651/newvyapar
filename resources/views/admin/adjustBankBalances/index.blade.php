@@ -2,143 +2,131 @@
 @section('content')
 <div class="content">
     @can('adjust_bank_balance_create')
-        <div style="margin-bottom: 10px;" class="row">
-            <div class="col-lg-12">
-                <a class="btn btn-success" href="{{ route('admin.adjust-bank-balances.create') }}">
-                    {{ trans('global.add') }} {{ trans('cruds.adjustBankBalance.title_singular') }}
-                </a>
-                <button class="btn btn-warning" data-toggle="modal" data-target="#csvImportModal">
-                    {{ trans('global.app_csvImport') }}
-                </button>
-                @include('csvImport.modal', ['model' => 'AdjustBankBalance', 'route' => 'admin.adjust-bank-balances.parseCsvImport'])
-            </div>
-        </div>
+    <div class="mb-4">
+        <a href="{{ route('admin.adjust-bank-balances.create') }}"
+           class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
+            <i class="fas fa-plus mr-2"></i>
+            {{ trans('global.add') }} {{ trans('cruds.adjustBankBalance.title_singular') }}
+        </a>
+
+        <button class="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow"
+                data-toggle="modal" data-target="#csvImportModal">
+            <i class="fas fa-file-csv mr-2"></i>
+            {{ trans('global.app_csvImport') }}
+        </button>
+
+        @include('csvImport.modal', ['model' => 'AdjustBankBalance', 'route' => 'admin.adjust-bank-balances.parseCsvImport'])
+    </div>
     @endcan
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('cruds.adjustBankBalance.title_singular') }} {{ trans('global.list') }}
-                </div>
-                <div class="panel-body">
-                    <div class="table-responsive">
-                        <table class=" table table-bordered table-striped table-hover datatable datatable-AdjustBankBalance">
-                            <thead>
-                                <tr>
-                                    <th width="10">
 
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.adjustBankBalance.fields.id') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.adjustBankBalance.fields.from') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.bankAccount.fields.account_number') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.bankAccount.fields.ifsc_code') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.bankAccount.fields.bank_name') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.bankAccount.fields.account_holder_name') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.adjustBankBalance.fields.type') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.adjustBankBalance.fields.amount') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.adjustBankBalance.fields.adjustment_date') }}
-                                    </th>
-                                    <th>
-                                        {{ trans('cruds.adjustBankBalance.fields.attechment') }}
-                                    </th>
-                                    <th>
-                                        &nbsp;
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($adjustBankBalances as $key => $adjustBankBalance)
-                                    <tr data-entry-id="{{ $adjustBankBalance->id }}">
-                                        <td>
+    <div class="bg-white shadow rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">
+                {{ trans('cruds.adjustBankBalance.title_singular') }} {{ trans('global.list') }}
+            </h3>
+        </div>
 
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->id ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->from->account_name ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->from->account_number ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->from->ifsc_code ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->from->bank_name ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->from->account_holder_name ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ App\Models\AdjustBankBalance::TYPE_SELECT[$adjustBankBalance->type] ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->amount ?? '' }}
-                                        </td>
-                                        <td>
-                                            {{ $adjustBankBalance->adjustment_date ?? '' }}
-                                        </td>
-                                        <td>
-                                            @if($adjustBankBalance->attechment)
-                                                <a href="{{ $adjustBankBalance->attechment->getUrl() }}" target="_blank" style="display: inline-block">
-                                                    <img src="{{ $adjustBankBalance->attechment->getUrl('thumb') }}">
-                                                </a>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @can('adjust_bank_balance_show')
-                                                <a class="btn btn-xs btn-primary" href="{{ route('admin.adjust-bank-balances.show', $adjustBankBalance->id) }}">
-                                                    {{ trans('global.view') }}
-                                                </a>
-                                            @endcan
+        <div class="bg-white shadow rounded-lg overflow-hidden p-2">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-left text-gray-600 datatable datatable-AdjustBankBalance">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3 w-12"></th>
+                            <th class="px-4 py-3">{{ trans('cruds.adjustBankBalance.fields.id') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.adjustBankBalance.fields.from') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.bankAccount.fields.account_number') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.bankAccount.fields.ifsc_code') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.bankAccount.fields.bank_name') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.bankAccount.fields.account_holder_name') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.adjustBankBalance.fields.type') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.adjustBankBalance.fields.amount') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.adjustBankBalance.fields.adjustment_date') }}</th>
+                            <th class="px-4 py-3">{{ trans('cruds.adjustBankBalance.fields.attechment') }}</th>
+                            <th class="px-4 py-3 text-center">{{ trans('global.actions') }}</th>
+                        </tr>
+                    </thead>
 
-                                            @can('adjust_bank_balance_edit')
-                                                <a class="btn btn-xs btn-info" href="{{ route('admin.adjust-bank-balances.edit', $adjustBankBalance->id) }}">
-                                                    {{ trans('global.edit') }}
-                                                </a>
-                                            @endcan
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($adjustBankBalances as $key => $adjustBankBalance)
+                            <tr class="hover:bg-gray-50" data-entry-id="{{ $adjustBankBalance->id }}">
+                                <td class="px-4 py-3"></td>
+                                <td class="px-4 py-3 font-medium text-gray-900">{{ $adjustBankBalance->id ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->from->account_name ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->from->account_number ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->from->ifsc_code ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->from->bank_name ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->from->account_holder_name ?? '' }}</td>
+                                <td class="px-4 py-3">{{ App\Models\AdjustBankBalance::TYPE_SELECT[$adjustBankBalance->type] ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->amount ?? '' }}</td>
+                                <td class="px-4 py-3">{{ $adjustBankBalance->adjustment_date ?? '' }}</td>
 
-                                            @can('adjust_bank_balance_delete')
-                                                <form action="{{ route('admin.adjust-bank-balances.destroy', $adjustBankBalance->id) }}" method="POST" onsubmit="return confirm('{{ trans('global.areYouSure') }}');" style="display: inline-block;">
-                                                    <input type="hidden" name="_method" value="DELETE">
-                                                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                                    <input type="submit" class="btn btn-xs btn-danger" value="{{ trans('global.delete') }}">
-                                                </form>
-                                            @endcan
+                                <td class="px-4 py-3">
+                                    @if($adjustBankBalance->attechment)
+                                        <a href="{{ $adjustBankBalance->attechment->getUrl() }}" target="_blank" class="inline-block">
+                                            <img src="{{ $adjustBankBalance->attechment->getUrl('thumb') }}" class="h-10 rounded shadow">
+                                        </a>
+                                    @endif
+                                </td>
 
-                                        </td>
+                                {{-- Actions Dropdown --}}
+                                <td class="px-4 py-3 text-center relative"
+                                    x-data="{ open: false }"
+                                    @mouseenter="open = true"
+                                    @mouseleave="open = false">
 
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                    <!-- Ellipsis icon -->
+                                    <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
+                                        <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
+                                    </button>
+
+                                    <!-- Dropdown -->
+                                    <div x-show="open"
+                                         x-transition:enter="transition ease-out duration-200"
+                                         x-transition:enter-start="opacity-0 transform translate-y-1"
+                                         x-transition:enter-end="opacity-100 transform translate-y-0"
+                                         x-transition:leave="transition ease-in duration-150"
+                                         x-transition:leave-start="opacity-100 transform translate-y-0"
+                                         x-transition:leave-end="opacity-0 transform translate-y-1"
+                                         class="absolute top-full left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                         style="display: none;">
+
+                                        @can('adjust_bank_balance_show')
+                                            <a href="{{ route('admin.adjust-bank-balances.show', $adjustBankBalance->id) }}"
+                                               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition">
+                                                <i class="fas fa-eye mr-2"></i> {{ trans('global.view') }}
+                                            </a>
+                                        @endcan
+
+                                        @can('adjust_bank_balance_edit')
+                                            <a href="{{ route('admin.adjust-bank-balances.edit', $adjustBankBalance->id) }}"
+                                               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition">
+                                                <i class="fas fa-edit mr-2"></i> {{ trans('global.edit') }}
+                                            </a>
+                                        @endcan
+
+                                        @can('adjust_bank_balance_delete')
+                                            <form action="{{ route('admin.adjust-bank-balances.destroy', $adjustBankBalance->id) }}"
+                                                  method="POST"
+                                                  onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
+                                                @method('DELETE')
+                                                @csrf
+                                                <button type="submit"
+                                                        class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition">
+                                                    <i class="fas fa-trash mr-2"></i> {{ trans('global.delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
-
-
-
         </div>
     </div>
 </div>
+
 @endsection
 @section('scripts')
 @parent

@@ -2,88 +2,150 @@
 @section('content')
 <div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.edit') }} {{ trans('cruds.adjustBankBalance.title_singular') }}
-                </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.adjust-bank-balances.update", [$adjustBankBalance->id]) }}" enctype="multipart/form-data">
-                        @method('PUT')
-                        @csrf
-                        <div class="form-group {{ $errors->has('from') ? 'has-error' : '' }}">
-                            <label for="from_id">{{ trans('cruds.adjustBankBalance.fields.from') }}</label>
-                            <select class="form-control select2" name="from_id" id="from_id">
-                                @foreach($froms as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('from_id') ? old('from_id') : $adjustBankBalance->from->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('from'))
-                                <span class="help-block" role="alert">{{ $errors->first('from') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.from_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('type') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.adjustBankBalance.fields.type') }}</label>
-                            <select class="form-control" name="type" id="type">
-                                <option value disabled {{ old('type', null) === null ? 'selected' : '' }}>{{ trans('global.pleaseSelect') }}</option>
-                                @foreach(App\Models\AdjustBankBalance::TYPE_SELECT as $key => $label)
-                                    <option value="{{ $key }}" {{ old('type', $adjustBankBalance->type) === (string) $key ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('type'))
-                                <span class="help-block" role="alert">{{ $errors->first('type') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.type_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('amount') ? 'has-error' : '' }}">
-                            <label class="required" for="amount">{{ trans('cruds.adjustBankBalance.fields.amount') }}</label>
-                            <input class="form-control" type="number" name="amount" id="amount" value="{{ old('amount', $adjustBankBalance->amount) }}" step="0.01" required>
-                            @if($errors->has('amount'))
-                                <span class="help-block" role="alert">{{ $errors->first('amount') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.amount_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('adjustment_date') ? 'has-error' : '' }}">
-                            <label for="adjustment_date">{{ trans('cruds.adjustBankBalance.fields.adjustment_date') }}</label>
-                            <input class="form-control date" type="text" name="adjustment_date" id="adjustment_date" value="{{ old('adjustment_date', $adjustBankBalance->adjustment_date) }}">
-                            @if($errors->has('adjustment_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('adjustment_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.adjustment_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.adjustBankBalance.fields.description') }}</label>
-                            <textarea class="form-control ckeditor" name="description" id="description">{!! old('description', $adjustBankBalance->description) !!}</textarea>
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('attechment') ? 'has-error' : '' }}">
-                            <label for="attechment">{{ trans('cruds.adjustBankBalance.fields.attechment') }}</label>
-                            <div class="needsclick dropzone" id="attechment-dropzone">
+    <div class="p-6 max-w-5xl mx-auto">
+
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="{{ route('admin.adjust-bank-balances.index') }}" 
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                {{ trans('global.back_to_list') }}
+            </a>
+        </div>
+
+        <!-- Edit Adjust Bank Balance Card -->
+        <div class="bg-white shadow-lg rounded-xl p-6 text-sm">
+
+            <h2 class="text-2xl font-bold mb-6 text-blue-600">
+                {{ trans('global.edit') }} {{ trans('cruds.adjustBankBalance.title_singular') }}
+            </h2>
+
+            <form method="POST" action="{{ route('admin.adjust-bank-balances.update', [$adjustBankBalance->id]) }}" enctype="multipart/form-data">
+                @method('PUT')
+                @csrf
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {{-- From Account --}}
+                    <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                        <label for="from_id" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.adjustBankBalance.fields.from') }}
+                        </label>
+                        <select name="from_id" id="from_id"
+                                class="w-full p-2 border rounded-md focus:ring focus:ring-blue-200">
+                            @foreach($froms as $id => $entry)
+                                <option value="{{ $id }}" {{ (old('from_id', $adjustBankBalance->from->id ?? '') == $id) ? 'selected' : '' }}>
+                                    {{ $entry }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('from')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.adjustBankBalance.fields.from_helper') }}</span>
+
+                        {{-- Show account details (if available) --}}
+                        @if($adjustBankBalance->from)
+                            <div class="mt-3 text-gray-800 text-sm">
+                                <p><strong>Account Name:</strong> {{ $adjustBankBalance->from->account_name ?? '-' }}</p>
+                                <p><strong>Account Number:</strong> {{ $adjustBankBalance->from->account_number ?? '-' }}</p>
+                                <p><strong>IFSC Code:</strong> {{ $adjustBankBalance->from->ifsc_code ?? '-' }}</p>
                             </div>
-                            @if($errors->has('attechment'))
-                                <span class="help-block" role="alert">{{ $errors->first('attechment') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.adjustBankBalance.fields.attechment_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+                        @endif
+                    </div>
+
+                    {{-- Type --}}
+                    <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                        <label for="type" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.adjustBankBalance.fields.type') }}
+                        </label>
+                        <select name="type" id="type"
+                                class="w-full p-2 border rounded-md focus:ring focus:ring-green-200">
+                            <option value disabled {{ old('type', null) === null ? 'selected' : '' }}>
+                                {{ trans('global.pleaseSelect') }}
+                            </option>
+                            @foreach(App\Models\AdjustBankBalance::TYPE_SELECT as $key => $label)
+                                <option value="{{ $key }}" {{ old('type', $adjustBankBalance->type) === (string) $key ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('type')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.adjustBankBalance.fields.type_helper') }}</span>
+                    </div>
+
+                    {{-- Amount --}}
+                    <div class="bg-yellow-50 p-4 rounded-lg shadow-inner">
+                        <label for="amount" class="block font-semibold text-gray-700 mb-1 required">
+                            {{ trans('cruds.adjustBankBalance.fields.amount') }}
+                        </label>
+                        <input type="number" name="amount" id="amount" step="0.01" required
+                               value="{{ old('amount', $adjustBankBalance->amount) }}"
+                               class="w-full p-2 border rounded-md focus:ring focus:ring-yellow-200">
+                        @error('amount')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.adjustBankBalance.fields.amount_helper') }}</span>
+                    </div>
+
+                    {{-- Adjustment Date --}}
+                    <div class="bg-indigo-50 p-4 rounded-lg shadow-inner">
+                        <label for="adjustment_date" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.adjustBankBalance.fields.adjustment_date') }}
+                        </label>
+                        <input type="text" name="adjustment_date" id="adjustment_date"
+                               value="{{ old('adjustment_date', $adjustBankBalance->adjustment_date) }}"
+                               class="w-full p-2 border rounded-md focus:ring focus:ring-indigo-200 date">
+                        @error('adjustment_date')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.adjustBankBalance.fields.adjustment_date_helper') }}</span>
+                    </div>
+
+                    {{-- Description --}}
+                    <div class="bg-pink-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                        <label for="description" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.adjustBankBalance.fields.description') }}
+                        </label>
+                        <textarea name="description" id="description"
+                                  class="ckeditor w-full p-2 border rounded-md focus:ring focus:ring-pink-200">{!! old('description', $adjustBankBalance->description) !!}</textarea>
+                        @error('description')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.adjustBankBalance.fields.description_helper') }}</span>
+                    </div>
+
+                    {{-- Attachment --}}
+                    <div class="bg-yellow-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                        <label for="attechment" class="block font-semibold text-gray-700 mb-1">
+                            {{ trans('cruds.adjustBankBalance.fields.attechment') }}
+                        </label>
+                        <div class="needsclick dropzone border-2 border-dashed border-yellow-300 p-4 rounded-lg" id="attechment-dropzone"></div>
+                        @error('attechment')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                        <span class="text-gray-500 text-xs">{{ trans('cruds.adjustBankBalance.fields.attechment_helper') }}</span>
+                    </div>
+
                 </div>
-            </div>
 
+                <!-- Save Button -->
+                <div class="mt-6">
+                    <button type="submit"
+                            class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg shadow hover:bg-red-600 transition">
+                        {{ trans('global.save') }}
+                    </button>
+                </div>
 
+            </form>
 
         </div>
+
     </div>
+
 </div>
+
 @endsection
 
 @section('scripts')
