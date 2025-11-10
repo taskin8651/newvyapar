@@ -19,7 +19,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class PartyDetailsController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
-
 public function index()
 {
     abort_if(Gate::denies('party_detail_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
@@ -27,31 +26,35 @@ public function index()
     $user = auth()->user();
     $userRole = $user->roles->pluck('title')->first();
 
-    // 🟢 1️⃣ Super Admin → sabhi records dekh sakta hai
+    // 🟢 1️⃣ Super Admin → sabhi records
     if ($userRole === 'Super Admin') {
         $partyDetails = \App\Models\PartyDetail::withoutGlobalScopes()
             ->with(['created_by'])
             ->get();
 
-    } else {
-        // 🟢 2️⃣ Admin / Branch / Same Company users
+    } 
+    // 🟢 2️⃣ Agar user kisi ko create karta hai (creator) → apne + apne created users ka data
+    elseif ($user->created_users()->exists()) {
+        // Get IDs of users created by this user
+        $createdUserIds = $user->created_users()->pluck('id')->toArray();
 
-        // Step 1️⃣ - Get all company IDs linked with this user
-        $companyIds = $user->select_companies()->pluck('id')->toArray();
+        // Include current user ID also
+        $allUserIds = array_merge([$user->id], $createdUserIds);
 
-        // Step 2️⃣ - Get all user IDs (Admin + Branch) under same company
-        $relatedUserIds = \App\Models\User::whereHas('select_companies', function ($q) use ($companyIds) {
-            $q->whereIn('add_businesses.id', $companyIds);
-        })->pluck('id')->toArray();
-
-        // Step 3️⃣ - Fetch all Party Details created by users of same company
         $partyDetails = \App\Models\PartyDetail::with(['created_by'])
-            ->whereIn('created_by_id', $relatedUserIds)
+            ->whereIn('created_by_id', $allUserIds)
+            ->get();
+    } 
+    // 🟢 3️⃣ Normal user → sirf apna data
+    else {
+        $partyDetails = \App\Models\PartyDetail::with(['created_by'])
+            ->where('created_by_id', $user->id)
             ->get();
     }
 
     return view('admin.partyDetails.index', compact('partyDetails'));
 }
+
 
 
 
