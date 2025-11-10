@@ -63,7 +63,7 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($proformaInvoices as $proformaInvoice)
+                    @foreach($challans as $proformaInvoice)
                         <tr data-entry-id="{{ $proformaInvoice->id }}" class="hover:bg-gray-50">
                             <td class="px-4 py-3"></td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $proformaInvoice->id ?? '' }}</td>

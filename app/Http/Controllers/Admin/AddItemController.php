@@ -63,72 +63,68 @@ public function create()
 
     $userId = Auth::id();
 
+    // ✅ Units Dropdown
     $select_units = Unit::where('created_by_id', $userId)
         ->pluck('base_unit', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
 
+    // ✅ Categories Dropdown
     $select_categories = Category::where('created_by_id', $userId)
         ->pluck('name', 'id');
 
+    // ✅ Taxes Dropdown
     $select_taxes = TaxRate::where('created_by_id', $userId)
         ->pluck('name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
 
-    // Fetch raw materials from current_stocks and include sale & purchase price from AddItem
+    // ✅ Raw Materials (coming from current stock + with sale/purchase price from AddItem)
     $rawMaterials = CurrentStock::with('addItem')
         ->where('product_type', 'raw_material')
         ->where('created_by_id', $userId)
         ->get()
         ->map(function ($stock) {
-            // try to read sale and purchase price from related addItem
-            $salePrice = $stock->addItem->sale_price ?? 0;
-            $purchasePrice = $stock->addItem->purchase_price ?? 0;
+            $item = $stock->addItem;
 
             return [
-                'id' => $stock->addItem->id ?? null,
-                'name' => $stock->addItem->item_name ?? 'Unnamed Item',
-                'qty' => (int) $stock->qty,
-                'sale_price' => (float) $salePrice,
-                'purchase_price' => (float) $purchasePrice,
-                'source' => 'current_stock',
+                'id'              => $item->id ?? null,
+                'name'            => $item->item_name ?? 'Unnamed Item',
+                'qty'             => (int) $stock->qty,
+                'sale_price'      => (float)($item->sale_price ?? 0),
+                'purchase_price'  => (float)($item->purchase_price ?? 0),
+                'source'          => 'current_stock',
             ];
         });
 
-    // Fetch service-type items
-    $service_items = \App\Models\AddItem::where('created_by_id', $userId)
+    // ✅ Service Items from AddItem
+    $service_items = AddItem::where('created_by_id', $userId)
         ->where('item_type', 'service')
         ->get()
         ->map(function ($item) {
             return [
-                'id' => $item->id,
-                'name' => $item->item_name ?? 'Unnamed Item',
-                'qty' => 'No Need',
-                'sale_price' => (float) ($item->sale_price ?? 0),
-                'purchase_price' => (float) ($item->purchase_price ?? 0),
-                'source' => 'add_items',
+                'id'              => $item->id,
+                'name'            => $item->item_name ?? 'Unnamed Item',
+                'qty'             => 'No Need',
+                'sale_price'      => (float)($item->sale_price ?? 0),
+                'purchase_price'  => (float)($item->purchase_price ?? 0),
+                'source'          => 'add_items',
             ];
         });
 
-    $raw_materials = $rawMaterials->merge($service_items);
+    // ✅ Merge both collections safely
+    $raw_materials = collect($rawMaterials)->merge(collect($service_items));
 
     return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units', 'raw_materials'));
 }
 
-
 public function store(Request $request)
 {
-    // Basic required product_type
-    $request->validate([
-        'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
-    ]);
-
-    if ($request->product_type === 'raw_material') {
-        $request->merge(['item_type' => 'raw_material']);
-    }
-
-    // Full validation including arrays
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 1️⃣: Basic Validation (product_type not required now)
+    |--------------------------------------------------------------------------
+    */
     $validated = $request->validate([
-        'product_type' => 'required|string|in:single,raw_material,finished_goods,ready_made',
+        'product_type' => 'nullable|string|in:single,raw_material,finished_goods,ready_made',
         'item_type' => 'required|string|in:raw_material,product,service',
         'item_name' => 'required|string|max:255',
         'item_hsn' => 'nullable|string|max:255',
@@ -154,9 +150,9 @@ public function store(Request $request)
         'online_store_description' => 'nullable|string',
         'online_store_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
 
+        // For finished goods composition (optional)
         'select_raw_materials' => 'nullable|array',
         'select_raw_materials.*' => 'integer|exists:add_items,id',
-
         'raw_qty' => 'nullable|array',
         'raw_qty.*' => 'nullable|numeric|min:0',
         'raw_sale_price' => 'nullable|array',
@@ -167,21 +163,43 @@ public function store(Request $request)
         'json_data' => 'nullable',
     ]);
 
-    // Handle image
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 2️⃣: If product_type is blank and item_type is raw_material, auto-set
+    |--------------------------------------------------------------------------
+    */
+    if (empty($validated['product_type']) && $validated['item_type'] === 'raw_material') {
+        $validated['product_type'] = 'raw_material';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 3️⃣: Handle image upload
+    |--------------------------------------------------------------------------
+    */
     if ($request->hasFile('online_store_image')) {
         $validated['online_store_image'] = $request->file('online_store_image')->store('item_images', 'public');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 4️⃣: Add created_by_id + Full JSON backup
+    |--------------------------------------------------------------------------
+    */
     $validated['created_by_id'] = auth()->id();
 
-    // Full JSON backup
     $fullData = $request->all();
     if ($request->hasFile('online_store_image')) {
         $fullData['online_store_image'] = $validated['online_store_image'];
     }
+
     $validated['json_data'] = json_encode($fullData);
 
-    // Create Item
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 5️⃣: Create Item
+    |--------------------------------------------------------------------------
+    */
     $item = AddItem::create($validated);
 
     // Sync categories
@@ -191,31 +209,31 @@ public function store(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | ✅ Always Create Current Stock Record (Except Service)
+    | STEP 6️⃣: Create Current Stock Record (Except for services)
     |--------------------------------------------------------------------------
     */
     if ($validated['item_type'] !== 'service') {
-
-        // If opening_stock null, blank or zero → default 0
         $qty = !empty($validated['opening_stock']) ? $validated['opening_stock'] : 0;
 
         CurrentStock::create([
             'json_data' => json_encode($fullData),
             'user_id' => 1,
             'qty' => $qty,
-            'type' => $validated['product_type'] === 'finished_goods' ? 'Manufactured Stock' : 'Opening Stock',
+            'type' => ($validated['product_type'] === 'finished_goods') 
+                        ? 'Manufactured Stock' 
+                        : 'Opening Stock',
             'created_by_id' => auth()->id(),
             'item_id' => $item->id,
-            'product_type' => $validated['product_type'],
+            'product_type' => $validated['product_type'] ?? 'single',
         ]);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | FINISHED GOODS: Save Composition (No Stock Deduction)
+    | STEP 7️⃣: Handle Finished Goods Composition (if applicable)
     |--------------------------------------------------------------------------
     */
-    if ($validated['product_type'] === 'finished_goods') {
+    if (($validated['product_type'] ?? null) === 'finished_goods') {
         $rawMaterials = $request->input('select_raw_materials', []);
         $finishedGoodsQty = 0;
         $total_sale_value_all = 0;
@@ -251,7 +269,7 @@ public function store(Request $request)
             ]);
         }
 
-        // Save summary in json_data
+        // Add summary to json_data
         $decodedJson = json_decode($item->json_data ?? '{}', true);
         $decodedJson['composition_summary'] = [
             'finished_goods_composition' => [
@@ -264,12 +282,15 @@ public function store(Request $request)
         $item->save();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 8️⃣: Redirect
+    |--------------------------------------------------------------------------
+    */
     return redirect()
         ->route('admin.add-items.index')
         ->with('success', 'Item added successfully!');
 }
-
-
 
     public function edit(AddItem $addItem)
     {

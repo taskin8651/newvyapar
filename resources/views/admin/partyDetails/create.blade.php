@@ -180,8 +180,8 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 required">Pincode</label>
-                                <input type="text" name="pin_code" id="pincode" required maxlength="6"
+                                <label class="block text-sm font-medium text-gray-700 ">Pincode</label>
+                                <input type="text" name="pin_code" id="pincode"  maxlength="6"
                                     @input.debounce.500ms="fetchPincodeDetails()"
                                     class="w-full rounded-md border border-gray-300 px-4 py-3 shadow-sm focus:border-indigo-500 
                                             focus:ring focus:ring-indigo-200 focus:ring-opacity-50 mt-1">
@@ -226,8 +226,8 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 required">Opening Balance</label>
-                                <input type="number" step="0.01" name="opening_balance" required
+                                <label class="block text-sm font-medium text-gray-700 ">Opening Balance</label>
+                                <input type="number" step="0.01" name="opening_balance" 
                                     class="w-full rounded-md border border-gray-300 px-4 py-3 focus:border-indigo-500 mt-1">
                             </div>
                             <div>
@@ -284,7 +284,7 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 required">IFSC Code</label>
+                                <label class="block text-sm font-medium text-gray-700 ">IFSC Code</label>
                                 <input type="text" name="ifsc_code" id="ifsc_code" x-model="ifsc_code"
                                        @blur="fetchBankDetails()"
                                        placeholder="Enter IFSC code (e.g., SBIN0000456)"

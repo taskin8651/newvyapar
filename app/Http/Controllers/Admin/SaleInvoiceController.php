@@ -291,134 +291,174 @@ class SaleInvoiceController extends Controller
             ], 500);
         }
     }
+public function getCustomerDetails($id)
+{
+    $customer = \App\Models\PartyDetail::withoutGlobalScopes()->find($id);
+
+    if (!$customer) {
+        return response()->json(['error' => 'Customer not found'], 404);
+    }
+
+    return response()->json([
+        'party_name'            => $customer->party_name,
+        'phone_number'          => $customer->phone_number,
+        'email'                 => $customer->email,
+        'gstin'                 => $customer->gstin,
+        'pan_number'            => $customer->pan_number,
+        'billing_address'       => $customer->billing_address,
+        'shipping_address'      => $customer->shipping_address,
+        'state'                 => $customer->state,
+        'city'                  => $customer->city,
+        'pincode'               => $customer->pincode,
+        'credit_limit'          => $customer->credit_limit,
+        'payment_terms'         => $customer->payment_terms,
+
+        // Opening & Current Balance
+        'opening_balance'       => $customer->opening_balance,
+        'opening_balance_type'  => $customer->opening_balance_type,
+        'opening_balance_date'  => $customer->opening_balance_date,
+
+        'current_balance'       => $customer->current_balance,
+        'current_balance_type'  => $customer->current_balance_type,
+        'current_balance_date'  => $customer->updated_at,
+    ]);
+}
 
     // -----------------------------
     // Create (unchanged logic you shared)
     // -----------------------------
     public function create()
+{
+    abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+    $user = Auth::user();
+    $userId = $user->id;
+    $userRole = $user->roles->pluck('title')->first();
+
+    $company = $user->select_companies()->first();
+    $companyId = $company?->id;
+
+    $allowedUserIds = collect([$userId]); // Start with logged-in user
+
+    if ($companyId) 
     {
-        abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        // All users under this company (admin + branches)
+        $companyUserIds = DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
 
-        $user = Auth::user();
-        $userId = $user->id;
-        $userRole = $user->roles->pluck('title')->first();
+        // Find company Admin ID
+        $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
+            ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+            ->value('id');
 
-        $company = $user->select_companies()->first();
-        $companyId = $company?->id;
+        if ($companyAdminId) {
+            $allowedUserIds->push($companyAdminId);
+        }
 
-        $allowedUserIds = collect([$userId]);
+        // Parent-Admin Logic for Branch User
+        $parentId = $user->created_by_id;
+        if ($parentId) {
+            $allowedUserIds->push($parentId);
 
-        if ($companyId) {
-            $companyUserIds = DB::table('add_business_user')
-                ->where('add_business_id', $companyId)
-                ->pluck('user_id')
-                ->toArray();
+            $parent = \App\Models\User::find($parentId);
+            if ($parent) {
+                $parentCompanyId = $parent->select_companies()->first()?->id;
+                if ($parentCompanyId) {
+                    $parentCompanyUsers = DB::table('add_business_user')
+                        ->where('add_business_id', $parentCompanyId)
+                        ->pluck('user_id')
+                        ->toArray();
 
-            $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
-                ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
-                ->value('id');
+                    $parentAdminId = \App\Models\User::whereIn('id', $parentCompanyUsers)
+                        ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
+                        ->value('id');
 
-            if ($companyAdminId) {
-                $allowedUserIds->push($companyAdminId);
-            }
-
-            $parentId = $user->created_by_id;
-            if ($parentId) {
-                $allowedUserIds->push($parentId);
-
-                $parent = \App\Models\User::find($parentId);
-                if ($parent) {
-                    $parentCompanyId = $parent->select_companies()->first()?->id;
-                    if ($parentCompanyId) {
-                        $parentCompanyUsers = DB::table('add_business_user')
-                            ->where('add_business_id', $parentCompanyId)
-                            ->pluck('user_id')
-                            ->toArray();
-
-                        $parentAdminId = \App\Models\User::whereIn('id', $parentCompanyUsers)
-                            ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
-                            ->value('id');
-
-                        if ($parentAdminId) {
-                            $allowedUserIds->push($parentAdminId);
-                        }
+                    if ($parentAdminId) {
+                        $allowedUserIds->push($parentAdminId);
                     }
                 }
             }
-
-            if ($userRole === 'Admin') {
-                $allowedUserIds = collect($companyUserIds);
-            }
         }
 
-        $allowedUserIds = $allowedUserIds->unique()->toArray();
-
-        // Customers dropdown with balance display (scoped)
-        if ($userRole === 'Super Admin') {
-            $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
-        } elseif ($companyId) {
-            $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $allowedUserIds)->get();
-        } else {
-            $select_customers = \App\Models\PartyDetail::where('created_by_id', $userId)->get();
+        // ✅ FIX APPLIED HERE
+        if ($userRole === 'Admin') {
+            // Admin + All users of that company
+            $allowedUserIds = collect($companyUserIds)->push($userId);
         }
-
-        $select_customers = $select_customers->mapWithKeys(function ($customer) {
-            $balance = $customer->current_balance ?? $customer->opening_balance ?? 0;
-            $type    = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
-            $balanceFormatted = number_format($balance, 2);
-
-            $display = $type === 'Debit'
-                ? "₹{$balanceFormatted} Dr - Payable ↑"
-                : "₹{$balanceFormatted} Cr - Receivable ↓";
-
-            return [$customer->id => "{$customer->party_name} ({$display})"];
-        });
-
-        // Items with stock
-        if ($userRole === 'Super Admin') {
-            $items = \App\Models\AddItem::withoutGlobalScopes()
-                ->whereIn('item_type', ['product', 'service'])
-                ->with('select_unit')
-                ->get();
-        } elseif ($companyId) {
-            $items = \App\Models\AddItem::whereIn('created_by_id', $allowedUserIds)
-                ->whereIn('item_type', ['product', 'service'])
-                ->with('select_unit')
-                ->get();
-        } else {
-            $items = \App\Models\AddItem::where('created_by_id', $userId)
-                ->whereIn('item_type', ['product', 'service'])
-                ->with('select_unit')
-                ->get();
-        }
-
-        $items->map(function ($item) use ($userRole, $companyId, $allowedUserIds, $userId) {
-            if ($item->item_type === 'product') {
-                if ($userRole === 'Super Admin') {
-                    $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)->sum('qty');
-                } elseif ($companyId) {
-                    $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $allowedUserIds)
-                        ->where('item_id', $item->id)->sum('qty');
-                } else {
-                    $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
-                        ->where('item_id', $item->id)->sum('qty');
-                }
-            } else {
-                $item->stock_qty = null;
-            }
-            return $item;
-        });
-
-        $cost = \App\Models\MainCostCenter::whereIn('created_by_id', $allowedUserIds)
-            ->pluck('cost_center_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-
-        $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
-            ->pluck('sub_cost_center_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-
-        return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
     }
+
+    $allowedUserIds = $allowedUserIds->unique()->toArray();
+
+    // ✅ Customers dropdown
+    if ($userRole === 'Super Admin') {
+        $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
+    } elseif ($companyId) {
+        $select_customers = \App\Models\PartyDetail::whereIn('created_by_id', $allowedUserIds)->get();
+    } else {
+        $select_customers = \App\Models\PartyDetail::where('created_by_id', $userId)->get();
+    }
+
+    $select_customers = $select_customers->mapWithKeys(function ($customer) {
+        $balance = $customer->current_balance ?? $customer->opening_balance ?? 0;
+        $type    = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
+        $balanceFormatted = number_format($balance, 2);
+
+        $display = $type === 'Debit'
+            ? "₹{$balanceFormatted} Dr - Payable ↑"
+            : "₹{$balanceFormatted} Cr - Receivable ↓";
+
+        return [$customer->id => "{$customer->party_name} ({$display})"];
+    });
+
+    // ✅ Items with stock
+    if ($userRole === 'Super Admin') {
+        $items = \App\Models\AddItem::withoutGlobalScopes()
+            ->whereIn('item_type', ['product', 'service'])
+            ->with('select_unit')
+            ->get();
+    } elseif ($companyId) {
+        $items = \App\Models\AddItem::whereIn('created_by_id', $allowedUserIds)
+            ->whereIn('item_type', ['product', 'service'])
+            ->with('select_unit')
+            ->get();
+    } else {
+        $items = \App\Models\AddItem::where('created_by_id', $userId)
+            ->whereIn('item_type', ['product', 'service'])
+            ->with('select_unit')
+            ->get();
+    }
+
+    $items->map(function ($item) use ($userRole, $companyId, $allowedUserIds, $userId) {
+        if ($item->item_type === 'product') {
+            if ($userRole === 'Super Admin') {
+                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)->sum('qty');
+            } elseif ($companyId) {
+                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $allowedUserIds)
+                    ->where('item_id', $item->id)->sum('qty');
+            } else {
+                $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
+                    ->where('item_id', $item->id)->sum('qty');
+            }
+        } else {
+            $item->stock_qty = null;
+        }
+        return $item;
+    });
+
+    // ✅ Cost Center & Sub Cost Center (Works Perfect Now)
+    $cost = \App\Models\MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+    
+    $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
+
+    return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
+}
+
 
     // -----------------------------
     // Helper: Fetch composition for item
@@ -1193,29 +1233,70 @@ class SaleInvoiceController extends Controller
     // -----------------------------
     // PDF
     // -----------------------------
-    public function pdf(SaleInvoice $saleInvoice)
-    {
+public function pdf(SaleInvoice $saleInvoice)
+{
+    $saleInvoice->load([
+        'select_customer',
+        'items' => function ($query) {
+            $query->withPivot([
+                'description','qty','unit','price','discount_type','discount',
+                'tax_type','tax','amount','created_by_id','json_data',
+            ]);
+        },
+        'created_by',
+        'main_cost_center',
+        'sub_cost_center',
+    ]);
+
+    $user = auth()->user();
+    $company = $user->select_companies()->first();
+    $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+
+    $userRole = $user->roles->first()->title;
+
+    // ✅ SUPER ADMIN → All bank + all terms
+    if ($userRole === 'Super Admin') {
         $bankDetails = BankAccount::where('print_bank_details', 1)->get();
-        $terms       = TermAndCondition::where('status', 'active')->get();
+        $terms = TermAndCondition::where('status', 'active')->get();
 
-        $saleInvoice->load([
-            'select_customer',
-            'items' => function ($query) {
-                $query->withPivot([
-                    'description','qty','unit','price','discount_type','discount','tax_type','tax','amount','created_by_id','json_data',
-                ]);
-            },
-            'created_by',
-            'main_cost_center',
-            'sub_cost_center',
-        ]);
-
-        $user    = auth()->user();
-        $company = $user->select_companies()->first();
-        $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
-
-        return view('admin.saleInvoices.pdf', compact('saleInvoice','bankDetails','terms','company','logoUrl'));
+        return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
     }
+
+    // ✅ If logged-in user is Admin → He is the main admin
+    if ($userRole === 'Admin') {
+        $mainAdminId = $user->id;
+    } else {
+        // ✅ Branch User → find Main Admin from add_business_user table
+        $mainAdminId = DB::table('add_business_user')
+            ->where('user_id', $user->id)
+            ->value('add_business_id'); // this is main admin id
+
+        if (!$mainAdminId) {
+            $mainAdminId = $user->id; // fallback
+        }
+    }
+
+    // ✅ Get all branches under this main admin
+    $branchUserIds = DB::table('add_business_user')
+        ->where('add_business_id', $mainAdminId) // fetch branch users of this admin
+        ->pluck('user_id')
+        ->toArray();
+
+    // Include main admin also
+    $allRelatedUsers = array_merge([$mainAdminId], $branchUserIds);
+
+    // ✅ Fetch bank accounts of main admin + branches
+    $bankDetails = BankAccount::whereIn('created_by_id', $allRelatedUsers)
+        ->where('print_bank_details', 1)
+        ->get();
+
+    // ✅ Terms also based on main admin only
+    $terms = TermAndCondition::where('status', 'active')
+        
+        ->get();
+
+    return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));
+}
 
     // =========================================================================
     //                      ADMIN-ONLY STATUS UPDATE (Option B)
