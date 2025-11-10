@@ -9,7 +9,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Poppins', sans-serif; }
         .invoice-container { box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .header-gradient { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .header-gradient { background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%); }
         .table-header { background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); }
 
         @media print {
@@ -25,29 +25,32 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-4 px-2 text-xs">
-    <div class="max-w-4xl mx-auto border border-gray-300 bg-white p-4 rounded-lg shadow-md">
+    <div class="max-w-4xl mx-auto border border-gray-300 bg-blue-50 p-4 rounded-lg shadow-md">
 
         <!-- Header -->
-        <div class="text-center mb-2">
-            <div class="flex items-center justify-center space-x-3">
-                @if($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="Company Logo" class="h-12 w-auto rounded shadow-sm" style="width: 200px;">
-                @else
-                    <img src="{{ asset('images/default-logo.png') }}" alt="Default Logo" class="h-12 w-auto rounded shadow-sm">
-                @endif
+      <!-- Header -->
+<div class="text-center mb-2 relative">
+    @if($logoUrl)
+        <img src="{{ $logoUrl }}" 
+             alt="Company Logo" 
+             class="h-12 w-auto absolute left-0 top-1/2 transform -translate-y-1/2 ml-2 rounded shadow-sm" 
+             style="width: 200px;">
+    @else
+        <img src="{{ asset('images/default-logo.png') }}" 
+             alt="Default Logo" 
+             class="h-12 w-auto absolute left-0 top-1/2 transform -translate-y-1/2 ml-2 rounded shadow-sm">
+    @endif
 
-                <div class="text-left">
-                    <h1 class="text-xl font-bold text-blue-800">
-                        {{ $company->company_name ?? 'MARUTI SUZUKI VENTURES' }}
-                    </h1>
-                    <p class="text-blue-600 text-xs">Authorized Dealer & Service Center</p>
-                </div>
-            </div>
-        </div>
-
+    <div class="text-center">
+        <h1 class="text-xl font-bold text-blue-800">
+            {{ $company->company_name ?? 'MARUTI SUZUKI VENTURES' }}
+        </h1>
+        <p class="text-blue-600 text-xs">Authorized Dealer & Service Center</p>
+    </div>
+</div>
 
         <!-- Invoice Container -->
-        <div class="invoice-container bg-white rounded-xl overflow-hidden text-xs">
+        <div class="invoice-container bg-white border-2 border-black rounded-xl overflow-hidden text-xs">
 
             <!-- Header -->
             <div class="header-gradient text-white p-4 text-xs">
@@ -74,7 +77,7 @@
         <!-- Customer Info -->
          <!-- Supplier Info -->
                     <td class="w-1/2 p-2 align-top">
-                       <div class="flex  rounded-lg border border-blue-200">
+                       <div class="flex  rounded-lg border-2 border-blue-600">
     <!-- Left Column: Supplier Details -->
     <div class="w-1/2 bg-blue-50 p-2  text-xs">
         <h3 class="text-sm font-semibold text-blue-700 mb-1 flex items-center">
@@ -117,7 +120,7 @@
 
         <!-- Bill Details -->
         <td class="w-1/2 p-2 align-top">
-            <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
+            <table class="w-full border rounded-lg border-2 border-blue-600 bg-blue-50 text-xs">
                 <thead>
                     <tr>
                         <th colspan="2" class="text-center text-blue-700 font-semibold py-1 text-sm">
@@ -197,7 +200,7 @@
                 <table class="w-full text-xs">
                     <tr>
                        <td class="align-top w-1/2 pl-2">
-                            <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
+                            <table class="w-full border-2 rounded-lg border-blue-600 bg-blue-50 text-xs">
                                
                                <tbody>
     <!-- 🔹 Amount in Words -->
@@ -237,7 +240,7 @@
 
               <!-- Subtotal / Total -->
 <td class="align-top w-1/2 pl-2">
-    <table class="w-full border rounded-lg border-blue-200 bg-blue-50 text-xs">
+    <table class="w-full border-2 rounded-lg border-blue-600 bg-blue-50 text-xs">
         <thead>
             <tr>
                 <th class="text-center text-blue-700 font-semibold py-1 text-sm">
@@ -308,7 +311,7 @@
                     <tbody>
                         <tr class="align-top">
                             <!-- Bank Details -->
-                            <td class="p-2 w-1/3 border-r border-gray-200">
+                            <td class="p-2 w-1/3 border-2 border-gray-500">
                                 <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
                                     <i class="fas fa-university mr-1"></i> Bank Details
                                 </h3>
@@ -356,7 +359,7 @@
                             </td>
 
                             <!-- Terms & Conditions -->
-                            <td class="p-2 w-1/3 border-r border-gray-200">
+                            <td class="p-2 w-1/3 border-2 border-gray-500">
                                 <h3 class="font-semibold text-blue-700 mb-1 flex items-center text-xs">
                                     <i class="fas fa-file-contract mr-1"></i> Terms & Conditions
                                 </h3>
@@ -379,7 +382,7 @@
                             </td>
 
                             <!-- Authorized Signatory -->
-                            <td class="p-2 w-1/3 text-center align-top">
+                            <td class="p-2 w-1/3 text-center align-top border-2 border-gray-500">
                                 <div class="flex flex-col justify-end h-full" style="height: 120px;">
                                     <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
                                         <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
@@ -396,7 +399,7 @@
 
         <!-- Footer -->
         <!-- Footer -->
-       <div class="mt-4 p-3 border-t border-gray-300 text-xs text-gray-600 space-y-1 text-center">
+       <div class="mt-4 p-3 border-t border-gray-300 text-xs text-gray-600 space-y-1 text-center ">
     <p class="italic text-gray-500">
         This is a computer-generated sales bill and does not require a physical signature.
     </p>
