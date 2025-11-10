@@ -63,53 +63,55 @@ public function create()
 
     $userId = Auth::id();
 
+    // ✅ Units Dropdown
     $select_units = Unit::where('created_by_id', $userId)
         ->pluck('base_unit', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
 
+    // ✅ Categories Dropdown
     $select_categories = Category::where('created_by_id', $userId)
         ->pluck('name', 'id');
 
+    // ✅ Taxes Dropdown
     $select_taxes = TaxRate::where('created_by_id', $userId)
         ->pluck('name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
 
-    // Fetch raw materials from current_stocks and include sale & purchase price from AddItem
+    // ✅ Raw Materials (coming from current stock + with sale/purchase price from AddItem)
     $rawMaterials = CurrentStock::with('addItem')
         ->where('product_type', 'raw_material')
         ->where('created_by_id', $userId)
         ->get()
         ->map(function ($stock) {
-            // try to read sale and purchase price from related addItem
-            $salePrice = $stock->addItem->sale_price ?? 0;
-            $purchasePrice = $stock->addItem->purchase_price ?? 0;
+            $item = $stock->addItem;
 
             return [
-                'id' => $stock->addItem->id ?? null,
-                'name' => $stock->addItem->item_name ?? 'Unnamed Item',
-                'qty' => (int) $stock->qty,
-                'sale_price' => (float) $salePrice,
-                'purchase_price' => (float) $purchasePrice,
-                'source' => 'current_stock',
+                'id'              => $item->id ?? null,
+                'name'            => $item->item_name ?? 'Unnamed Item',
+                'qty'             => (int) $stock->qty,
+                'sale_price'      => (float)($item->sale_price ?? 0),
+                'purchase_price'  => (float)($item->purchase_price ?? 0),
+                'source'          => 'current_stock',
             ];
         });
 
-    // Fetch service-type items
-    $service_items = \App\Models\AddItem::where('created_by_id', $userId)
+    // ✅ Service Items from AddItem
+    $service_items = AddItem::where('created_by_id', $userId)
         ->where('item_type', 'service')
         ->get()
         ->map(function ($item) {
             return [
-                'id' => $item->id,
-                'name' => $item->item_name ?? 'Unnamed Item',
-                'qty' => 'No Need',
-                'sale_price' => (float) ($item->sale_price ?? 0),
-                'purchase_price' => (float) ($item->purchase_price ?? 0),
-                'source' => 'add_items',
+                'id'              => $item->id,
+                'name'            => $item->item_name ?? 'Unnamed Item',
+                'qty'             => 'No Need',
+                'sale_price'      => (float)($item->sale_price ?? 0),
+                'purchase_price'  => (float)($item->purchase_price ?? 0),
+                'source'          => 'add_items',
             ];
         });
 
-    $raw_materials = $rawMaterials->merge($service_items);
+    // ✅ Merge both collections safely
+    $raw_materials = collect($rawMaterials)->merge(collect($service_items));
 
     return view('admin.addItems.create', compact('select_categories', 'select_taxes', 'select_units', 'raw_materials'));
 }
