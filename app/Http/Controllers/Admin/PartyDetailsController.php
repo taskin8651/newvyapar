@@ -34,9 +34,9 @@ public function index()
 
     } 
     // 🟢 2️⃣ Agar user kisi ko create karta hai (creator) → apne + apne created users ka data
-    elseif ($user->created_users()->exists()) {
+    elseif ($user->created_by()->exists()) {
         // Get IDs of users created by this user
-        $createdUserIds = $user->created_users()->pluck('id')->toArray();
+        $createdUserIds = $user->created_by()->pluck('id')->toArray();
 
         // Include current user ID also
         $allUserIds = array_merge([$user->id], $createdUserIds);
