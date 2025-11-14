@@ -115,7 +115,6 @@
         </p>
     </div>
 </div>
-
                     </td>
 
         <!-- Bill Details -->
@@ -387,8 +386,7 @@
                                     <div class="border-t border-blue-400 w-40 pt-1 mx-auto">
                                         <p class="font-medium text-blue-700 text-xs">Authorized Signatory</p>
                                     </div>
-                                    <p class="text-gray-500 mt-1 text-xs">For:  {{ $company->company_name ?? 'MARUTI SUZUKI VENTURES' }}</p>
-                                    
+                                    <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
                                 </div>
                             </td>
                         </tr>

@@ -18,15 +18,16 @@
         }
     </style>
 </head>
-<body class="min-h-screen py-4 px-2 text-xs">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-4 px-2 text-xs">
 
-<div class="max-w-5xl mx-auto">
+<div class="max-w-4xl mx-auto border-2 border-black bg-blue-50 p-4 rounded-lg shadow-md">
+
 
     <!-- Title -->
     <div class="text-center mb-4">
         <h1 class="text-2xl font-bold text-blue-800">PARTY DETAIL REPORT</h1>
         <p class="text-blue-600 text-sm">Maruti Suzuki Ventures</p>
-    </div>
+    </div> 
 
     <!-- Company / Party Info -->
     <div class="card mb-4">
@@ -90,7 +91,6 @@
             <p class="text-gray-500 mt-1 text-xs">For: MARUTI SUZUKI VENTURES</p>
         </div>
     </div>
-
 </div>
 
 <!-- Print Button -->
