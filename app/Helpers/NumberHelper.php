@@ -4,103 +4,144 @@ namespace App\Helpers;
 
 class NumberHelper
 {
+    /**
+     * Convert number to Indian currency words
+     * Example: 15250.75 => "Fifteen Thousand Two Hundred And Fifty Rupees And Seventy Five Paise Only"
+     */
     public static function toWords($number)
     {
-        $hyphen      = '-';
-        $conjunction = ' and ';
-        $separator   = ', ';
-        $negative    = 'negative ';
-        $decimal     = ' point ';
-        $dictionary  = [
-            0 => 'zero',
-            1 => 'one',
-            2 => 'two',
-            3 => 'three',
-            4 => 'four',
-            5 => 'five',
-            6 => 'six',
-            7 => 'seven',
-            8 => 'eight',
-            9 => 'nine',
-            10 => 'ten',
-            11 => 'eleven',
-            12 => 'twelve',
-            13 => 'thirteen',
-            14 => 'fourteen',
-            15 => 'fifteen',
-            16 => 'sixteen',
-            17 => 'seventeen',
-            18 => 'eighteen',
-            19 => 'nineteen',
-            20 => 'twenty',
-            30 => 'thirty',
-            40 => 'forty',
-            50 => 'fifty',
-            60 => 'sixty',
-            70 => 'seventy',
-            80 => 'eighty',
-            90 => 'ninety',
-            100 => 'hundred',
-            1000 => 'thousand',
-            1000000 => 'million',
-            1000000000 => 'billion',
+        // Validate number
+        if (!is_numeric($number)) {
+            return '';
+        }
+
+        // Handle zero
+        if ($number == 0) {
+            return "Zero Rupees Only";
+        }
+
+        // Handle negative values
+        $negative = $number < 0 ? "Negative " : "";
+        $number = abs($number);
+
+        $no = floor($number);
+        $point = round($number - $no, 2) * 100;
+
+        $hundreds = null;
+        $digits_1 = strlen($no);
+        $i = 0;
+        $str = [];
+
+        $words = [
+            0 => '',
+            1 => 'One',
+            2 => 'Two',
+            3 => 'Three',
+            4 => 'Four',
+            5 => 'Five',
+            6 => 'Six',
+            7 => 'Seven',
+            8 => 'Eight',
+            9 => 'Nine',
+            10 => 'Ten',
+            11 => 'Eleven',
+            12 => 'Twelve',
+            13 => 'Thirteen',
+            14 => 'Fourteen',
+            15 => 'Fifteen',
+            16 => 'Sixteen',
+            17 => 'Seventeen',
+            18 => 'Eighteen',
+            19 => 'Nineteen',
+            20 => 'Twenty',
+            30 => 'Thirty',
+            40 => 'Forty',
+            50 => 'Fifty',
+            60 => 'Sixty',
+            70 => 'Seventy',
+            80 => 'Eighty',
+            90 => 'Ninety'
         ];
 
-        if (!is_numeric($number)) {
-            return false;
-        }
+        $digits = [
+            '', 'Hundred', 'Thousand', 'Lakh', 'Crore'
+        ];
 
-        if ($number < 0) {
-            return $negative . self::toWords(abs($number));
-        }
+        // Core logic
+        while ($i < $digits_1) {
+            $divider = ($i == 2) ? 10 : 100;
+            $numberChunk = floor($no % $divider);
+            $no = floor($no / $divider);
+            $i += ($divider == 10) ? 1 : 2;
 
-        $string = $fraction = null;
+            if ($numberChunk) {
+                $counter = count($str);
+                $plural = ($counter && $numberChunk > 9) ? '' : null;
+                $hundreds = ($counter == 1 && $str[0]) ? ' and ' : null;
 
-        if (strpos((string) $number, '.') !== false) {
-            [$number, $fraction] = explode('.', (string) $number);
-        }
-
-        switch (true) {
-            case $number < 21:
-                $string = $dictionary[$number];
-                break;
-            case $number < 100:
-                $tens   = ((int) ($number / 10)) * 10;
-                $units  = $number % 10;
-                $string = $dictionary[$tens];
-                if ($units) {
-                    $string .= $hyphen . $dictionary[$units];
+                if ($numberChunk < 21) {
+                    $temp = $words[$numberChunk] . " " . $digits[$counter] . $plural . " " . $hundreds;
+                } else {
+                    $temp = $words[floor($numberChunk / 10) * 10] . " " . $words[$numberChunk % 10] . " " . $digits[$counter] . $plural . " " . $hundreds;
                 }
-                break;
-            case $number < 1000:
-                $hundreds  = (int) ($number / 100);
-                $remainder = $number % 100;
-                $string = $dictionary[$hundreds] . ' ' . $dictionary[100];
-                if ($remainder) {
-                    $string .= $conjunction . self::toWords($remainder);
-                }
-                break;
-            default:
-                $baseUnit = pow(1000, floor(log($number, 1000)));
-                $numBaseUnits = (int) ($number / $baseUnit);
-                $remainder = $number % $baseUnit;
-                $string = self::toWords($numBaseUnits) . ' ' . $dictionary[$baseUnit];
-                if ($remainder) {
-                    $string .= $remainder < 100 ? $conjunction : $separator;
-                    $string .= self::toWords($remainder);
-                }
-                break;
-        }
 
-        if ($fraction !== null && is_numeric($fraction)) {
-            $string .= $decimal;
-            $words = [];
-            foreach (str_split((string) $fraction) as $digit) {
-                $words[] = $dictionary[$digit];
+                $str[] = $temp;
+            } else {
+                $str[] = null;
             }
-            $string .= implode(' ', $words);
         }
 
-        return ucfirst($string);
+        $rupees = implode('', array_reverse($str));
+        $rupees = trim($rupees);
+
+        // Handle paise
+        $paise = "";
+        if ($point > 0) {
+            $paiseWords = "";
+            if ($point < 21) {
+                $paiseWords = $words[$point];
+            } else {
+                $paiseWords = $words[floor($point / 10) * 10] . " " . $words[$point % 10];
+            }
+
+            $paise = "And " . trim($paiseWords) . " Paise ";
+        }
+
+        // Final output
+        return trim($negative . $rupees . " Rupees " . $paise . "Only");
+    }
+
+
+    /**
+     * Format a number with Indian commas
+     * Example: 15250 => 15,250
+     */
+    public static function formatIndian($number, $decimals = 2)
+    {
+        if (!is_numeric($number)) {
+            return $number;
+        }
+
+        $negative = $number < 0 ? "-" : "";
+        $number = abs($number);
+
+        $decimalPart = "";
+        if (strpos($number, '.') !== false) {
+            $parts = explode('.', $number);
+            $number = $parts[0];
+            $decimalPart = "." . substr($parts[1], 0, $decimals);
+        }
+
+        $number = (string) $number;
+
+        if (strlen($number) <= 3) {
+            return $negative . $number . $decimalPart;
+        }
+
+        $lastThree = substr($number, -3);
+        $rest = substr($number, 0, -3);
+        $rest = preg_replace("/\B(?=(\d{2})+(?!\d))/", ",", $rest);
+
+        return $negative . $rest . "," . $lastThree . $decimalPart;
     }
 }

@@ -65,6 +65,10 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('cruds.addBusiness.fields.logo_upload') }}
                         </th>
+                        <th>GST</th>
+                        <th>Phone Number</th>
+                        <th>Email</th>
+                        <th>Address</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('global.actions') }}
                         </th>
@@ -95,6 +99,18 @@
                                         <img src="{{ $media->getUrl('thumb') }}" class="h-10 w-10 rounded border">
                                     </a>
                                 @endforeach
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                {{ $addBusiness->gst_number }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                {{ $addBusiness->phone_number }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                {{ $addBusiness->email }}
+                            </td>    
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                {{ $addBusiness->address }}
                             </td>
                             <td class="px-4 py-3 text-center space-x-1">
                                 @can('add_business_show')

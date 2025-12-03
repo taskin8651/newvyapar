@@ -28,6 +28,30 @@ class StoreAddBusinessRequest extends FormRequest
             'logo_upload' => [
                 'array',
             ],
+            'business_type' => [
+                'string',
+                'nullable',
+            ],
+            'industry_type' => [
+                'string',
+                'nullable',
+            ],
+            'gst_number' => [
+                'string',
+                'nullable',
+            ],
+            'phone_number' => [
+                'string',
+                'nullable',
+            ],
+            'email' => [
+                'string',
+                'nullable',
+            ],
+            'address' => [
+                'string',
+                'nullable',
+            ],
         ];
     }
 }

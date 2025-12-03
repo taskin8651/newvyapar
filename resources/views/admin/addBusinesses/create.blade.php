@@ -34,6 +34,39 @@
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="gst_number" class="block text-sm font-semibold text-gray-700 mb-1">
+                        GST Number 
+                    </label>
+                    <input type="text" name="gst_number" id="gst_number" 
+                           value="{{ old('gst_number', '') }}" 
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    @error('gst_number')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="phone_number" class="block text-sm font-semibold text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input type="text" name="phone_number" id="phone_number" 
+                           value="{{ old('phone_number', '') }}" 
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    @error('phone_number')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input type="email" name="email" id="email" 
+                           value="{{ old('email', '') }}" 
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    @error('email')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 <!-- Legal Name -->
                 <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
@@ -89,7 +122,13 @@
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
-
+                <div class="md:col-span-2 bg-yellow-50 p-4 rounded-lg shadow-inner">
+                    <label for="address" class="block text-sm font-semi-bold text-gray-700 mb-1"> Address</label>
+                    <textarea name="address" id="" cols="30" rows="10" class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                    @error('address')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
                 <!-- Logo Upload -->
                 <div class="md:col-span-2 bg-yellow-50 p-4 rounded-lg shadow-inner">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">

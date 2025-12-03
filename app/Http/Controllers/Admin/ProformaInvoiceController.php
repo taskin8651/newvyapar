@@ -82,10 +82,10 @@ class ProformaInvoiceController extends Controller
 
         if ($userRole === 'Super Admin') {
             $challans = ProformaInvoice::withoutGlobalScopes()
-                ->with(['select_customer' => fn($q)=>$q->withoutGlobalScopes(),'items','created_by','media'])
+                ->with(['select_customer','main_cost_center','sub_cost_center','created_by','media','items' => fn($q)=>$q->withoutGlobalScopes(),'items','created_by','media'])
                 ->latest()->paginate(10);
         } else {
-            $challans = ProformaInvoice::with(['select_customer','items','created_by','media'])
+            $challans = ProformaInvoice::with(['select_customer','items','created_by','media','main_cost_center','sub_cost_center'])
                 ->whereIn('created_by_id', $allowedUserIds)
                 ->latest()->paginate(10);
         }
@@ -503,40 +503,69 @@ public function update(Request $request, ProformaInvoice $proformaInvoice)
             ->with('success', 'Proforma Invoice Updated (stock re-applied).');
     });
 }
+public function reverseEffects($id)
+{
+    $challan = ProformaInvoice::with('items')->findOrFail($id);
+
+    try {
+        // Reverse stock
+        $this->reverseChallanEffects($challan);
+
+        // Update status
+        $challan->status = 'DC Returned';
+        $challan->save();
+
+        return back()->with([
+            'message' => 'Stock successfully reverted & Status updated to DC Returned.',
+            'alert-type' => 'success'
+        ]);
+
+    } catch (\Exception $e) {
+        return back()->with([
+            'message' => 'Error: '.$e->getMessage(),
+            'alert-type' => 'danger'
+        ]);
+    }
+}
 
 
     //================================================
     // REVERSE STOCK HELPER
     //================================================
-    protected function reverseChallanEffects(ProformaInvoice $challan): void
-    {
-        $oldItems = $challan->items()->withPivot(['qty','price','amount','json_data'])->get();
+protected function reverseChallanEffects(ProformaInvoice $challan): void
+{
+    $oldItems = $challan->items()->withPivot(['qty','price','amount','json_data'])->get();
 
-        foreach ($oldItems as $item) {
-            $qty = (float)($item->pivot->qty ?? 0);
+    foreach ($oldItems as $item) {
+        $qty = (float)($item->pivot->qty ?? 0);
 
-            if ($item->item_type === 'product') {
+        if ($item->item_type === 'product') {
 
-                // add back finished
-                $stock = CurrentStock::where('item_id', $item->id)->first();
-                if ($stock) {
-                    $stock->qty = $stock->qty + $qty;
-                    $stock->save();
-                }
+            // add back finished
+            $stock = CurrentStock::where('item_id', $item->id)->first();
+            if ($stock) {
+                $stock->qty = $stock->qty + $qty;
+                $stock->save();
+            }
 
-                // add back raw materials
-                $compositionRows = $this->fetchCompositionRowsForItem($item->id);
-                foreach ($compositionRows as $c) {
-                    $usedTotalQty = ((float)$c->qty) * $qty;
-                    $rawStock = CurrentStock::where('item_id', $c->select_raw_material_id)->first();
-                    if ($rawStock) {
-                        $rawStock->qty = $rawStock->qty + $usedTotalQty;
-                        $rawStock->save();
-                    }
+            // add back raw materials
+            $compositionRows = $this->fetchCompositionRowsForItem($item->id);
+            foreach ($compositionRows as $c) {
+                $usedTotalQty = ((float)$c->qty) * $qty;
+                $rawStock = CurrentStock::where('item_id', $c->select_raw_material_id)->first();
+                if ($rawStock) {
+                    $rawStock->qty = $rawStock->qty + $usedTotalQty;
+                    $rawStock->save();
                 }
             }
         }
     }
+
+    // update status
+    $challan->status = 'DC Returned';
+    $challan->save();
+}
+
 
     //================================================
     // CONVERT TO SALE
@@ -604,12 +633,18 @@ public function convertToSale(Request $request, ProformaInvoice $proformaInvoice
 
             }
         }
+        $customer = PartyDetail::find($request->select_customer_id);
 
-        // update status
-        $proformaInvoice->update([
-            'status' => 'Converted',
-            'converted_sale_invoice_id' => $invoice->id
-        ]);
+                    if ($customer) {
+                        $customer->current_balance = ($customer->current_balance ?? 0) + (float)$request->total;
+                        $customer->save();
+                    }
+
+                    // update
+                    $proformaInvoice->update([
+                        'status' => 'Converted to Sale Invoice',
+                        'converted_sale_invoice_id' => $invoice->id
+                    ]);             
 
         return redirect()
             ->route('admin.sale-invoices.edit', $invoice->id)

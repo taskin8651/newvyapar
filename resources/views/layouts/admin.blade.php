@@ -282,32 +282,42 @@
 </div>
 
 <style>
-    .watermarked {
-        position: relative;
-        overflow: hidden; /* 👈 overflow kaat dega */
-    }
+   .watermarked {
+    position: relative;
+    overflow: hidden;
+}
 
-    .watermarked::before {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-30deg); /* center rotate */
-        
-        width: 150%;   /* 👈 thoda bada rakha taki corners cut na ho */
-        height: 150%;
+.watermarked::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    width: 150%;
+    height: 150%;
+    background: url("{{ asset('logo.png') }}") center center no-repeat;
+    background-size: 400px auto;
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 0 !important; /* <-- FIX */
+}
 
-        background: url("{{ asset('logo.png') }}") center center no-repeat;
-        background-size: 400px auto; /* height maintain */
-        opacity: 0.1; 
-        pointer-events: none;
-        z-index: 1556655; /* content ke neeche */
-    }
+.watermarked > * {
+    position: relative;
+    z-index: 1 !important; /* content watermark se upar */
+}
 
-    .watermarked > * {
-        position: relative;
-        z-index: 1; /* content upar */
-    }
+/* Modal ALWAYS on top */
+#itemModal {
+    z-index: 9999999 !important;
+    position: fixed !important;
+}
+
+#itemModal .modal-box {
+    z-index: 10000000 !important;
+    position: relative !important;
+}
+
 </style>
 
 

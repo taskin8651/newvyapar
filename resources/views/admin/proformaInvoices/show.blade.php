@@ -1,334 +1,500 @@
 @extends('layouts.admin')
 
-@section('content')
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+@section('styles')
+<style>
+    body {
+        background: #f8f9fa;
+        font-family: "Helvetica", sans-serif;
+    }
 
-<div class="bg-gray-100 min-h-screen py-8">
-    <div class="max-w-6xl mx-auto">
-        <!-- Top actions -->
-        <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
+    .invoice-wrapper {
+        background: #fff;
+        max-width: 900px;
+        margin: auto;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+    }
+
+    .brand-header {
+        background: #1A73E8;
+        padding: 20px 30px;
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .brand-title {
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .section {
+        padding: 18px 25px;
+    }
+
+    .label-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #444;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    .table th {
+        background: #f4f4f4;
+        border: 1px solid #ddd;
+        font-weight: 600;
+        padding: 6px;
+        text-transform: uppercase;
+        font-size: 11px;
+    }
+
+    .table td {
+        padding: 6px 4px;
+        border: 1px solid #ddd;
+        font-size: 12px;
+    }
+
+    .totals-table td {
+        padding: 6px 4px;
+        font-size: 13px;
+    }
+
+    .box {
+        border: 1px dashed #aaa;
+        padding: 10px;
+        font-size: 12px;
+        margin-top: 8px;
+        background: #fafafa;
+    }
+
+    .signature-box {
+        text-align: right;
+        margin-top: 40px;
+    }
+
+    /* =========================
+        FIXED PRINT STYLE
+    ========================= */
+    @media print {
+
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            background: #fff !important;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+        .invoice-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        pre.box {
+            background: #fafafa !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .table th {
+            background: #f4f4f4 !important;
+        }
+    }
+</style>
+@endsection
+
+
+
+@section('content')
+
+@if(session('message'))
+    <div class="p-2 my-2 rounded text-white 
+                {{ session('alert-type') === 'success' ? 'bg-green-600' : 'bg-red-600' }}">
+        {{ session('message') }}
+    </div>
+@endif
+
+@php
+$company = optional(auth()->user()->select_companies()->first());
+$c = $proformaInvoice->select_customer;
+@endphp
+
+
+<div class="max-w-6xl mx-auto mt-6 mb-10">
+
+    <!-- BUTTONS -->
+    <div id="actionButtons" class="flex justify-between items-center mb-3 no-print">
+
+        <a href="{{ route('admin.proforma-invoices.index') }}"
+            class="px-4 py-2 bg-gray-600 text-white text-sm rounded-md">
+            ← Back
+        </a>
+
+        <div class="flex gap-2">
+
+            <button onclick="printInvoice()"
+                class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">
+                Print
+            </button>
+
+            <button id="downloadPdfBtn"
+                class="px-4 py-2 bg-green-600 text-white text-sm rounded-md">
+                Download PDF
+            </button>
+        </div>
+
+        <div class="flex gap-2">
+
+            <a href="{{ route('admin.proforma-invoices.edit', $proformaInvoice->id) }}" 
+                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                Edit
+            </a>
+
+            @if($proformaInvoice->status !== 'Converted' && $proformaInvoice->status !== 'DC Returned')
+            <form action="{{ route('admin.proforma-invoices.convertToSale', $proformaInvoice->id) }}" 
+                method="POST" 
+                onsubmit="return confirm('Convert this Delivery Challan to Sale Invoice?')">
+                @csrf
+
+                <!-- MASTER FIELDS -->
+                <input type="hidden" name="payment_type" value="{{ $proformaInvoice->payment_type }}">
+                <input type="hidden" name="select_customer_id" value="{{ $proformaInvoice->select_customer_id }}">
+                <input type="hidden" name="po_no" value="{{ $proformaInvoice->po_no }}">
+                <input type="hidden" name="docket_no" value="{{ $proformaInvoice->docket_no }}">
+                <input type="hidden" name="po_date" value="{{ $proformaInvoice->po_date }}">
+                <input type="hidden" name="due_date" value="{{ $proformaInvoice->due_date }}">
+                <input type="hidden" name="e_way_bill_no" value="{{ $proformaInvoice->e_way_bill_no }}">
+                <input type="hidden" name="phone_number" value="{{ $proformaInvoice->phone_number }}">
+                <input type="hidden" name="billing_address" value="{{ $proformaInvoice->billing_address }}">
+                <input type="hidden" name="shipping_address" value="{{ $proformaInvoice->shipping_address }}">
+                <input type="hidden" name="notes" value="{{ $proformaInvoice->notes }}">
+                <input type="hidden" name="terms" value="{{ $proformaInvoice->terms }}">
+                <input type="hidden" name="overall_discount" value="{{ $proformaInvoice->overall_discount }}">
+                <input type="hidden" name="subtotal" value="{{ $proformaInvoice->subtotal }}">
+                <input type="hidden" name="tax" value="{{ $proformaInvoice->tax }}">
+                <input type="hidden" name="discount" value="{{ $proformaInvoice->discount }}">
+                <input type="hidden" name="total" value="{{ $proformaInvoice->total }}">
+                <input type="hidden" name="main_cost_center_id" value="{{ $proformaInvoice->main_cost_centers_id }}">
+                <input type="hidden" name="sub_cost_center_id" value="{{ $proformaInvoice->sub_cost_centers_id }}">
+
+                @foreach($proformaInvoice->items as $item)
+                    @php $p = $item->pivot; @endphp
+                    <input type="hidden" name="items[{{ $loop->index }}][add_item_id]" value="{{ $item->id }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][description]" value="{{ $p->description }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][qty]" value="{{ $p->qty }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][unit]" value="{{ $p->unit }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][price]" value="{{ $p->price }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][discount_type]" value="{{ $p->discount_type }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][discount]" value="{{ $p->discount }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][tax_type]" value="{{ $p->tax_type }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][tax]" value="{{ $p->tax }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][amount]" value="{{ $p->amount }}">
+                    <input type="hidden" name="items[{{ $loop->index }}][json_data]" value="{{ $p->json_data }}">
+                @endforeach
+
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
+                    Convert to Sale Invoice
+                </button>
+            </form>
+
+            <form action="{{ route('admin.proforma-invoices.reverseEffects', $proformaInvoice->id) }}" 
+                method="POST" 
+                onsubmit="return confirm('Are you sure? This will revert stock changes made by this challan!')">
+                @csrf
+                <button type="submit" class="px-3 py-2 bg-red-600 text-white text-xs rounded">
+                    Reverse Stock
+                </button>
+            </form>
+
+            @endif
+        </div>
+    </div>
+
+
+    <!-- INVOICE -->
+    <div id="printArea" class="invoice-wrapper shadow-xl">
+
+        <!-- HEADER -->
+        <div class="brand-header">
+
             <div>
-                <a href="{{ route('admin.proforma-invoices.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm">
-                    ← Back to List
-                </a>
+                <div class="brand-title">{{ $company?->company_name }}</div>
+                <div style="font-size:13px">GSTIN: {{ $company?->gst_number }}</div>
+                <div style="font-size:13px">Status: {{ $proformaInvoice->status }}</div>
             </div>
 
-            <div class="flex gap-2">
-                <a href="{{ route('admin.proforma-invoices.edit', $proformaInvoice->id) }}" 
-                   class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
-                    Edit
-                </a>
+            @if($company?->getFirstMediaUrl('logo_upload'))
+                <img src="{{ $company->getFirstMediaUrl('logo_upload') }}" style="height:60px">
+            @endif
+        </div>
 
-                @if($proformaInvoice->status !== 'Converted')
-                <form action="{{ route('admin.proforma-invoices.convertToSale', $proformaInvoice->id) }}" method="POST" 
-                      onsubmit="return confirm('Convert this Delivery Challan to Sale Invoice?')">
-                    @csrf
 
-                    <!-- MASTER FIELDS -->
-                    <input type="hidden" name="payment_type" value="{{ $proformaInvoice->payment_type }}">
-                    <input type="hidden" name="select_customer_id" value="{{ $proformaInvoice->select_customer_id }}">
-                    <input type="hidden" name="po_no" value="{{ $proformaInvoice->po_no }}">
-                    <input type="hidden" name="docket_no" value="{{ $proformaInvoice->docket_no }}">
-                    <input type="hidden" name="po_date" value="{{ $proformaInvoice->po_date }}">
-                    <input type="hidden" name="due_date" value="{{ $proformaInvoice->due_date }}">
-                    <input type="hidden" name="e_way_bill_no" value="{{ $proformaInvoice->e_way_bill_no }}">
-                    <input type="hidden" name="phone_number" value="{{ $proformaInvoice->phone_number }}">
-                    <input type="hidden" name="billing_address" value="{{ $proformaInvoice->billing_address }}">
-                    <input type="hidden" name="shipping_address" value="{{ $proformaInvoice->shipping_address }}">
-                    <input type="hidden" name="notes" value="{{ $proformaInvoice->notes }}">
-                    <input type="hidden" name="terms" value="{{ $proformaInvoice->terms }}">
-                    <input type="hidden" name="overall_discount" value="{{ $proformaInvoice->overall_discount }}">
-                    <input type="hidden" name="subtotal" value="{{ $proformaInvoice->subtotal }}">
-                    <input type="hidden" name="tax" value="{{ $proformaInvoice->tax }}">
-                    <input type="hidden" name="discount" value="{{ $proformaInvoice->discount }}">
-                    <input type="hidden" name="total" value="{{ $proformaInvoice->total }}">
-                    <input type="hidden" name="main_cost_center_id" value="{{ $proformaInvoice->main_cost_centers_id }}">
-                    <input type="hidden" name="sub_cost_center_id" value="{{ $proformaInvoice->sub_cost_centers_id }}">
+        <!-- INVOICE TITLE -->
+        <div class="section">
+            <h1 class="text-2xl font-bold text-blue-700">TAX INVOICE</h1>
 
-                    <!-- ITEM FIELDS -->
-                    @foreach($proformaInvoice->items as $item)
-                       @php $p = $item->pivot; @endphp
-                        
-                       <input type="hidden" name="items[{{ $loop->index }}][add_item_id]" value="{{ $item->id }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][description]" value="{{ $p->description }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][qty]" value="{{ $p->qty }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][unit]" value="{{ $p->unit }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][price]" value="{{ $p->price }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][discount_type]" value="{{ $p->discount_type }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][discount]" value="{{ $p->discount }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][tax_type]" value="{{ $p->tax_type }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][tax]" value="{{ $p->tax }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][amount]" value="{{ $p->amount }}">
-                       <input type="hidden" name="items[{{ $loop->index }}][json_data]" value="{{ $p->json_data }}">
+            <p class="text-xs text-gray-600 mt-1">
+                Invoice No: <b>{{ $proformaInvoice->delivery_challan_number }}</b><br>
+                Date: <b>{{ $proformaInvoice->created_at?->format('d/m/Y') }}</b>
+            </p>
+
+            {!! DNS1D::getBarcodeHTML($proformaInvoice->delivery_challan_number, 'C39', 2, 60) !!}
+        </div>
+
+
+        <!-- SELLER / BUYER -->
+        <div class="section grid grid-cols-2 gap-10">
+
+            <div>
+                <div class="label-title">Seller</div>
+                <p class="text-sm font-semibold">{{ $company?->legal_name }}</p>
+                <p class="text-xs">{{ $company?->address }}</p>
+                <p class="text-xs">Phone: {{ $company?->phone_number }}</p>
+                <p class="text-xs">Email: {{ $company?->email }}</p>
+            </div>
+
+            <div>
+                <div class="label-title">Buyer</div>
+                <p class="text-sm font-semibold">{{ $c?->party_name }}</p>
+                <p class="text-xs">Shipping Address: {{ $proformaInvoice->shipping_address }}</p>
+                <p class="text-xs">Postal Address: {{ $proformaInvoice->billing_address }}</p>
+                <p class="text-xs">Phone: {{ $c?->phone_number }}</p>
+                <p class="text-xs">Email: {{ $c?->email }}</p>
+                <p class="text-xs">GSTIN: {{ $c?->gstin }}</p>
+            </div>
+        </div>
+
+        <!-- DELIVERY -->
+        <div class="section">
+            <div class="label-title">Delivery Details</div>
+
+            <table class="table">
+                <tr>
+                    <td>Mode of Transport</td>
+                    <td>{{ $proformaInvoice->json_data['transport_mode'] ?? '-' }}</td>
+                </tr>
+                <tr>
+                    <td>Vehicle Number</td>
+                    <td>{{ $proformaInvoice->json_data['vehicle_number'] ?? '-' }}</td>
+                </tr>
+                <tr>
+                    <td>Transporter</td>
+                    <td>{{ $proformaInvoice->json_data['transporter_name'] ?? '-' }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ITEMS -->
+        <div class="section">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th>HSN</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Tax%</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                @foreach($proformaInvoice->items as $item)
+                    @php $p = $item->pivot; @endphp
+                    <tr>
+                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $item->item_name }}</td>
+                        <td>{{ $item->item_hsn }}</td>
+                        <td class="text-right">{{ $p->qty }}</td>
+                        <td class="text-right">{{ number_format($p->price,2) }}</td>
+                        <td class="text-right">{{ $p->tax }}</td>
+                        <td class="text-right">{{ number_format($p->amount,2) }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- HSN SUMMARY -->
+        <div class="section">
+            <div class="label-title">HSN Summary</div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>HSN Code</th>
+                        <th>Qty</th>
+                        <th>Taxable Value</th>
+                        <th>CGST</th>
+                        <th>SGST</th>
+                        <th>Total Tax</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @php
+                        $summary = $proformaInvoice->items->groupBy('item_hsn');
+                    @endphp
+
+                    @foreach($summary as $hsn => $rows)
+                        @php
+                            $qty = $rows->sum('pivot.qty');
+                            $taxable = $rows->sum('pivot.amount');
+                            $cgst = $taxable * 0.09;
+                            $sgst = $taxable * 0.09;
+                        @endphp
+
+                        <tr>
+                            <td>{{ $hsn }}</td>
+                            <td class="text-right">{{ $qty }}</td>
+                            <td class="text-right">{{ number_format($taxable,2) }}</td>
+                            <td class="text-right">{{ number_format($cgst,2) }}</td>
+                            <td class="text-right">{{ number_format($sgst,2) }}</td>
+                            <td class="text-right">{{ number_format($cgst + $sgst, 2) }}</td>
+                        </tr>
                     @endforeach
 
-                    <button type="submit" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
-                        Convert to Sale Invoice
-                    </button>
-                </form>
-                @endif
-
-            </div>
+                </tbody>
+            </table>
         </div>
 
-        <!-- Printable invoice wrapper -->
-        <div id="invoicePrintable" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
 
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-6 flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-bold tracking-wide">DELIVERY CHALLAN</h1>
-                    <p class="mt-2 text-sm opacity-90">
-                        DC No: <span class="font-semibold">{{ $proformaInvoice->delivery_challan_number }}</span>
-                    </p>
-                    <p class="text-xs mt-1">
-                        Created: {{ $proformaInvoice->created_at?->format('d-m-Y H:i') }} |
-                        Updated: {{ $proformaInvoice->updated_at?->format('d-m-Y H:i') }}
-                    </p>
+        <!-- TOTALS -->
+        <div class="section grid grid-cols-2 gap-6">
+
+            <div>
+                <div class="label-title">Payment Terms</div>
+                <div class="box">
+                    {!! nl2br(e($proformaInvoice->terms ?? 'Payment due within 7 days.')) !!}
                 </div>
 
-                <div class="text-right text-sm">
-                    <p>Status:</p>
-                    <p class="mt-1">
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold
-                            @if($proformaInvoice->status === 'Converted') bg-green-300 text-green-900 
-                            @elseif($proformaInvoice->status === 'Draft') bg-yellow-300 text-yellow-900
-                            @else bg-blue-300 text-blue-900 @endif">
-                            {{ $proformaInvoice->status }}
-                        </span>
-                    </p>
-                    <p class="mt-3">
-                        Payment Type: 
-                        <span class="font-semibold uppercase">{{ $proformaInvoice->payment_type }}</span>
-                    </p>
-                    @if($proformaInvoice->converted_sale_invoice_id)
-                        <p class="mt-2 text-xs">
-                            Linked Sale Invoice ID: 
-                            <span class="font-semibold">{{ $proformaInvoice->converted_sale_invoice_id }}</span>
-                        </p>
-                    @endif
+                <div class="label-title mt-3">Reverse Charge</div>
+                <div class="box">
+                    {{ $proformaInvoice->json_data['reverse_charge'] ?? 'No' }}
                 </div>
             </div>
 
-            <!-- Company & Customer -->
-            <div class="px-6 py-4 border-b border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Company Details</h2>
-                    @php $company = optional(auth()->user()->select_companies()->first()); @endphp
-                    <div class="text-sm text-gray-800 space-y-1">
-                        <p class="font-bold text-lg">{{ $company?->business_name ?? '-' }}</p>
-                        <p>{{ $company?->address ?? '' }}</p>
-                        <p>GSTIN: {{ $company?->gst_number ?? '-' }}</p>
-                        <p>Phone: {{ $company?->phone ?? '-' }}</p>
-                        <p>Email: {{ $company?->email ?? '-' }}</p>
-                    </div>
-                </div>
 
-                <div>
-                    <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Bill / Ship To</h2>
-                    @php $c = $proformaInvoice->select_customer; @endphp
-                    <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-800 space-y-1">
-                        <p class="font-bold text-lg">{{ $c?->party_name ?? '-' }}</p>
-                        <p><span class="font-semibold">Phone:</span> {{ $proformaInvoice->phone_number ?? $c?->phone_number ?? '-' }}</p>
-                        <p><span class="font-semibold">Email:</span> {{ $c?->email ?? '-' }}</p>
-                        <p><span class="font-semibold">GSTIN:</span> {{ $c?->gstin ?? '-' }}</p>
-                        <p><span class="font-semibold">PAN:</span> {{ $c?->pan_number ?? '-' }}</p>
+            <div>
+                <table class="table totals-table">
+                    <tr>
+                        <td>Subtotal</td>
+                        <td class="text-right">₹ {{ number_format($proformaInvoice->subtotal,2) }}</td>
+                    </tr>
 
-                        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                                <p class="font-semibold text-xs text-gray-600 uppercase">Billing Address</p>
-                                <p class="text-xs">{{ $proformaInvoice->billing_address ?? $c?->billing_address ?? '-' }}</p>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-xs text-gray-600 uppercase">Shipping Address</p>
-                                <p class="text-xs">{{ $proformaInvoice->shipping_address ?? $c?->shipping_address ?? '-' }}</p>
-                            </div>
-                        </div>
-                    </div>
+                    <tr>
+                        <td>Discount</td>
+                        <td class="text-right">₹ {{ number_format($proformaInvoice->discount,2) }}</td>
+                    </tr>
+
+                    <tr>
+                        <td>CGST</td>
+                        <td class="text-right">₹ {{ number_format($proformaInvoice->tax/2,2) }}</td>
+                    </tr>
+
+                    <tr>
+                        <td>SGST</td>
+                        <td class="text-right">₹ {{ number_format($proformaInvoice->tax/2,2) }}</td>
+                    </tr>
+
+                    <tr class="font-bold">
+                        <td>Grand Total</td>
+                        <td class="text-right">₹ {{ number_format($proformaInvoice->total,2) }}</td>
+                    </tr>
+                </table>
+
+                <div class="mt-4 text-xs font-semibold text-gray-700">
+                    Amount in Words:<br>
+                    <span class="uppercase">
+                       ₹ {{ \App\Helpers\NumberHelper::formatIndian($proformaInvoice->total) }}
+                    </span>
                 </div>
             </div>
 
-            <!-- Meta -->
-            <div class="px-6 py-4 border-b border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-700">
-                <div>
-                    <p class="font-semibold text-gray-600">PO No</p>
-                    <p class="mt-1 text-sm">{{ $proformaInvoice->po_no ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">Docket No</p>
-                    <p class="mt-1 text-sm">{{ $proformaInvoice->docket_no ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">Billing Date</p>
-                    <p class="mt-1 text-sm">{{ $proformaInvoice->po_date ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">Bill Date</p>
-                    <p class="mt-1 text-sm">{{ $proformaInvoice->due_date ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">E-Way Bill</p>
-                    <p class="mt-1 text-sm">{{ $proformaInvoice->e_way_bill_no ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">Main Cost Center</p>
-                    <p class="mt-1 text-sm">{{ $proformaInvoice->main_cost_centers_id ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">Sub Cost Center</p>
-                    <p class="mt-1 text-sm">{{$proformaInvoice->sub_cost_centers_id ?? '-' }}</p>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-600">Created By</p>
-                    <p class="mt-1 text-sm">{{ optional($proformaInvoice->created_by)->name ?? '-' }}</p>
-                </div>
-            </div>
-
-            <!-- Items Table -->
-            <div class="px-6 py-4">
-                <h2 class="text-lg font-semibold text-gray-700 mb-3">Items</h2>
-                <div class="overflow-x-auto rounded-lg border border-gray-200">
-                    <table class="min-w-full text-xs md:text-sm">
-                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
-                            <tr>
-                                <th class="px-2 py-2 text-left">#</th>
-                                <th class="px-2 py-2 text-left">Item</th>
-                                <th class="px-2 py-2 text-left">Description</th>
-                                <th class="px-2 py-2 text-right">Qty</th>
-                                <th class="px-2 py-2 text-left">Unit</th>
-                                <th class="px-2 py-2 text-right">Price</th>
-                                <th class="px-2 py-2 text-right">Discount</th>
-                                <th class="px-2 py-2 text-right">Tax</th>
-                                <th class="px-2 py-2 text-right">Amount</th>
-                            </tr>
-                        </thead>
-
-                        <tbody class="divide-y divide-gray-100">
-                            @foreach($proformaInvoice->items as $item)
-                                @php $p = $item->pivot; @endphp
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-2 py-2">{{ $loop->iteration }}</td>
-                                    <td class="px-2 py-2">
-                                        <div class="font-semibold">{{ $item->item_name }}</div>
-                                        <div class="text-[10px] text-gray-500">
-                                            Code: {{ $item->item_code ?? '-' }} |
-                                            HSN: {{ $item->item_hsn ?? '-' }}
-                                        </div>
-                                    </td>
-                                    <td class="px-2 py-2">{{ $p->description ?: '-' }}</td>
-                                    <td class="px-2 py-2 text-right">{{ number_format($p->qty,2) }}</td>
-                                    <td class="px-2 py-2 text-left">{{ $p->unit ?? '-' }}</td>
-                                    <td class="px-2 py-2 text-right">₹ {{ number_format($p->price,2) }}</td>
-                                    <td class="px-2 py-2 text-right">
-                                        @if($p->discount > 0)
-                                            @if($p->discount_type == 'percentage')
-                                                {{ $p->discount }}%
-                                            @else
-                                                ₹ {{ number_format($p->discount,2) }}
-                                            @endif
-                                        @else
-                                            —
-                                        @endif
-                                    </td>
-                                    <td class="px-2 py-2 text-right">
-                                        @if($p->tax > 0)
-                                            {{ $p->tax }}%
-                                        @else
-                                            —
-                                        @endif
-                                    </td>
-                                    <td class="px-2 py-2 text-right font-semibold">
-                                        ₹ {{ number_format($p->amount,2) }}
-                                    </td>
-                                </tr>
-                            @endforeach
-
-                            @if($proformaInvoice->items->isEmpty())
-                                <tr>
-                                    <td colspan="9" class="px-2 py-4 text-center text-sm text-gray-500">
-                                        No items found.
-                                    </td>
-                                </tr>
-                            @endif
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Totals -->
-            <div class="px-6 py-6 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-200">
-
-                <div class="md:col-span-2 space-y-3">
-                    @if($proformaInvoice->notes)
-                        <div>
-                            <h3 class="text-xs font-semibold text-gray-600 uppercase mb-1">Notes</h3>
-                            <p class="text-xs text-gray-700 whitespace-pre-line">
-                                {{ $proformaInvoice->notes }}
-                            </p>
-                        </div>
-                    @endif
-
-                    @if($proformaInvoice->terms)
-                        <div>
-                            <h3 class="text-xs font-semibold text-gray-600 uppercase mb-1">Terms & Conditions</h3>
-                            <p class="text-xs text-gray-700 whitespace-pre-line">
-                                {{ $proformaInvoice->terms }}
-                            </p>
-                        </div>
-                    @endif
-                </div>
-
-                <div>
-                    <div class="bg-gray-50 rounded-lg p-4 text-sm space-y-2 shadow-inner">
-                        <div class="flex justify-between">
-                            <span>Subtotal:</span>
-                            <span>₹ {{ number_format($proformaInvoice->subtotal ?? 0, 2) }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Tax:</span>
-                            <span>₹ {{ number_format($proformaInvoice->tax ?? 0, 2) }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Discount:</span>
-                            <span>₹ {{ number_format($proformaInvoice->discount ?? 0, 2) }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Overall Discount:</span>
-                            <span>₹ {{ number_format($proformaInvoice->overall_discount ?? 0, 2) }}</span>
-                        </div>
-                        <div class="flex justify-between border-t pt-2 font-bold text-base">
-                            <span>Total:</span>
-                            <span>₹ {{ number_format($proformaInvoice->total ?? 0, 2) }}</span>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 text-xs text-gray-500 text-right">
-                        <p>Authorised Signatory</p>
-                        <div class="mt-8 border-t border-gray-300 w-32 ml-auto"></div>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <p class="mt-4 text-[10px] text-gray-400 text-center">
-            Generated from system • {{ now()->format('d-m-Y H:i') }}
-        </p>
+
+        <!-- E-INVOICE JSON -->
+        <div class="section">
+            <div class="label-title">E-Invoice JSON</div>
+
+            <pre class="box" style="white-space:pre-wrap">
+{{ json_encode([
+    "InvoiceNo" => $proformaInvoice->delivery_challan_number,
+    "InvoiceDate" => $proformaInvoice->created_at?->format('Y-m-d'),
+    "BuyerGST" => $c?->gstin,
+    "Total" => $proformaInvoice->total,
+], JSON_PRETTY_PRINT) }}
+            </pre>
+        </div>
+
+
+        <!-- SIGNATURE -->
+        <div class="section signature-box">
+
+            @if($company?->getFirstMediaUrl('stamp_upload'))
+                <img src="{{ $company->getFirstMediaUrl('stamp_upload') }}" style="height:80px; opacity:0.8;">
+            @endif
+
+            @if($company?->getFirstMediaUrl('signature_upload'))
+                <img src="{{ $company->getFirstMediaUrl('signature_upload') }}" style="height:60px; opacity:0.8;">
+            @endif
+
+            <p class="text-xs mt-2">(Authorized Signatory)</p>
+        </div>
+
     </div>
 </div>
 
 @endsection
+
+
+
 @section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
-document.getElementById('downloadPdfBtn')?.addEventListener('click', function () {
-    const element = document.getElementById('invoicePrintable');
+function printInvoice() {
+
+    let btns = document.getElementById("actionButtons");
+
+    btns.style.display = "none";    // hide buttons
+
+    setTimeout(() => {
+        window.print();
+
+        btns.style.display = "flex"; // restore buttons
+    }, 200);
+}
+</script>
+
+
+<script>
+document.getElementById('downloadPdfBtn')
+?.addEventListener('click', function () {
+    const element = document.getElementById('printArea');
+
     const opt = {
-        margin:       0.4,
-        filename:     'delivery-challan-{{ $proformaInvoice->delivery_challan_number ?? $proformaInvoice->id }}.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        margin: 0.2,
+        filename: "Invoice-{{ $proformaInvoice->delivery_challan_number }}.pdf",
+        image: { type: "jpeg", quality: 1 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "in", format: "a4", orientation: "portrait" }
     };
+
     html2pdf().set(opt).from(element).save();
 });
 </script>

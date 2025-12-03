@@ -44,6 +44,10 @@ class AddBusiness extends Model implements HasMedia
         'updated_at',
         'deleted_at',
         'created_by_id',
+        'gst_number',
+        'phone_number',
+        'email',
+        'address',
     ];
 
     public const BUSINESS_TYPE_SELECT = [

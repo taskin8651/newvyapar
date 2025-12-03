@@ -107,12 +107,12 @@ class ProformaInvoice extends Model implements HasMedia
 
     public function main_cost_center()
     {
-        return $this->belongsTo(MainCostCenter::class, 'main_cost_center_id');
+        return $this->belongsTo(MainCostCenter::class, 'main_cost_centers_id');
     }
 
     public function sub_cost_center()
     {
-        return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
+        return $this->belongsTo(SubCostCenter::class, 'sub_cost_centers_id');
     }
 
     public function items()

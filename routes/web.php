@@ -131,6 +131,9 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('proforma-invoices/{proformaInvoice}/convert-to-sale', 
         [ProformaInvoiceController::class, 'convertToSale']
     )->name('proforma-invoices.convertToSale');
+    Route::post('proforma-invoices/{id}/reverse-effects', [ProformaInvoiceController::class, 'reverseEffects'])
+    ->name('proforma-invoices.reverseEffects');
+
     // Bank Account
     Route::delete('bank-accounts/destroy', 'BankAccountController@massDestroy')->name('bank-accounts.massDestroy');
     Route::post('bank-accounts/parse-csv-import', 'BankAccountController@parseCsvImport')->name('bank-accounts.parseCsvImport');
