@@ -242,7 +242,7 @@ class ProformaInvoiceController extends Controller
             ->pluck('sub_cost_center_name', 'id')
             ->prepend(trans('global.pleaseSelect'), '');
 
-        return view('admin.ProformaInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
+        return view('admin.proformaInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
     }
 
     //================================================
@@ -675,7 +675,7 @@ public function show(ProformaInvoice $proformaInvoice)
         'media',
     ]);
 
-    return view('admin.ProformaInvoices.show', compact('proformaInvoice'));
+    return view('admin.proformaInvoices.show', compact('proformaInvoice'));
 }
 
 
@@ -719,7 +719,7 @@ public function show(ProformaInvoice $proformaInvoice)
         $company = $user->select_companies()->first();
         $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
 
-        return view('admin.ProformaInvoices.pdf', compact(
+        return view('admin.proformaInvoices.pdf', compact(
             'proformaInvoice','bankDetails','terms','company','logoUrl'
         ));
     }
