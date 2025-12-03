@@ -396,7 +396,7 @@ public function edit(ProformaInvoice $proformaInvoice)
     $sub_cost = SubCostCenter::pluck('sub_cost_center_name', 'id')
                 ->prepend(trans('global.pleaseSelect'), '');
 
-    return view('admin.ProformaInvoices.edit', compact(
+    return view('admin.proformaInvoices.edit', compact(
         'proformaInvoice','items','select_customers','cost','sub_cost'
     ));
 }
