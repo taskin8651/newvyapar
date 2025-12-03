@@ -93,7 +93,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 required">Select Main Cost Center</label>
-                        <select name="main_cost_center_id" id="main_cost_center_id"
+                        <select name="main_cost_centers_id" id="main_cost_center_id"
                                 class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm" required>
                             @foreach($cost as $id => $name)
                                 <option value="{{ $id }}" {{ old('main_cost_center_id') == $id ? 'selected' : '' }}>
@@ -105,7 +105,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 required">Select Sub Cost Center</label>
-                        <select name="sub_cost_center_id" id="sub_cost_center_id"
+                        <select name="sub_cost_centers_id" id="sub_cost_center_id"
                                 class="select2 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm" required>
                             @foreach($sub_cost as $id => $name)
                                 <option value="{{ $id }}">{{ $name }}</option>

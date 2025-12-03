@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\TermAndConditionController;
 use App\Http\Controllers\Admin\PaymentInController;
 use App\Http\Controllers\Admin\StockHistoryController;
 use App\Http\Controllers\Admin\LedgerController;
+use App\Http\Controllers\Admin\ProformaInvoiceController;
 use App\Http\Controllers\Admin\SaleInvoiceController;
 
 Route::redirect('/', '/login');
@@ -118,13 +119,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::resource('estimate-quotations', 'EstimateQuotationController');
 
     // Proforma Invoice
+    Route::patch('proforma-invoices/{proformaInvoice}/status', [\App\Http\Controllers\Admin\ProformaInvoiceController::class, 'convertToSale'])->name('proforma-invoices.update-status');
+    Route::delete('proforma-invoices/destroy', 'ProformaInvoiceController@massDestroy')->name('proforma-invoices.massDestroy');
     Route::delete('proforma-invoices/destroy', 'ProformaInvoiceController@massDestroy')->name('proforma-invoices.massDestroy');
     Route::post('proforma-invoices/media', 'ProformaInvoiceController@storeMedia')->name('proforma-invoices.storeMedia');
     Route::post('proforma-invoices/ckmedia', 'ProformaInvoiceController@storeCKEditorImages')->name('proforma-invoices.storeCKEditorImages');
     Route::post('proforma-invoices/parse-csv-import', 'ProformaInvoiceController@parseCsvImport')->name('proforma-invoices.parseCsvImport');
     Route::post('proforma-invoices/process-csv-import', 'ProformaInvoiceController@processCsvImport')->name('proforma-invoices.processCsvImport');
     Route::resource('proforma-invoices', 'ProformaInvoiceController');
-
+        // 🔹 Convert Proforma/Challan -> Sale Invoice
+    Route::post('proforma-invoices/{proformaInvoice}/convert-to-sale', 
+        [ProformaInvoiceController::class, 'convertToSale']
+    )->name('proforma-invoices.convertToSale');
     // Bank Account
     Route::delete('bank-accounts/destroy', 'BankAccountController@massDestroy')->name('bank-accounts.massDestroy');
     Route::post('bank-accounts/parse-csv-import', 'BankAccountController@parseCsvImport')->name('bank-accounts.parseCsvImport');

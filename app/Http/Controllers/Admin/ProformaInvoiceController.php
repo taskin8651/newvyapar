@@ -20,13 +20,15 @@ use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
+
 class ProformaInvoiceController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait;
 
+    //================================================
+    // INDEX
+    //================================================
     public function index()
     {
         abort_if(Gate::denies('proforma_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
@@ -90,9 +92,13 @@ class ProformaInvoiceController extends Controller
 
         return view('admin.ProformaInvoices.index', compact('challans'));
     }
+
+    //================================================
+    // GET CUSTOMER DETAILS AJAX
+    //================================================
     public function getCustomerDetails($id)
     {
-        $customer = \App\Models\PartyDetail::withoutGlobalScopes()->find($id);
+        $customer = PartyDetail::withoutGlobalScopes()->find($id);
 
         if (!$customer) {
             return response()->json(['error' => 'Customer not found'], 404);
@@ -111,21 +117,18 @@ class ProformaInvoiceController extends Controller
             'pincode'               => $customer->pincode,
             'credit_limit'          => $customer->credit_limit,
             'payment_terms'         => $customer->payment_terms,
-
-            // Opening & Current Balance
             'opening_balance'       => $customer->opening_balance,
             'opening_balance_type'  => $customer->opening_balance_type,
             'opening_balance_date'  => $customer->opening_balance_date,
-
             'current_balance'       => $customer->current_balance,
             'current_balance_type'  => $customer->current_balance_type,
             'current_balance_date'  => $customer->updated_at,
         ]);
     }
 
-    // -----------------------------
-    // Create: same dropdowns and stocks
-    // -----------------------------
+    //================================================
+    // CREATE
+    //================================================
     public function create()
     {
         abort_if(Gate::denies('proforma_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
@@ -133,13 +136,13 @@ class ProformaInvoiceController extends Controller
         $user = Auth::user();
         $userId = $user->id;
         $userRole = $user->roles->pluck('title')->first();
-
         $company = $user->select_companies()->first();
         $companyId = $company?->id;
 
         $allowedUserIds = collect([$userId]);
 
         if ($companyId) {
+
             $companyUserIds = DB::table('add_business_user')
                 ->where('add_business_id', $companyId)
                 ->pluck('user_id')
@@ -159,6 +162,7 @@ class ProformaInvoiceController extends Controller
                 if ($parent) {
                     $parentCompanyId = $parent->select_companies()->first()?->id;
                     if ($parentCompanyId) {
+
                         $parentCompanyUsers = DB::table('add_business_user')
                             ->where('add_business_id', $parentCompanyId)
                             ->pluck('user_id')->toArray();
@@ -177,7 +181,7 @@ class ProformaInvoiceController extends Controller
 
         $allowedUserIds = $allowedUserIds->unique()->toArray();
 
-        // Customers (no balance mutation in challan)
+        // customers
         if ($userRole === 'Super Admin') {
             $select_customers = PartyDetail::withoutGlobalScopes()->get();
         } elseif ($companyId) {
@@ -189,14 +193,16 @@ class ProformaInvoiceController extends Controller
         $select_customers = $select_customers->mapWithKeys(function ($c) {
             $balance = $c->current_balance ?? $c->opening_balance ?? 0;
             $type    = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
+
             $balanceFormatted = number_format($balance, 2);
             $display = $type === 'Debit'
                 ? "₹{$balanceFormatted} Dr - Payable ↑"
                 : "₹{$balanceFormatted} Cr - Receivable ↓";
+
             return [$c->id => "{$c->party_name} ({$display})"];
         });
 
-        // Items with stock
+        // items
         if ($userRole === 'Super Admin') {
             $items = AddItem::withoutGlobalScopes()
                 ->whereIn('item_type', ['product', 'service'])
@@ -239,39 +245,34 @@ class ProformaInvoiceController extends Controller
         return view('admin.ProformaInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
     }
 
-    // helper: composition
-    protected function fetchCompositionRowsForItem($itemId)
-    {
-        return DB::table('finished_goods_raw_material')
-            ->where('item_id', $itemId)
-            ->get();
-    }
-
-    // -----------------------------
-    // Store: STOCK MINUS ONLY, NO PARTY BALANCE
-    // -----------------------------
+    //================================================
+    // STORE
+    //================================================
     public function store(Request $request)
     {
        
-
         $request->validate([
             'select_customer_id'      => 'required|exists:party_details,id',
             'po_no'                   => 'required|string',
             'po_date'                 => 'required|date',
-            'docket_no'               => 'nullable|string',
             'items'                   => 'required|array|min:1',
             'items.*.add_item_id'     => 'required|exists:add_items,id',
             'items.*.qty'             => 'required|numeric|min:1',
             'attachment'              => 'nullable|file|max:10240',
-        ]);
+            'main_cost_centers_id'     => 'required|exists:main_cost_centers,id',
+            'sub_cost_centers_id'      => 'required|exists:sub_cost_centers,id',
+            'subtotal'             => 'required',
+            'total'                => 'required',
 
+        ]);
+        
         return DB::transaction(function () use ($request) {
 
             $challan_no = 'DC-' . now()->format('YmdHis') . rand(100, 999);
 
             $challan = ProformaInvoice::create([
                 'delivery_challan_number' => $challan_no,
-                'payment_type'            => $request->payment_type, // informational
+                'payment_type'            => $request->payment_type, 
                 'select_customer_id'      => $request->select_customer_id,
                 'po_no'                   => $request->po_no,
                 'docket_no'               => $request->docket_no,
@@ -290,16 +291,16 @@ class ProformaInvoiceController extends Controller
                 'total'                   => $request->total ?? 0,
                 'created_by_id'           => auth()->id(),
                 'json_data'               => json_encode($request->all()),
-                'status'                  => 'Draft', // or Pending
-                'main_cost_center_id'     => $request->main_cost_center_id,
-                'sub_cost_center_id'      => $request->sub_cost_center_id,
+                'status'                  => 'Draft',
+                'main_cost_centers_id'     => $request->main_cost_centers_id,
+                'sub_cost_centers_id'      => $request->sub_cost_centers_id,
             ]);
 
             if ($request->hasFile('attachment')) {
                 $challan->addMediaFromRequest('attachment')->toMediaCollection('document');
             }
 
-            // attach + STOCK MINUS (finished + raw)
+            // attach + STOCK MINUS
             foreach ($request->items as $itemData) {
                 $item = AddItem::findOrFail($itemData['add_item_id']);
 
@@ -337,144 +338,176 @@ class ProformaInvoiceController extends Controller
                 }
             }
 
-            return redirect()->route('admin.delivery-challans.index')
-                ->with('success', 'Delivery Challan Created (stock updated).');
+            return redirect()->route('admin.proforma-invoices.index')
+                ->with('success', 'Proforma Invoice Created (stock updated).');
         });
     }
 
-    // -----------------------------
-    // Edit (load same lists)
-    // -----------------------------
-    public function edit(ProformaInvoice $ProformaInvoice)
-    {
-        abort_if(Gate::denies('proforma_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    //================================================
+    // EDIT
+    //================================================
+public function edit(ProformaInvoice $proformaInvoice)
+{
+    abort_if(Gate::denies('proforma_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $select_customers = PartyDetail::select('id','party_name','opening_balance','opening_balance_type','current_balance','current_balance_type')
-            ->get()
-            ->mapWithKeys(function($c){
-                $balance = $c->current_balance ?? $c->opening_balance ?? 0;
-                $type    = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
-                $balanceFormatted = number_format($balance, 2);
-                $display = $type === 'Debit'
-                    ? "₹{$balanceFormatted} Dr - Payable ↑"
-                    : "₹{$balanceFormatted} Cr - Receivable ↓";
-                return [$c->id => "{$c->party_name} ({$display})"];
-            });
+    // Load pivot data
+    $proformaInvoice->load([
+        'select_customer',
+        'items' => function ($q) {
+            $q->withPivot([
+                'description','qty','unit','price',
+                'discount_type','discount',
+                'tax_type','tax','amount',
+                'created_by_id','json_data'
+            ]);
+        },
+        'created_by'
+    ]);
 
-        $items = AddItem::whereIn('item_type', ['product', 'service'])
-            ->select('id','item_name','sale_price','select_unit_id','item_hsn','item_code','item_type','purchase_price')
-            ->with('select_unit')->get()
-            ->map(function($item){
-                $item->stock_qty = $item->item_type === 'product'
-                    ? CurrentStock::where('item_id', $item->id)->sum('qty')
-                    : null;
-                return $item;
-            });
+    // Customers
+    $select_customers = PartyDetail::select(
+            'id','party_name','opening_balance',
+            'opening_balance_type','current_balance',
+            'current_balance_type'
+        )->get()
+        ->mapWithKeys(function($c){
+            $balance = $c->current_balance ?? $c->opening_balance ?? 0;
+            $type    = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
+            $display = $type === 'Debit'
+                ? "₹{$balance} Dr - Payable ↑"
+                : "₹{$balance} Cr - Receivable ↓";
+            return [$c->id => "{$c->party_name} ({$display})"];
+        });
 
-        $cost     = MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-        $sub_cost = SubCostCenter::pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+    // Items with stock
+    $items = AddItem::whereIn('item_type', ['product', 'service'])
+        ->with('select_unit')->get()
+        ->map(function($item){
+            $item->stock_qty = $item->item_type === 'product'
+                ? CurrentStock::where('item_id', $item->id)->sum('qty')
+                : null;
+            return $item;
+        });
 
-        $ProformaInvoice->load('select_customer','items');
+    // cost center
+    $cost     = MainCostCenter::pluck('cost_center_name', 'id')
+                ->prepend(trans('global.pleaseSelect'), '');
 
-        return view('admin.ProformaInvoices.edit', compact('ProformaInvoice','items','select_customers','cost','sub_cost'));
+    $sub_cost = SubCostCenter::pluck('sub_cost_center_name', 'id')
+                ->prepend(trans('global.pleaseSelect'), '');
+
+    return view('admin.ProformaInvoices.edit', compact(
+        'proformaInvoice','items','select_customers','cost','sub_cost'
+    ));
+}
+
+
+    //================================================
+    // UPDATE
+    //================================================
+public function update(Request $request, ProformaInvoice $proformaInvoice)
+{
+    abort_if(Gate::denies('proforma_invoice_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+    if ($proformaInvoice->status === 'Converted') {
+        return back()->with('error', 'This Proforma has already been converted. It cannot be edited.');
     }
 
-    // -----------------------------
-    // UPDATE: reverse previous stock, then apply new. NO PARTY BALANCE.
-    // -----------------------------
-    public function update(Request $request, ProformaInvoice $ProformaInvoice)
-    {
-        abort_if(Gate::denies('delivery_challan_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    $request->validate([
+        'select_customer_id'      => 'required|exists:party_details,id',
+        'po_no'                   => 'required|string',
+        'po_date'                 => 'required|date',
+        'items'                   => 'required|array|min:1',
+        'items.*.add_item_id'     => 'required|exists:add_items,id',
+        'items.*.qty'             => 'required|numeric|min:1',
+        'attachment'              => 'nullable|file|max:10240',
+    ]);
 
-        $request->validate([
-            'select_customer_id'      => 'required|exists:party_details,id',
-            'po_no'                   => 'required|string',
-            'po_date'                 => 'required|date',
-            'items'                   => 'required|array|min:1',
-            'items.*.add_item_id'     => 'required|exists:add_items,id',
-            'items.*.qty'             => 'required|numeric|min:1',
-            'attachment'              => 'nullable|file|max:10240',
+    return DB::transaction(function() use ($request, $proformaInvoice) {
+
+        // reverse previous stock effects
+        $this->reverseChallanEffects($proformaInvoice);
+
+        // media
+        if ($request->hasFile('attachment')) {
+            $proformaInvoice->clearMediaCollection('document');
+            $proformaInvoice->addMediaFromRequest('attachment')->toMediaCollection('document');
+        }
+
+        // update master
+        $proformaInvoice->update([
+            'payment_type'         => $request->payment_type,
+            'select_customer_id'   => $request->select_customer_id,
+            'po_no'                => $request->po_no,
+            'docket_no'            => $request->docket_no,
+            'po_date'              => $request->po_date,
+            'due_date'             => $request->due_date,
+            'e_way_bill_no'        => $request->e_way_bill_no,
+            'phone_number'         => $request->customer_phone_invoice,
+            'billing_address'      => $request->billing_address_invoice,
+            'shipping_address'     => $request->shipping_address_invoice,
+            'notes'                => $request->notes,
+            'terms'                => $request->terms,
+            'overall_discount'     => $request->overall_discount ?? 0,
+            'subtotal'             => $request->subtotal ?? 0,
+            'tax'                  => $request->tax ?? 0,
+            'discount'             => $request->discount ?? 0,
+            'total'                => $request->total ?? 0,
+            'json_data'            => json_encode($request->all()),
+            'main_cost_center_id'  => $request->main_cost_center_id,
+            'sub_cost_center_id'   => $request->sub_cost_center_id,
         ]);
 
-        return DB::transaction(function() use ($request, $ProformaInvoice) {
+        // detach old and attach new with stock effects
+        $proformaInvoice->items()->detach();
 
-            // reverse previous stock effects
-            $this->reverseChallanEffects($ProformaInvoice);
+        foreach ($request->items as $itemData) {
+            $item = AddItem::findOrFail($itemData['add_item_id']);
 
-            // media
-            if ($request->hasFile('attachment')) {
-                $ProformaInvoice->clearMediaCollection('document');
-                $ProformaInvoice->addMediaFromRequest('attachment')->toMediaCollection('document');
-            }
-
-            // update master
-            $ProformaInvoice->update([
-                'payment_type'         => $request->payment_type,
-                'select_customer_id'   => $request->select_customer_id,
-                'po_no'                => $request->po_no,
-                'docket_no'            => $request->docket_no,
-                'po_date'              => $request->po_date,
-                'due_date'             => $request->due_date,
-                'e_way_bill_no'        => $request->e_way_bill_no,
-                'phone_number'         => $request->customer_phone_invoice,
-                'billing_address'      => $request->billing_address_invoice,
-                'shipping_address'     => $request->shipping_address_invoice,
-                'notes'                => $request->notes,
-                'terms'                => $request->terms,
-                'overall_discount'     => $request->overall_discount ?? 0,
-                'subtotal'             => $request->subtotal ?? 0,
-                'tax'                  => $request->tax ?? 0,
-                'discount'             => $request->discount ?? 0,
-                'total'                => $request->total ?? 0,
-                'json_data'            => json_encode($request->all()),
-                'main_cost_center_id'  => $request->main_cost_center_id,
-                'sub_cost_center_id'   => $request->sub_cost_center_id,
+            $proformaInvoice->items()->attach($item->id, [
+                'description'   => $itemData['description'] ?? null,
+                'qty'           => $itemData['qty'],
+                'unit'          => $itemData['unit'] ?? null,
+                'price'         => $itemData['price'] ?? 0,
+                'discount_type' => $itemData['discount_type'] ?? 'value',
+                'discount'      => $itemData['discount'] ?? 0,
+                'tax_type'      => $itemData['tax_type'] ?? 'without',
+                'tax'           => $itemData['tax'] ?? 0,
+                'amount'        => $itemData['amount'] ?? 0,
+                'created_by_id' => auth()->id(),
+                'json_data'     => json_encode($itemData),
             ]);
 
-            // detach old and attach new with stock effects
-            $ProformaInvoice->items()->detach();
+            // stock minus again
+            if ($item->item_type === 'product') {
 
-            foreach ($request->items as $itemData) {
-                $item = AddItem::findOrFail($itemData['add_item_id']);
-
-                $ProformaInvoice->items()->attach($item->id, [
-                    'description'   => $itemData['description'] ?? null,
-                    'qty'           => $itemData['qty'],
-                    'unit'          => $itemData['unit'] ?? null,
-                    'price'         => $itemData['price'] ?? 0,
-                    'discount_type' => $itemData['discount_type'] ?? 'value',
-                    'discount'      => $itemData['discount'] ?? 0,
-                    'tax_type'      => $itemData['tax_type'] ?? 'without',
-                    'tax'           => $itemData['tax'] ?? 0,
-                    'amount'        => $itemData['amount'] ?? 0,
-                    'created_by_id' => auth()->id(),
-                    'json_data'     => json_encode($itemData),
-                ]);
-
-                if ($item->item_type === 'product') {
-                    $compositionRows = $this->fetchCompositionRowsForItem($item->id);
-                    foreach ($compositionRows as $c) {
-                        $usedTotalQty = ((float)$c->qty) * (float)$itemData['qty'];
-                        $rawStock = CurrentStock::where('item_id', $c->select_raw_material_id)->first();
-                        if ($rawStock) {
-                            $rawStock->qty = max(0, $rawStock->qty - $usedTotalQty);
-                            $rawStock->save();
-                        }
-                    }
-                    $stock = CurrentStock::where('item_id', $item->id)->first();
-                    if ($stock) {
-                        $stock->qty = max(0, $stock->qty - (float)$itemData['qty']);
-                        $stock->save();
+                $compositionRows = $this->fetchCompositionRowsForItem($item->id);
+                foreach ($compositionRows as $c) {
+                    $usedTotalQty = ((float)$c->qty) * (float)$itemData['qty'];
+                    $rawStock = CurrentStock::where('item_id', $c->select_raw_material_id)->first();
+                    if ($rawStock) {
+                        $rawStock->qty = max(0, $rawStock->qty - $usedTotalQty);
+                        $rawStock->save();
                     }
                 }
+
+                $stock = CurrentStock::where('item_id', $item->id)->first();
+                if ($stock) {
+                    $stock->qty = max(0, $stock->qty - (float)$itemData['qty']);
+                    $stock->save();
+                }
             }
+        }
 
-            return redirect()->route('admin.delivery-challans.index')
-                ->with('success', 'Delivery Challan Updated (stock re-applied).');
-        });
-    }
+        return redirect()->route('admin.proforma-invoices.index')
+            ->with('success', 'Proforma Invoice Updated (stock re-applied).');
+    });
+}
 
-    // reverse stock effects only
+
+    //================================================
+    // REVERSE STOCK HELPER
+    //================================================
     protected function reverseChallanEffects(ProformaInvoice $challan): void
     {
         $oldItems = $challan->items()->withPivot(['qty','price','amount','json_data'])->get();
@@ -483,12 +516,14 @@ class ProformaInvoiceController extends Controller
             $qty = (float)($item->pivot->qty ?? 0);
 
             if ($item->item_type === 'product') {
+
                 // add back finished
                 $stock = CurrentStock::where('item_id', $item->id)->first();
                 if ($stock) {
                     $stock->qty = $stock->qty + $qty;
                     $stock->save();
                 }
+
                 // add back raw materials
                 $compositionRows = $this->fetchCompositionRowsForItem($item->id);
                 foreach ($compositionRows as $c) {
@@ -501,125 +536,91 @@ class ProformaInvoiceController extends Controller
                 }
             }
         }
-
-        // detach handled in update method
     }
 
-    // -----------------------------
-    // Convert to Sale: create SaleInvoice WITHOUT stock deduction; apply party balances here.
-    // -----------------------------
-    public function convertToSale(Request $request, ProformaInvoice $ProformaInvoice)
-    {
-        abort_if(Gate::denies('proforma_invoice_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    //================================================
+    // CONVERT TO SALE
+    //================================================
+public function convertToSale(Request $request, ProformaInvoice $proformaInvoice)
+{
+    abort_if(Gate::denies('proforma_invoice_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        if ($ProformaInvoice->status === 'Converted') {
-            return back()->with('info', 'Already converted to Sale.');
+    if ($proformaInvoice->status === 'Converted') {
+        return back()->with('info', 'Already converted to Sale.');
+    }
+
+    return DB::transaction(function() use ($request, $proformaInvoice) {
+
+        $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
+
+        $invoice = SaleInvoice::create([
+            'sale_invoice_number' => $sale_invoice_number,
+            'payment_type'        => $request->payment_type,
+            'select_customer_id'  => $request->select_customer_id,
+            'po_no'               => $request->po_no,
+            'docket_no'           => $request->docket_no,
+            'po_date'             => $request->po_date,
+            'due_date'            => $request->due_date,
+            'e_way_bill_no'       => $request->e_way_bill_no,
+            'phone_number'        => $request->phone_number,
+            'billing_address'     => $request->billing_address,
+            'shipping_address'    => $request->shipping_address,
+            'notes'               => $request->notes,
+            'terms'               => $request->terms,
+            'overall_discount'    => $request->overall_discount ?? 0,
+            'subtotal'            => $request->subtotal ?? 0,
+            'tax'                 => $request->tax ?? 0,
+            'discount'            => $request->discount ?? 0,
+            'total'               => $request->total ?? 0,
+            'created_by_id'       => auth()->id(),
+            'json_data'           => json_encode($request->all()),
+            'status'              => 'converted dc to sale',
+
+            // FIXED HERE 👇
+            'main_cost_center_id' => $request->main_cost_center_id ?? null,  
+            'sub_cost_center_id'  => $request->sub_cost_center_id ?? null, 
+
+            'price'               => 0,
+        ]);
+
+        // attach items
+        if ($request->has('items')) {
+
+            foreach ($request->items as $it) {
+
+                $invoice->items()->attach($it['add_item_id'], [
+                    'description'   => $it['description'] ?? null,
+                    'qty'           => $it['qty'] ?? 0,
+                    'unit'          => $it['unit'] ?? null,
+                    'price'         => $it['price'] ?? 0,
+                    'discount_type' => $it['discount_type'] ?? null,
+                    'discount'      => $it['discount'] ?? 0,
+                    'tax_type'      => $it['tax_type'] ?? null,
+                    'tax'           => $it['tax'] ?? 0,
+                    'amount'        => $it['amount'] ?? 0,
+                    'created_by_id' => auth()->id(),
+                    'json_data'     => $it['json_data'] ?? null,
+                ]);
+
+            }
         }
 
-        return DB::transaction(function() use ($request, $ProformaInvoice) {
+        // update status
+        $proformaInvoice->update([
+            'status' => 'Converted',
+            'converted_sale_invoice_id' => $invoice->id
+        ]);
 
-            $ProformaInvoice->load('items');
+        return redirect()
+            ->route('admin.sale-invoices.edit', $invoice->id)
+            ->with('success', 'Proforma Invoice converted to Sale Invoice.');
+    });
+}
 
-            // create sale invoice skeleton (NO stock deduction again)
-            $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
 
-            $invoice = SaleInvoice::create([
-                'sale_invoice_number' => $sale_invoice_number,
-                'payment_type'        => $ProformaInvoice->payment_type,
-                'select_customer_id'  => $ProformaInvoice->select_customer_id,
-                'po_no'               => $ProformaInvoice->po_no,
-                'docket_no'           => $ProformaInvoice->docket_no,
-                'po_date'             => $ProformaInvoice->po_date,
-                'due_date'            => $ProformaInvoice->due_date,
-                'e_way_bill_no'       => $ProformaInvoice->e_way_bill_no,
-                'phone_number'        => $ProformaInvoice->phone_number,
-                'billing_address'     => $ProformaInvoice->billing_address,
-                'shipping_address'    => $ProformaInvoice->shipping_address,
-                'notes'               => $ProformaInvoice->notes,
-                'terms'               => $ProformaInvoice->terms,
-                'overall_discount'    => $ProformaInvoice->overall_discount ?? 0,
-                'subtotal'            => $ProformaInvoice->subtotal ?? 0,
-                'tax'                 => $ProformaInvoice->tax ?? 0,
-                'discount'            => $ProformaInvoice->discount ?? 0,
-                'total'               => $ProformaInvoice->total ?? 0,
-                'created_by_id'       => auth()->id(),
-                'json_data'           => $ProformaInvoice->json_data,
-                'status'              => 'Pending',
-                'main_cost_center_id' => $ProformaInvoice->main_cost_center_id,
-                'sub_cost_center_id'  => $ProformaInvoice->sub_cost_center_id,
-                'price'               => 0,
-            ]);
-
-            // copy media file if any
-            if ($ProformaInvoice->getFirstMedia('document')) {
-                $media = $ProformaInvoice->getFirstMedia('document');
-                $invoice
-                    ->addMedia($media->getPath())
-                    ->preservingOriginal()
-                    ->toMediaCollection('document');
-            }
-
-            // attach items to invoice WITHOUT stock ops (already deducted in DC)
-            foreach ($ProformaInvoice->items as $it) {
-                $p = $it->pivot;
-                $invoice->items()->attach($it->id, [
-                    'description'   => $p->description,
-                    'qty'           => $p->qty,
-                    'unit'          => $p->unit,
-                    'price'         => $p->price,
-                    'discount_type' => $p->discount_type,
-                    'discount'      => $p->discount,
-                    'tax_type'      => $p->tax_type,
-                    'tax'           => $p->tax,
-                    'amount'        => $p->amount,
-                    'created_by_id' => auth()->id(),
-                    'json_data'     => $p->json_data,
-                ]);
-            }
-
-            // Apply party balance like SaleInvoiceController
-            $customer = PartyDetail::findOrFail($ProformaInvoice->select_customer_id);
-            $baseBalance = $customer->current_balance ?? $customer->opening_balance ?? 0;
-            $baseType    = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
-
-            $totalSaleAmount = $invoice->total ?? 0;
-            [$closingBalance, $closingType] = $this->applySaleOnBalance($baseBalance, $baseType, $totalSaleAmount);
-
-            $customer->current_balance      = $closingBalance;
-            $customer->current_balance_type = $closingType;
-            $customer->save();
-
-            // transaction create (simple)
-            Transaction::create([
-                'sale_invoice_id'      => $invoice->id,
-                'select_customer_id'   => $customer->id,
-                'payment_type_id'      => null,
-                'main_cost_center_id'  => $invoice->main_cost_center_id,
-                'sub_cost_center_id'   => $invoice->sub_cost_center_id,
-                'sale_amount'          => $totalSaleAmount,
-                'opening_balance'      => $baseBalance,
-                'closing_balance'      => $closingBalance,
-                'transaction_type'     => 'sale',
-                'transaction_id'       => strtoupper('TXN' . rand(1000000000, 9999999999)),
-                'created_by_id'        => auth()->id(),
-                'json_data'            => json_encode([
-                    'from_delivery_challan_id' => $ProformaInvoice->id,
-                    'delivery_challan' => $ProformaInvoice->toArray(),
-                    'invoice'          => $invoice->toArray(),
-                    'customer_before'  => ['balance' => $baseBalance, 'type' => $baseType],
-                    'customer_after'   => ['balance' => $closingBalance, 'type' => $closingType],
-                ]),
-            ]);
-
-            // mark challan converted
-            $ProformaInvoice->update(['status' => 'Converted', 'converted_sale_invoice_id' => $invoice->id]);
-
-            return redirect()->route('admin.sale-invoices.edit', $invoice->id)
-                ->with('success', 'Delivery Challan converted to Sale Invoice (balances applied).');
-        });
-    }
-
-    // same helper from SaleInvoice
+    //================================================
+    // BALANCE HELPER
+    //================================================
     protected function applySaleOnBalance($baseBalance, $baseType, $saleAmount): array
     {
         $closingBalance = $baseBalance;
@@ -641,55 +642,68 @@ class ProformaInvoiceController extends Controller
         return [$closingBalance, $closingType];
     }
 
-    // Ajax composition (for UI)
-    public function getItemComposition($itemId)
+    //================================================
+    // ITEM COMPOSITION AJAX
+    //================================================
+    protected function fetchCompositionRowsForItem($itemId)
     {
-        $rows = DB::table('finished_goods_raw_material')
+        return DB::table('finished_goods_raw_material')
             ->where('item_id', $itemId)
-            ->select(
-                'select_raw_material_id as id',
-                'qty as qty_used',
-                'sale_price_at_time as sale_price',
-                'purchase_price_at_time as purchase_price',
-                'item_name as name'
-            )->get()->map(function($r){
-                return [
-                    'id' => $r->id,
-                    'name' => $r->name ?? (AddItem::find($r->id)->item_name ?? 'Unnamed'),
-                    'qty_used' => (float)$r->qty_used,
-                    'sale_price' => (float)$r->sale_price,
-                    'purchase_price' => (float)$r->purchase_price,
-                ];
-            });
-
-        return response()->json(['composition' => $rows]);
+            ->get();
     }
 
-    public function show(ProformaInvoice $ProformaInvoice)
-    {
-        abort_if(Gate::denies('proforma_invoice_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-        $ProformaInvoice->load('select_customer','items','created_by','media');
-        return view('admin.ProformaInvoices.show', compact('ProformaInvoice'));
-    }
+    //================================================
+    // SHOW
+    //================================================
+public function show(ProformaInvoice $proformaInvoice)
+{
+    abort_if(Gate::denies('proforma_invoice_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    public function destroy(ProformaInvoice $ProformaInvoice)
+    $proformaInvoice->load([
+        'select_customer',
+        'items' => function ($q) {
+            $q->withPivot([
+                'description','qty','unit','price',
+                'discount_type','discount',
+                'tax_type','tax','amount',
+                'created_by_id','json_data'
+            ]);
+        },
+        'created_by',
+        'main_cost_center',
+        'sub_cost_center',
+        'media',
+    ]);
+
+    return view('admin.ProformaInvoices.show', compact('proformaInvoice'));
+}
+
+
+    //================================================
+    // DESTROY
+    //================================================
+    public function destroy(ProformaInvoice $proformaInvoice)
     {
         abort_if(Gate::denies('proforma_invoice_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-        // reverse stock before delete
-        DB::transaction(function() use ($ProformaInvoice){
-            $this->reverseChallanEffects($ProformaInvoice);
-            $ProformaInvoice->items()->detach();
-            $ProformaInvoice->delete();
+
+        DB::transaction(function() use ($proformaInvoice){
+            $this->reverseChallanEffects($proformaInvoice);
+            $proformaInvoice->items()->detach();
+            $proformaInvoice->delete();
         });
-        return back()->with('success', 'Delivery Challan deleted & stock restored.');
+
+        return back()->with('success', 'Proforma Invoice deleted & stock restored.');
     }
 
-    public function pdf(ProformaInvoice $ProformaInvoice)
+    //================================================
+    // PDF
+    //================================================
+    public function pdf(ProformaInvoice $proformaInvoice)
     {
         $bankDetails = BankAccount::where('print_bank_details', 1)->get();
         $terms       = TermAndCondition::where('status', 'active')->get();
 
-        $ProformaInvoice->load([
+        $proformaInvoice->load([
             'select_customer',
             'items' => function ($query) {
                 $query->withPivot([
@@ -705,8 +719,8 @@ class ProformaInvoiceController extends Controller
         $company = $user->select_companies()->first();
         $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
 
-        return view('admin.ProformaInvoices.pdf', compact('ProformaInvoice','bankDetails','terms','company','logoUrl'));
+        return view('admin.ProformaInvoices.pdf', compact(
+            'proformaInvoice','bankDetails','terms','company','logoUrl'
+        ));
     }
 }
-
-

@@ -17,51 +17,66 @@ class ProformaInvoice extends Model implements HasMedia
 {
     use SoftDeletes, MultiTenantModelTrait, InteractsWithMedia, Auditable, HasFactory;
 
-    public $table = 'proforma_invoices';
+    protected $table = 'proforma_invoices';
+
+    protected $dates = [
+        'po_date',
+        'due_date',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
 
     protected $appends = [
         'image',
         'document',
     ];
 
-    protected $dates = [
-        'po_date',
-        'created_at',
-        'updated_at',
-        'deleted_at',
-    ];
-
+    // ----------------------------------------------------------------------
+    // FILLABLE FIELDS
+    // ----------------------------------------------------------------------
     protected $fillable = [
+        'delivery_challan_number',
+        'payment_type',
         'select_customer_id',
-        'billing_name',
-        'phone_number',
+
+        'po_no',
+        'docket_no',
+        'po_date',
+        'due_date',
         'e_way_bill_no',
+
+        'phone_number',
         'billing_address',
         'shipping_address',
-        'po_no',
-        'po_date',
-        'qty',
-        'description',
-        'created_at',
-        'updated_at',
-        'deleted_at',
+
+        'notes',
+        'terms',
+
+        // BILL CALC
+        'overall_discount',
+        'subtotal',
+        'tax',
+        'discount',
+        'total',
+
+        'status',
+
+        // COST CENTERS
+        'main_cost_centers_id',
+        'sub_cost_centers_id',
+
+        // FOR AUDIT & MISC
+        'json_data',
         'created_by_id',
     ];
 
+    // ----------------------------------------------------------------------
+    // ACCESSORS + MUTATORS
+    // ----------------------------------------------------------------------
     protected function serializeDate(DateTimeInterface $date)
     {
         return $date->format('Y-m-d H:i:s');
-    }
-
-    public function registerMediaConversions(Media $media = null): void
-    {
-        $this->addMediaConversion('thumb')->fit('crop', 50, 50);
-        $this->addMediaConversion('preview')->fit('crop', 120, 120);
-    }
-
-    public function select_customer()
-    {
-        return $this->belongsTo(PartyDetail::class, 'select_customer_id');
     }
 
     public function getPoDateAttribute($value)
@@ -71,13 +86,56 @@ class ProformaInvoice extends Model implements HasMedia
 
     public function setPoDateAttribute($value)
     {
-        $this->attributes['po_date'] = $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
+        $this->attributes['po_date'] = $value
+            ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d')
+            : null;
+    }
+
+    // ----------------------------------------------------------------------
+    // RELATIONSHIPS
+    // ----------------------------------------------------------------------
+
+    public function select_customer()
+    {
+        return $this->belongsTo(PartyDetail::class, 'select_customer_id');
+    }
+
+    public function created_by()
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    public function main_cost_center()
+    {
+        return $this->belongsTo(MainCostCenter::class, 'main_cost_center_id');
+    }
+
+    public function sub_cost_center()
+    {
+        return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
     }
 
     public function items()
     {
-        return $this->belongsToMany(AddItem::class);
+        return $this->belongsToMany(AddItem::class)
+            ->withPivot([
+                'description',
+                'qty',
+                'unit',
+                'price',
+                'discount_type',
+                'discount',
+                'tax_type',
+                'tax',
+                'amount',
+                'created_by_id',
+                'json_data',
+            ]);
     }
+
+    // ----------------------------------------------------------------------
+    // MEDIA
+    // ----------------------------------------------------------------------
 
     public function getImageAttribute()
     {
@@ -87,7 +145,6 @@ class ProformaInvoice extends Model implements HasMedia
             $file->thumbnail = $file->getUrl('thumb');
             $file->preview   = $file->getUrl('preview');
         }
-
         return $file;
     }
 
@@ -96,8 +153,9 @@ class ProformaInvoice extends Model implements HasMedia
         return $this->getMedia('document')->last();
     }
 
-    public function created_by()
+    public function registerMediaConversions(Media $media = null): void
     {
-        return $this->belongsTo(User::class, 'created_by_id');
+        $this->addMediaConversion('thumb')->fit('crop', 50, 50);
+        $this->addMediaConversion('preview')->fit('crop', 120, 120);
     }
 }
