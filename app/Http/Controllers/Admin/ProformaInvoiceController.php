@@ -90,7 +90,7 @@ class ProformaInvoiceController extends Controller
                 ->latest()->paginate(10);
         }
 
-        return view('admin.ProformaInvoices.index', compact('challans'));
+        return view('admin.proformaInvoices.index', compact('challans'));
     }
 
     //================================================
