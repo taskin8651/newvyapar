@@ -16,6 +16,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class CashInHand extends Model implements HasMedia
 {
     use SoftDeletes, MultiTenantModelTrait, InteractsWithMedia, Auditable, HasFactory;
+    
+    public const ADJUSTMENT_SELECT = [
+        'increase' => 'Increase',
+        'decrease' => 'Decrease',
+    ];
 
     public $table = 'cash_in_hands';
 
@@ -31,19 +36,24 @@ class CashInHand extends Model implements HasMedia
     ];
 
 
-    protected $fillable = [
-        'account_name',
-        'opening_balance',
-        'as_of_date',
-        'account_number',
-        'ifsc_code',
-        'bank_name',
-        'account_holder_name',
-        'created_at',
-        'updated_at',
-        'deleted_at',
-        'created_by_id',
-    ];
+   protected $fillable = [
+    'account_name',
+    'opening_balance',
+    'as_of_date',
+    'account_number',
+    'ifsc_code',
+    'bank_name',
+    'account_holder_name',
+    'adjustment',            // ADD THIS
+    'enter_amount',          // ADD THIS
+    'adjustment_date',       // ADD THIS
+    'description',           // ADD THIS
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'created_by_id',
+];
+
 
     protected function serializeDate(DateTimeInterface $date)
     {

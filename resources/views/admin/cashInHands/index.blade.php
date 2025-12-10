@@ -35,15 +35,16 @@
                                 {{ trans('cruds.cashInHand.fields.id') }}
                             </th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                {{ trans('cruds.cashInHand.fields.adjustment') }}
+                                Account Name
                             </th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                 {{ trans('cruds.cashInHand.fields.enter_amount') }}
                             </th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                {{ trans('cruds.cashInHand.fields.adjustment_date') }}
+                                As of Date
                             </th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account Number</th>
+                            
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
