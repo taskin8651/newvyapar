@@ -139,7 +139,7 @@
                         </div>
 
                         <div class="flex flex-col">
-                            <label for="due_date" class="mb-1 font-semibold"> Bill Date</label>
+                            <label for="due_date" class="mb-1 font-semibold"> Valid Date</label>
                             <input type="date" id="due_date" name="due_date" class="w-full rounded-md border px-3 py-2" value="{{ date('Y-m-d') }}">
                         </div>
                     </div>
