@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\PurchaseBillController;
 use App\Http\Controllers\Admin\CurrentStocksController;
+use App\Http\Controllers\Admin\EstimateQuotationController;
 use App\Http\Controllers\Admin\TermAndConditionController;
 use App\Http\Controllers\Admin\PaymentInController;
 use App\Http\Controllers\Admin\StockHistoryController;
@@ -111,6 +112,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('sale-invoices/{sale_invoice}/pdf', [App\Http\Controllers\Admin\SaleInvoiceController::class, 'pdf'])->name('sale-invoices.pdf');
 
     // Estimate Quotation
+    Route::get('estimate-quotations/{estimateQuotation}/invoice', 
+    [EstimateQuotationController::class, 'pdf'])
+    ->name('estimate-quotations.invoice');
+
     Route::delete('estimate-quotations/destroy', 'EstimateQuotationController@massDestroy')->name('estimate-quotations.massDestroy');
     Route::post('estimate-quotations/media', 'EstimateQuotationController@storeMedia')->name('estimate-quotations.storeMedia');
     Route::post('estimate-quotations/ckmedia', 'EstimateQuotationController@storeCKEditorImages')->name('estimate-quotations.storeCKEditorImages');

@@ -116,6 +116,13 @@
                                         </button>
                                     </form>
                                 @endcan
+                                @can('estimate_quotation_show')
+                                    <a href="{{ route('admin.estimate-quotations.invoice', $estimateQuotation->id) }}" 
+                                    class="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </a>
+                                @endcan
+
                             </td>
                         </tr>
                     @endforeach

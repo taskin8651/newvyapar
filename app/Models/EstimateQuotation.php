@@ -33,7 +33,7 @@ class EstimateQuotation extends Model implements HasMedia
 
     protected $fillable = [
         'select_customer_id',
-        'billing_name',
+        'estimate_quotations_number',
         'phone_number',
         'e_way_bill_no',
         'billing_address',
@@ -41,11 +41,25 @@ class EstimateQuotation extends Model implements HasMedia
         'po_no',
         'po_date',
         'qty',
+        'due_date',
         'description',
         'created_at',
         'updated_at',
         'deleted_at',
         'created_by_id',
+        'updated_by_id',
+        'main_cost_centers_id',
+        'sub_cost_centers_id',
+        'docket_no',
+        'customer_phone_invoice',
+        'notes',
+        'terms_conditions',
+        'overall_discount',
+        'payment_type',
+        'subtotal',
+        'tax',
+        'total',
+        'discount',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
