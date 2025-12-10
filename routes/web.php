@@ -142,7 +142,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('proforma-invoices/ckmedia', 'ProformaInvoiceController@storeCKEditorImages')->name('proforma-invoices.storeCKEditorImages');
     Route::post('proforma-invoices/parse-csv-import', 'ProformaInvoiceController@parseCsvImport')->name('proforma-invoices.parseCsvImport');
     Route::post('proforma-invoices/process-csv-import', 'ProformaInvoiceController@processCsvImport')->name('proforma-invoices.processCsvImport');
-    Route::resource('main-invoices', 'ProformaInvoiceController');
+    Route::resource('proforma-invoices', 'ProformaInvoiceController');
         // 🔹 Convert Proforma/Challan -> Sale Invoice
     Route::post('proforma-invoices/{proformaInvoice}/convert-to-sale', 
         [ProformaInvoiceController::class, 'convertToSale']
