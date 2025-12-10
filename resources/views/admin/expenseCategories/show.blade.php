@@ -34,12 +34,15 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th>
-                                        {{ trans('cruds.expenseCategory.fields.type') }}
-                                    </th>
-                                    <td>
-                                        {{ App\Models\ExpenseCategory::TYPE_SELECT[$expenseCategory->type] ?? '' }}
-                                    </td>
+                                   <tr>
+                                        <th>
+                                            {{ trans('cruds.expenseCategory.fields.type') }}
+                                        </th>
+                                        <td>
+                                            {{ App\Models\ExpenseCategory::CATEGORY_TYPE_SELECT[$expenseCategory->category_type] ?? '' }}
+                                        </td>
+                                    </tr>
+
                                 </tr>
                             </tbody>
                         </table>
