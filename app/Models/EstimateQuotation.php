@@ -73,6 +73,7 @@ class EstimateQuotation extends Model implements HasMedia
         $this->addMediaConversion('preview')->fit('crop', 120, 120);
     }
 
+
     public function select_customer()
     {
         return $this->belongsTo(PartyDetail::class, 'select_customer_id');
@@ -88,10 +89,13 @@ class EstimateQuotation extends Model implements HasMedia
         $this->attributes['po_date'] = $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
     }
 
-    public function items()
-    {
-        return $this->belongsToMany(AddItem::class);
-    }
+public function items()
+{
+    return $this->belongsToMany(AddItem::class)
+        ->withPivot(['qty', 'price', 'tax', 'amount', 'json_data'])
+        ->withTimestamps();
+}
+
 
     public function getImageAttribute()
     {

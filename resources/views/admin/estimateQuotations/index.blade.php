@@ -50,14 +50,11 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.gstin') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.phone_number') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.partyDetail.fields.pan_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.billing_name') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.phone_number') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.e_way_bill_no') }}</th>
+
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.po_no') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.po_date') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.item') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.qty') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.image') }}</th>
+
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ trans('cruds.estimateQuotation.fields.document') }}</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{{ trans('global.actions') }}</th>
                     </tr>
@@ -71,24 +68,18 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->select_customer->gstin ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->select_customer->phone_number ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->select_customer->pan_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->billing_name ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->phone_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->e_way_bill_no ?? '' }}</td>
+
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->po_no ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->po_date ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 @foreach($estimateQuotation->items as $item)
-                                    <span class="inline-block bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded">{{ $item->item_name }}</span>
+                                    <div class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded mb-1 inline-block">
+                                        {{ $item->item_name }}: <strong>{{ $item->pivot->qty }}</strong>
+                                    </div>
                                 @endforeach
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $estimateQuotation->qty ?? '' }}</td>
-                            <td class="px-4 py-3">
-                                @if($estimateQuotation->image)
-                                    <a href="{{ $estimateQuotation->image->getUrl() }}" target="_blank" class="inline-block">
-                                        <img src="{{ $estimateQuotation->image->getUrl('thumb') }}" class="h-10 w-10 rounded border">
-                                    </a>
-                                @endif
-                            </td>
+
+
                             <td class="px-4 py-3">
                                 @if($estimateQuotation->document)
                                     <a href="{{ $estimateQuotation->document->getUrl() }}" target="_blank" class="text-blue-600 hover:underline">

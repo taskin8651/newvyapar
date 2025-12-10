@@ -465,5 +465,141 @@ class EstimateQuotationController extends Controller
 
         return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
+public function convert(Request $request, EstimateQuotation $estimate)
+{
+    abort_if(Gate::denies('estimate_quotation_show'), 403);
+
+    if ($estimate->status === 'converted') {
+        return back()->with('info', 'Already converted to Sale.');
+    }
+
+    return DB::transaction(function () use ($estimate) {
+
+        // CREATE SALE INVOICE NUMBER
+        $sale_no = 'SI-' . now()->format('YmdHis') . rand(100, 999);
+
+        // CREATE SALE INVOICE
+        $invoice = \App\Models\SaleInvoice::create([
+            'sale_invoice_number' => $sale_no,
+            'payment_type'        => $estimate->payment_type,
+            'select_customer_id'  => $estimate->select_customer_id,
+            'po_no'               => $estimate->po_no,
+            'po_date'             => $estimate->po_date,
+            'due_date'            => $estimate->due_date,
+            'billing_address'     => $estimate->billing_address,
+            'shipping_address'    => $estimate->shipping_address,
+            'subtotal'            => $estimate->subtotal,
+            'tax'                 => $estimate->tax,
+            'discount'            => $estimate->discount,
+            'overall_discount'    => $estimate->overall_discount,
+            'total'               => $estimate->total,
+            'status'              => 'converted from estimate',
+
+            // COST CENTER FIXED
+            'main_cost_center_id' => $estimate->main_cost_centers_id,
+            'sub_cost_center_id'  => $estimate->sub_cost_centers_id,
+
+            'created_by_id'       => auth()->id(),
+
+            // ⭐⭐⭐ FIXED HERE — JSON ENCODE REQUIRED ⭐⭐⭐
+            'json_data'           => json_encode($estimate->toArray(), JSON_UNESCAPED_UNICODE),
+        ]);
+
+        // ATTACH ITEMS & REDUCE STOCK
+        foreach ($estimate->items as $it) {
+
+            $invoice->items()->attach($it->id, [
+                'qty'           => $it->pivot->qty,
+                'unit'          => $it->pivot->unit,
+                'price'         => $it->pivot->price,
+                'discount'      => $it->pivot->discount,
+                'tax'           => $it->pivot->tax,
+                'tax_type'      => $it->pivot->tax_type,
+                'amount'        => $it->pivot->amount,
+                'created_by_id' => auth()->id(),
+            ]);
+
+            // STOCK REDUCE (CurrentStock table)
+            if ($it->item_type === 'product') {
+
+                // Fetch latest stock row for this item
+                $currentStock = \App\Models\CurrentStock::where('item_id', $it->id)
+                    ->latest()
+                    ->first();
+
+                if ($currentStock) {
+                    // Reduce qty
+                    $currentStock->qty = ($currentStock->qty ?? 0) - $it->pivot->qty;
+
+                    // Prevent negative stock just in case
+                    if ($currentStock->qty < 0) {
+                        $currentStock->qty = 0;
+                    }
+
+                    $currentStock->save();
+                } else {
+                    // If no stock record exists → create one with negative qty (optional)
+                    \App\Models\CurrentStock::create([
+                        'user_id'       => auth()->id(),
+                        'created_by_id' => auth()->id(),
+                        'item_id'       => $it->id,
+                        'qty'           => 0 - $it->pivot->qty,
+                        'type'          => 'Sale Minus',
+                        'product_type'  => 'product',
+                        'json_data'     => json_encode(['source' => 'estimate convert'], JSON_UNESCAPED_UNICODE),
+                    ]);
+                }
+            }
+
+        }
+
+        // UPDATE CUSTOMER BALANCE
+        $customer = PartyDetail::find($estimate->select_customer_id);
+
+        if ($customer) {
+            $customer->current_balance =
+                ($customer->current_balance ?? 0) + $estimate->total;
+
+            $customer->save();
+        }
+
+        // UPDATE ESTIMATE STATUS
+        $estimate->update([
+            'status' => 'converted',
+            'converted_sale_invoice_id' => $invoice->id
+        ]);
+
+        return redirect()
+            ->route('admin.sale-invoices.edit', $invoice->id)
+            ->with('success', 'Estimate Converted to Sale Invoice.');
+    });
+}
+
+
+public function cancel(EstimateQuotation $estimateQuotation)
+{
+    if ($estimateQuotation->status === 'converted') {
+        return back()->with('error', 'Converted estimate cannot be cancelled.');
+    }
+
+    $estimateQuotation->update([
+        'status' => 'cancelled'
+    ]);
+
+    return back()->with('success', 'Estimate cancelled.');
+}
+public function updateDate(Request $request, EstimateQuotation $estimateQuotation)
+{
+    $request->validate([
+        'due_date' => 'required|date'
+    ]);
+
+    $estimateQuotation->update([
+        'due_date' => $request->due_date
+    ]);
+
+    return back()->with('success', 'Valid date updated.');
+}
+
 }
 
