@@ -325,9 +325,9 @@ body.dark .control-select, body.dark .control-btn { background:#0b1220; color:#e
           <th style="width:10%;">HSN</th>
           <th style="width:30%;">Description</th>
           <th style="width:8%;">Qty</th>
-          <th style="width:8%;">Rate</th>
+          <th style="width:15%;">Rate</th>
           <th style="width:8%;">Tax</th>
-          <th style="width:8%;">Amount</th>
+          <th style="width:15%;">Amount</th>
         </tr>
       </thead>
       <tbody id="itemsBody">
@@ -489,22 +489,40 @@ profitToggle.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.ke
 ----------------------------*/
 (function generatePreviewCodes(){
   try {
-    const ref = {!! json_encode($estimateQuotation->estimate_quotations_number ?? $estimateQuotation->po_no ?? 'EST-000') !!};
-    // clear previous
+    const qrUrl = "{{ url('/invoice/' . $estimateQuotation->id . '/pdf') }}";
+
+    // ----- BARCODE -----
     const svg = document.getElementById('barcode');
     while(svg.firstChild) svg.removeChild(svg.firstChild);
     if(window.JsBarcode) {
-      JsBarcode(svg, String(ref), { format:'code128', width:1.6, height:40, displayValue:false, margin:4, lineColor:'#000' });
+      JsBarcode(svg, String("{{ $estimateQuotation->estimate_quotations_number }}"), {
+        format:'code128',
+        width:1.6,
+        height:40,
+        displayValue:false,
+        margin:4,
+        lineColor:'#000'
+      });
     }
+
+    // ----- QR CODE -----
     const qrEl = document.getElementById('qrcode');
     qrEl.innerHTML = '';
     if(window.QRCode) {
-      new QRCode(qrEl, { text:String(ref), width:64, height:64, colorDark:'#000', colorLight:'#fff' });
+      new QRCode(qrEl, {
+        text: qrUrl,
+        width: 64,
+        height: 64,
+        colorDark: '#000',
+        colorLight: '#fff'
+      });
     }
+
   } catch(err) {
     console.error('preview code error', err);
   }
 })();
+
 
 /* ---------------------------
    Print flow with pagination
