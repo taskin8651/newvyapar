@@ -53,13 +53,15 @@ class EstimateQuotation extends Model implements HasMedia
         'docket_no',
         'customer_phone_invoice',
         'notes',
-        'terms_conditions',
+        'terms',
         'overall_discount',
         'payment_type',
         'subtotal',
         'tax',
         'total',
         'discount',
+        'status',
+        'converted_sale_invoice_id',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
