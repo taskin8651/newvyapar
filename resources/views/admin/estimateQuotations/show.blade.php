@@ -37,6 +37,12 @@
         from { transform: scale(0.85); opacity: 0; }
         to { transform: scale(1); opacity: 1; }
     }
+
+    #dateModal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    }
 </style>
 
 
