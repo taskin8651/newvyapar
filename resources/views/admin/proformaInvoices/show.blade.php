@@ -276,24 +276,24 @@ $c = $proformaInvoice->select_customer;
         </div>
 
         <!-- DELIVERY -->
-        <div class="section">
-            <div class="label-title">Delivery Details</div>
+            {{-- <div class="section">
+                <div class="label-title">Delivery Details</div>
 
-            <table class="table">
-                <tr>
-                    <td>Mode of Transport</td>
-                    <td>{{ $proformaInvoice->json_data['transport_mode'] ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td>Vehicle Number</td>
-                    <td>{{ $proformaInvoice->json_data['vehicle_number'] ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td>Transporter</td>
-                    <td>{{ $proformaInvoice->json_data['transporter_name'] ?? '-' }}</td>
-                </tr>
-            </table>
-        </div>
+                <table class="table">
+                    <tr>
+                        <td>Mode of Transport</td>
+                        <td>{{ $proformaInvoice->json_data['transport_mode'] ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Vehicle Number</td>
+                        <td>{{ $proformaInvoice->json_data['vehicle_number'] ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Transporter</td>
+                        <td>{{ $proformaInvoice->json_data['transporter_name'] ?? '-' }}</td>
+                    </tr>
+                </table>
+            </div> --}}
 
         <!-- ITEMS -->
         <div class="section">
@@ -371,20 +371,47 @@ $c = $proformaInvoice->select_customer;
             </table>
         </div>
 
-
         <!-- TOTALS -->
         <div class="section grid grid-cols-2 gap-6">
 
             <div>
-                <div class="label-title">Payment Terms</div>
-                <div class="box">
-                    {!! nl2br(e($proformaInvoice->terms ?? 'Payment due within 7 days.')) !!}
-                </div>
+               
+                    @if($bankDetails->count())
+                    <div class="section">
+                        <div class="label-title">Bank Details</div>
 
-                <div class="label-title mt-3">Reverse Charge</div>
-                <div class="box">
-                    {{ $proformaInvoice->json_data['reverse_charge'] ?? 'No' }}
-                </div>
+                        @foreach($bankDetails as $bank)
+                        <div style="display: flex">
+                            <div class="box mb-3">
+                                <p><b>Bank:</b> {{ $bank->bank_name }}</p>
+                                <p><b>Account No:</b> {{ $bank->account_number }}</p>
+                                <p><b>IFSC:</b> {{ $bank->ifsc_code }}</p>
+                                <p><b>Branch:</b> {{ $bank->branch_name }}</p>
+
+
+                            </div>
+                            <div>
+                                {{-- =====================
+                                    UPI QR CODE
+                                ====================== --}}
+                                @if($bank->print_upi_qr)
+                                    @php
+                                        $upiQr = $bank->getFirstMediaUrl('upi_qr');
+                                    @endphp
+
+                                    @if($upiQr)
+                                        <div class="mt-2">
+                                            <img src="{{ $upiQr }}" style="height:120px">
+                                            <p class="text-xs text-gray-600">Scan & Pay (UPI)</p>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @endif
+
             </div>
 
 
@@ -429,15 +456,22 @@ $c = $proformaInvoice->select_customer;
 
         <!-- E-INVOICE JSON -->
         <div class="section">
-            <div class="label-title">E-Invoice JSON</div>
+            <div class="label-title">Terms & Conditions</div>
 
             <pre class="box" style="white-space:pre-wrap">
-{{ json_encode([
-    "InvoiceNo" => $proformaInvoice->delivery_challan_number,
-    "InvoiceDate" => $proformaInvoice->created_at?->format('Y-m-d'),
-    "BuyerGST" => $c?->gstin,
-    "Total" => $proformaInvoice->total,
-], JSON_PRETTY_PRINT) }}
+            @if($terms->count())
+            <div class="section">
+                
+                <div class="box text-xs">
+                    <ul class="list-disc ml-4">
+                        @foreach($terms as $term)
+                            <li>{!! nl2br(e($term->description)) !!}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            @endif
+
             </pre>
         </div>
 

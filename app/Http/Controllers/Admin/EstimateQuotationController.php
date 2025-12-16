@@ -467,6 +467,7 @@ class EstimateQuotationController extends Controller
     }
 public function convert(Request $request, EstimateQuotation $estimate)
 {
+    
     abort_if(Gate::denies('estimate_quotation_show'), 403);
 
     // ensure status exists
