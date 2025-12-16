@@ -38,54 +38,43 @@ class ExpenseListController extends Controller
         return view('admin.expenseLists.index', compact('expenseLists'));
     }
 
-    public function create()
-    {
-        abort_if(Gate::denies('expense_list_create'), Response::HTTP_FORBIDDEN);
+public function create()
+{
+    abort_if(Gate::denies('expense_list_create'), Response::HTTP_FORBIDDEN);
 
-        $allowedUserIds = $this->getCompanyAllowedUserIds();
+    $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        // 🔹 Ledgers
-        $ledgers = Ledger::with('expense_category')
-            ->whereIn('created_by_id', $allowedUserIds)
-            ->get();
+    // 🔹 Ledgers
+    $ledgers = Ledger::with('expense_category')
+        ->whereIn('created_by_id', $allowedUserIds)
+        ->get();
 
-        // 🔹 Bank Accounts
-        $bankAccounts = BankAccount::whereIn('created_by_id', $allowedUserIds)
-            ->select('id', 'bank_name as name')
-            ->get();
+    // 🔹 Bank Accounts ONLY
+    $accounts = BankAccount::whereIn('created_by_id', $allowedUserIds)
+        ->select('id', 'bank_name as name', 'opening_balance')
+        ->get()
+        ->map(fn ($b) => [
+            'id' => 'bank_' . $b->id,
+            'name' => $b->name,
+            'opening_balance' => $b->opening_balance,
+        ]);
 
-        // 🔹 Cash In Hand
-        $cashInHands = CashInHand::whereIn('created_by_id', $allowedUserIds)
-            ->select('id', 'account_name as name')
-            ->get();
+    // 🔹 Cost Centers
+    $mainCostCenters = MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        // 🔹 Merge Bank + Cash
-        $accounts = $bankAccounts->map(fn ($b) => [
-            'id'   => 'bank_' . $b->id,
-            'name' => $b->name . ' (Bank)',
-        ])->merge(
-            $cashInHands->map(fn ($c) => [
-                'id'   => 'cash_' . $c->id,
-                'name' => $c->name . ' (Cash)',
-            ])
-        );
+    $subCostCenters = SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+        ->pluck('sub_cost_center_name', 'id')
+        ->prepend(trans('global.pleaseSelect'), '');
 
-        // 🔹 Cost Centers
-        $mainCostCenters = MainCostCenter::whereIn('created_by_id', $allowedUserIds)
-            ->pluck('cost_center_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-
-        $subCostCenters = SubCostCenter::whereIn('created_by_id', $allowedUserIds)
-            ->pluck('sub_cost_center_name', 'id')
-            ->prepend(trans('global.pleaseSelect'), '');
-
-        return view('admin.expenseLists.create', compact(
-            'ledgers',
-            'accounts',
-            'mainCostCenters',
-            'subCostCenters'
-        ));
-    }
+    return view('admin.expenseLists.create', compact(
+        'ledgers',
+        'accounts',
+        'mainCostCenters',
+        'subCostCenters'
+    ));
+}
 
     public function store(StoreExpenseListRequest $request)
     {
