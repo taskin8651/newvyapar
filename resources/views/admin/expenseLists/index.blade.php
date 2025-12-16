@@ -93,7 +93,8 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->category->expense_category ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 @if($expenseList->category)
-                                    {{ $expenseList->category::TYPE_SELECT[$expenseList->category->type] ?? '' }}
+                                   {{ \App\Models\ExpenseCategory::CATEGORY_TYPE_SELECT[$expenseList->category->category_type] ?? '' }}
+
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->amount ?? '' }}</td>

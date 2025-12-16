@@ -106,9 +106,10 @@ class ExpenseList extends Model implements HasMedia
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
-    public function category()
+   public function category()
 {
-    return $this->belongsTo(Ledger::class, 'category_id');
+    return $this->belongsTo(\App\Models\ExpenseCategory::class, 'category_id');
 }
+
 
 }

@@ -2,164 +2,145 @@
 @section('content')
 <div class="content">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    {{ trans('global.edit') }} {{ trans('cruds.expenseList.title_singular') }}
-                </div>
-                <div class="panel-body">
-                    <form method="POST" action="{{ route("admin.expense-lists.update", [$expenseList->id]) }}" enctype="multipart/form-data">
-                        @method('PUT')
-                        @csrf
-                        <div class="form-group {{ $errors->has('entry_date') ? 'has-error' : '' }}">
-                            <label class="required" for="entry_date">{{ trans('cruds.expenseList.fields.entry_date') }}</label>
-                            <input class="form-control date" type="text" name="entry_date" id="entry_date" value="{{ old('entry_date', $expenseList->entry_date) }}" required>
-                            @if($errors->has('entry_date'))
-                                <span class="help-block" role="alert">{{ $errors->first('entry_date') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.entry_date_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('category') ? 'has-error' : '' }}">
-                            <label for="category_id">{{ trans('cruds.expenseList.fields.category') }}</label>
-                            <select class="form-control select2" name="category_id" id="category_id">
-                                @foreach($categories as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('category_id') ? old('category_id') : $expenseList->category->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('category'))
-                                <span class="help-block" role="alert">{{ $errors->first('category') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.category_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('amount') ? 'has-error' : '' }}">
-                            <label class="required" for="amount">{{ trans('cruds.expenseList.fields.amount') }}</label>
-                            <input class="form-control" type="number" name="amount" id="amount" value="{{ old('amount', $expenseList->amount) }}" step="0.01" required>
-                            @if($errors->has('amount'))
-                                <span class="help-block" role="alert">{{ $errors->first('amount') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.amount_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('description') ? 'has-error' : '' }}">
-                            <label for="description">{{ trans('cruds.expenseList.fields.description') }}</label>
-                            <input class="form-control" type="text" name="description" id="description" value="{{ old('description', $expenseList->description) }}">
-                            @if($errors->has('description'))
-                                <span class="help-block" role="alert">{{ $errors->first('description') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.description_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('payment') ? 'has-error' : '' }}">
-                            <label for="payment_id">{{ trans('cruds.expenseList.fields.payment') }}</label>
-                            <select class="form-control select2" name="payment_id" id="payment_id">
-                                @foreach($payments as $id => $entry)
-                                    <option value="{{ $id }}" {{ (old('payment_id') ? old('payment_id') : $expenseList->payment->id ?? '') == $id ? 'selected' : '' }}>{{ $entry }}</option>
-                                @endforeach
-                            </select>
-                            @if($errors->has('payment'))
-                                <span class="help-block" role="alert">{{ $errors->first('payment') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.payment_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('tax_include') ? 'has-error' : '' }}">
-                            <label>{{ trans('cruds.expenseList.fields.tax_include') }}</label>
-                            @foreach(App\Models\ExpenseList::TAX_INCLUDE_RADIO as $key => $label)
-                                <div>
-                                    <input type="radio" id="tax_include_{{ $key }}" name="tax_include" value="{{ $key }}" {{ old('tax_include', $expenseList->tax_include) === (string) $key ? 'checked' : '' }}>
-                                    <label for="tax_include_{{ $key }}" style="font-weight: 400">{{ $label }}</label>
-                                </div>
+    <div class="p-6 max-w-5xl mx-auto">
+
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="{{ route('admin.expense-lists.index') }}"
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                {{ trans('global.back_to_list') }}
+            </a>
+        </div>
+
+        <!-- Edit Expense List Card -->
+        <div class="bg-white shadow-lg rounded-xl p-6 text-sm">
+
+            <h2 class="text-2xl font-bold mb-6 text-blue-600">
+                {{ trans('global.edit') }} {{ trans('cruds.expenseList.title_singular') }}
+            </h2>
+
+            <form method="POST"
+                  action="{{ route('admin.expense-lists.update', $expenseList->id) }}"
+                  enctype="multipart/form-data">
+                @method('PUT')
+                @csrf
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {{-- Entry Date --}}
+                    <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                        <label class="block font-semibold mb-1 required">
+                            {{ trans('cruds.expenseList.fields.entry_date') }}
+                        </label>
+                        <input type="text"
+                               name="entry_date"
+                               value="{{ old('entry_date', $expenseList->entry_date) }}"
+                               required
+                               class="w-full p-2 border rounded-md date focus:ring focus:ring-blue-200">
+                        @error('entry_date')
+                            <span class="text-red-600 text-xs">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- Category --}}
+                    <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                        <label class="block font-semibold mb-1">
+                            {{ trans('cruds.expenseList.fields.category') }}
+                        </label>
+                        <select name="category_id"
+                                class="w-full p-2 border rounded-md select2 focus:ring focus:ring-green-200">
+                            @foreach($categories as $id => $entry)
+                                <option value="{{ $id }}"
+                                    {{ (old('category_id', $expenseList->category->id ?? '') == $id) ? 'selected' : '' }}>
+                                    {{ $entry }}
+                                </option>
                             @endforeach
-                            @if($errors->has('tax_include'))
-                                <span class="help-block" role="alert">{{ $errors->first('tax_include') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.tax_include_helper') }}</span>
-                        </div>
-                        <div class="form-group {{ $errors->has('notes') ? 'has-error' : '' }}">
-                            <label for="notes">{{ trans('cruds.expenseList.fields.notes') }}</label>
-                            <textarea class="form-control ckeditor" name="notes" id="notes">{!! old('notes', $expenseList->notes) !!}</textarea>
-                            @if($errors->has('notes'))
-                                <span class="help-block" role="alert">{{ $errors->first('notes') }}</span>
-                            @endif
-                            <span class="help-block">{{ trans('cruds.expenseList.fields.notes_helper') }}</span>
-                        </div>
-                        <div class="form-group">
-                            <button class="btn btn-danger" type="submit">
-                                {{ trans('global.save') }}
-                            </button>
-                        </div>
-                    </form>
+                        </select>
+                    </div>
+
+                    {{-- Amount --}}
+                    <div class="bg-yellow-50 p-4 rounded-lg shadow-inner">
+                        <label class="block font-semibold mb-1 required">
+                            {{ trans('cruds.expenseList.fields.amount') }}
+                        </label>
+                        <input type="number"
+                               step="0.01"
+                               name="amount"
+                               value="{{ old('amount', $expenseList->amount) }}"
+                               required
+                               class="w-full p-2 border rounded-md focus:ring focus:ring-yellow-200">
+                    </div>
+
+                    {{-- Payment --}}
+                    <div class="bg-purple-50 p-4 rounded-lg shadow-inner">
+                        <label class="block font-semibold mb-1">
+                            {{ trans('cruds.expenseList.fields.payment') }}
+                        </label>
+                        <select name="payment_id"
+                                class="w-full p-2 border rounded-md select2 focus:ring focus:ring-purple-200">
+                            @foreach($payments as $id => $entry)
+                                <option value="{{ $id }}"
+                                    {{ (old('payment_id', $expenseList->payment->id ?? '') == $id) ? 'selected' : '' }}>
+                                    {{ $entry }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Description --}}
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                        <label class="block font-semibold mb-1">
+                            {{ trans('cruds.expenseList.fields.description') }}
+                        </label>
+                        <input type="text"
+                               name="description"
+                               value="{{ old('description', $expenseList->description) }}"
+                               class="w-full p-2 border rounded-md">
+                    </div>
+
+                    {{-- Tax Include --}}
+                    <div class="bg-red-50 p-4 rounded-lg shadow-inner">
+                        <label class="block font-semibold mb-2">
+                            {{ trans('cruds.expenseList.fields.tax_include') }}
+                        </label>
+                        @foreach(App\Models\ExpenseList::TAX_INCLUDE_RADIO as $key => $label)
+                            <label class="flex items-center gap-2 mb-1">
+                                <input type="radio"
+                                       name="tax_include"
+                                       value="{{ $key }}"
+                                       {{ old('tax_include', $expenseList->tax_include) == $key ? 'checked' : '' }}>
+                                <span>{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    {{-- Notes --}}
+                    <div class="bg-indigo-50 p-4 rounded-lg shadow-inner md:col-span-2">
+                        <label class="block font-semibold mb-1">
+                            {{ trans('cruds.expenseList.fields.notes') }}
+                        </label>
+                        <textarea name="notes"
+                                  class="ckeditor w-full p-2 border rounded-md"
+                                  rows="4">{!! old('notes', $expenseList->notes) !!}</textarea>
+                    </div>
+
                 </div>
-            </div>
 
+                <!-- Buttons -->
+                <div class="mt-6 flex gap-3">
+                    <button type="submit"
+                            class="px-6 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">
+                        {{ trans('global.save') }}
+                    </button>
 
+                    <a href="{{ route('admin.expense-lists.index') }}"
+                       class="px-6 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition">
+                        {{ trans('global.back') }}
+                    </a>
+                </div>
 
+            </form>
         </div>
     </div>
 </div>
-@endsection
-
-@section('scripts')
-<script>
-    $(document).ready(function () {
-  function SimpleUploadAdapter(editor) {
-    editor.plugins.get('FileRepository').createUploadAdapter = function(loader) {
-      return {
-        upload: function() {
-          return loader.file
-            .then(function (file) {
-              return new Promise(function(resolve, reject) {
-                // Init request
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '{{ route('admin.expense-lists.storeCKEditorImages') }}', true);
-                xhr.setRequestHeader('x-csrf-token', window._token);
-                xhr.setRequestHeader('Accept', 'application/json');
-                xhr.responseType = 'json';
-
-                // Init listeners
-                var genericErrorText = `Couldn't upload file: ${ file.name }.`;
-                xhr.addEventListener('error', function() { reject(genericErrorText) });
-                xhr.addEventListener('abort', function() { reject() });
-                xhr.addEventListener('load', function() {
-                  var response = xhr.response;
-
-                  if (!response || xhr.status !== 201) {
-                    return reject(response && response.message ? `${genericErrorText}\n${xhr.status} ${response.message}` : `${genericErrorText}\n ${xhr.status} ${xhr.statusText}`);
-                  }
-
-                  $('form').append('<input type="hidden" name="ck-media[]" value="' + response.id + '">');
-
-                  resolve({ default: response.url });
-                });
-
-                if (xhr.upload) {
-                  xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                      loader.uploadTotal = e.total;
-                      loader.uploaded = e.loaded;
-                    }
-                  });
-                }
-
-                // Send request
-                var data = new FormData();
-                data.append('upload', file);
-                data.append('crud_id', '{{ $expenseList->id ?? 0 }}');
-                xhr.send(data);
-              });
-            })
-        }
-      };
-    }
-  }
-
-  var allEditors = document.querySelectorAll('.ckeditor');
-  for (var i = 0; i < allEditors.length; ++i) {
-    ClassicEditor.create(
-      allEditors[i], {
-        extraPlugins: [SimpleUploadAdapter]
-      }
-    );
-  }
-});
-</script>
-
 @endsection

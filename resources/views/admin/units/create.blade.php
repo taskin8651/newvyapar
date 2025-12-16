@@ -1,60 +1,91 @@
 @extends('layouts.admin')
+
 @section('content')
-<div class="content">
+<div class="max-w-5xl mx-auto py-8">
+    <div class="bg-white shadow-lg rounded-2xl p-8">
 
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-default shadow rounded-lg">
-                <div class="panel-heading bg-indigo-600 text-white px-4 py-3 rounded-t-lg">
-                    <h3 class="text-lg font-semibold">
-                        {{ trans('global.create') }} {{ trans('cruds.unit.title_singular') }}
-                    </h3>
-                </div>
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b pb-4 mb-6">
+            <h2 class="text-2xl font-bold text-indigo-600 flex items-center gap-2">
+                <i class="fas fa-balance-scale"></i>
+                {{ trans('global.create') }} {{ trans('cruds.unit.title_singular') }}
+            </h2>
 
-                <div class="panel-body bg-white p-6 rounded-b-lg">
-                    <form method="POST" action="{{ route("admin.units.store") }}" enctype="multipart/form-data" class="space-y-6">
-                        @csrf
-                        
-                        {{-- Base Unit --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-1">
-                                <label for="base_unit" class="block text-sm font-medium text-gray-700">
-                                    {{ trans('cruds.unit.fields.base_unit') }} <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" name="base_unit" id="base_unit" value="{{ old('base_unit', 'none') }}" required
-                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                @if($errors->has('base_unit'))
-                                    <p class="text-red-600 text-xs mt-1">{{ $errors->first('base_unit') }}</p>
-                                @endif
-                                <span class="text-xs text-gray-500">{{ trans('cruds.unit.fields.base_unit_helper') }}</span>
-                            </div>
-
-                            {{-- Secondary Unit --}}
-                            <div class="space-y-1">
-                                <label for="secondary_unit" class="block text-sm font-medium text-gray-700">
-                                    {{ trans('cruds.unit.fields.secondary_unit') }} <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" name="secondary_unit" id="secondary_unit" value="{{ old('secondary_unit', 'none') }}" required
-                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                @if($errors->has('secondary_unit'))
-                                    <p class="text-red-600 text-xs mt-1">{{ $errors->first('secondary_unit') }}</p>
-                                @endif
-                                <span class="text-xs text-gray-500">{{ trans('cruds.unit.fields.secondary_unit_helper') }}</span>
-                            </div>
-                        </div>
-
-                        {{-- Submit --}}
-                        <div class="flex justify-end pt-4">
-                            <button type="submit" 
-                                    class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center gap-2">
-                                <i class="fas fa-save"></i> {{ trans('global.save') }}
-                            </button>
-                        </div>
-
-                    </form>
-                </div>
-            </div>
+            <a href="{{ route('admin.units.index') }}"
+               class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm transition">
+                ← {{ trans('global.back_to_list') }}
+            </a>
         </div>
+
+        <!-- Form -->
+        <form method="POST" action="{{ route('admin.units.store') }}">
+            @csrf
+
+            <!-- Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {{-- Base Unit --}}
+                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <label for="base_unit" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.unit.fields.base_unit') }} <span class="text-red-500">*</span>
+                    </label>
+
+                    <input type="text"
+                           name="base_unit"
+                           id="base_unit"
+                           value="{{ old('base_unit') }}"
+                           required
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm
+                                  focus:border-indigo-500 focus:ring-indigo-500">
+
+                    @error('base_unit')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ trans('cruds.unit.fields.base_unit_helper') }}
+                    </p>
+                </div>
+
+                {{-- Secondary Unit --}}
+                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
+                    <label for="secondary_unit" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ trans('cruds.unit.fields.secondary_unit') }} <span class="text-red-500">*</span>
+                    </label>
+
+                    <input type="text"
+                           name="secondary_unit"
+                           id="secondary_unit"
+                           value="{{ old('secondary_unit') }}"
+                           required
+                           class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 text-sm
+                                  focus:border-indigo-500 focus:ring-indigo-500">
+
+                    @error('secondary_unit')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ trans('cruds.unit.fields.secondary_unit_helper') }}
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-end gap-3 pt-6 border-t mt-6">
+                <a href="{{ route('admin.units.index') }}"
+                   class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-sm hover:bg-gray-200 transition">
+                    {{ trans('global.cancel') }}
+                </a>
+
+                <button type="submit"
+                        class="px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 transition">
+                    <i class="fas fa-save mr-1"></i> {{ trans('global.save') }}
+                </button>
+            </div>
+
+        </form>
     </div>
 </div>
 @endsection
