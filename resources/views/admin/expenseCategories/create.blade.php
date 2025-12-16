@@ -47,7 +47,7 @@
                     <label for="category_type" class="block text-sm font-semibold text-gray-700 mb-1">
                         Category Type <span class="text-red-500">*</span>
                     </label>
-                    <select name="category_type" id="category_type" required
+                    <select name="type" id="category_type" required
                             class="w-full rounded-lg border-gray-300 shadow-sm px-3 py-2 
                                    text-sm focus:border-indigo-500 focus:ring-indigo-500">
                         <option value="" disabled {{ old('category_type') ? '' : 'selected' }}>-- Select Type --</option>

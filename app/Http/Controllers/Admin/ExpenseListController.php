@@ -15,119 +15,153 @@ use App\Models\Ledger;
 use App\Models\MainCostCenter;
 use App\Models\SubCostCenter;
 use App\Models\CashInHand;
+use App\Traits\CompanyScopeTrait;
 use Gate;
 use Illuminate\Http\Request;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\Response;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class ExpenseListController extends Controller
 {
-    use MediaUploadingTrait, CsvImportTrait;
+    use MediaUploadingTrait, CsvImportTrait, CompanyScopeTrait;
 
     public function index()
     {
-        abort_if(Gate::denies('expense_list_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('expense_list_access'), Response::HTTP_FORBIDDEN);
 
-        $expenseLists = ExpenseList::with(['category', 'payment', 'created_by'])->get();
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
+        $expenseLists = ExpenseList::with(['category', 'payment', 'created_by'])
+            ->whereIn('created_by_id', $allowedUserIds)
+            ->get();
 
         return view('admin.expenseLists.index', compact('expenseLists'));
     }
 
-  public function create()
-{
-    abort_if(Gate::denies('expense_list_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    public function create()
+    {
+        abort_if(Gate::denies('expense_list_create'), Response::HTTP_FORBIDDEN);
 
-    // 🔹 Ledger list
-    $ledgers = Ledger::pluck('ledger_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-    // 🔹 Bank Accounts
-    $bankAccounts = BankAccount::select('id', 'bank_name as name')->get();
+        // 🔹 Ledgers
+        $ledgers = Ledger::with('expense_category')
+            ->whereIn('created_by_id', $allowedUserIds)
+            ->get();
 
-    // 🔹 Cash In Hand
-    $cashInHands = CashInHand::select('id', 'account_name as name')->get();
+        // 🔹 Bank Accounts
+        $bankAccounts = BankAccount::whereIn('created_by_id', $allowedUserIds)
+            ->select('id', 'bank_name as name')
+            ->get();
 
-    // 🔹 Merge both (Bank + Cash)
-    $accounts = $bankAccounts->map(function ($item) {
-        return [
-            'id' => 'bank_' . $item->id,
-            'name' => $item->name . ' (Bank)'
-        ];
-    })->merge(
-        $cashInHands->map(function ($item) {
-            return [
-                'id' => 'cash_' . $item->id,
-                'name' => $item->name . ' (Cash)'
-            ];
-        })
-    );
+        // 🔹 Cash In Hand
+        $cashInHands = CashInHand::whereIn('created_by_id', $allowedUserIds)
+            ->select('id', 'account_name as name')
+            ->get();
 
-    // 🔹 Cost Centers
-    $mainCostCenters = MainCostCenter::pluck('cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-    $subCostCenters = SubCostCenter::pluck('sub_cost_center_name', 'id')->prepend(trans('global.pleaseSelect'), '');
+        // 🔹 Merge Bank + Cash
+        $accounts = $bankAccounts->map(fn ($b) => [
+            'id'   => 'bank_' . $b->id,
+            'name' => $b->name . ' (Bank)',
+        ])->merge(
+            $cashInHands->map(fn ($c) => [
+                'id'   => 'cash_' . $c->id,
+                'name' => $c->name . ' (Cash)',
+            ])
+        );
 
-    return view('admin.expenseLists.create', compact(
-        'ledgers',
-        'accounts', // 👈 combined dropdown
-        'mainCostCenters',
-        'subCostCenters'
-    ));
-}
+        // 🔹 Cost Centers
+        $mainCostCenters = MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('cost_center_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
 
+        $subCostCenters = SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('sub_cost_center_name', 'id')
+            ->prepend(trans('global.pleaseSelect'), '');
+
+        return view('admin.expenseLists.create', compact(
+            'ledgers',
+            'accounts',
+            'mainCostCenters',
+            'subCostCenters'
+        ));
+    }
 
     public function store(StoreExpenseListRequest $request)
-{
-    // ✅ Format entry_date correctly
-    if ($request->filled('entry_date')) {
-        try {
-            $request->merge([
-                'entry_date' => \Carbon\Carbon::createFromFormat('Y-m-d', $request->entry_date)->format('Y-m-d')
-            ]);
-        } catch (\Exception $e) {
-            // अगर गलत format आया तो null कर दो ताकि error ना फेंके
-            $request->merge(['entry_date' => null]);
+    {
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
+        $data = $request->all();
+        $data['created_by_id'] = auth()->id();
+
+        // 🔹 Handle combined payment_or_cash
+        if (!empty($data['payment_or_cash'])) {
+
+            // CASH
+            if (str_starts_with($data['payment_or_cash'], 'cash_')) {
+                $cashId = str_replace('cash_', '', $data['payment_or_cash']);
+
+                $cash = CashInHand::whereIn('created_by_id', $allowedUserIds)
+                    ->findOrFail($cashId);
+
+                // 🔻 Minus cash balance
+                $cash->decrement('amount', $data['amount']);
+
+                $data['cash_in_hand_id'] = $cashId;
+                $data['payment_id'] = null;
+            }
+
+            // BANK
+            if (str_starts_with($data['payment_or_cash'], 'bank_')) {
+                $bankId = str_replace('bank_', '', $data['payment_or_cash']);
+
+                $bank = BankAccount::whereIn('created_by_id', $allowedUserIds)
+                    ->findOrFail($bankId);
+
+                // 🔻 Minus opening balance
+                $bank->decrement('opening_balance', $data['amount']);
+
+                $data['payment_id'] = $bankId;
+                $data['cash_in_hand_id'] = null;
+            }
         }
-    }
 
-    // ✅ Handle combined payment_or_cash field
-    $data = $request->all();
-    if (!empty($data['payment_or_cash'])) {
-        // अगर user ने cash चुना है तो cash_in_hand_id assign करो
-        if (str_starts_with($data['payment_or_cash'], 'cash_')) {
-            $data['cash_in_hand_id'] = str_replace('cash_', '', $data['payment_or_cash']);
-            $data['payment_id'] = null;
-        } 
-        // अगर bank चुना है तो payment_id assign करो
-        elseif (str_starts_with($data['payment_or_cash'], 'bank_')) {
-            $data['payment_id'] = str_replace('bank_', '', $data['payment_or_cash']);
-            $data['cash_in_hand_id'] = null;
+        $expenseList = ExpenseList::create($data);
+
+        // 🔹 CKEditor media
+        if ($media = $request->input('ck-media', false)) {
+            Media::whereIn('id', $media)->update(['model_id' => $expenseList->id]);
         }
+
+        return redirect()
+            ->route('admin.expense-lists.index')
+            ->with('success', 'Expense entry created successfully.');
     }
 
-    // ✅ Save record
-    $expenseList = ExpenseList::create($data);
+    public function show(ExpenseList $expenseList)
+    {
+        abort_if(Gate::denies('expense_list_show'), Response::HTTP_FORBIDDEN);
 
-    // ✅ Handle media (ckeditor images)
-    if ($media = $request->input('ck-media', false)) {
-        \Spatie\MediaLibrary\MediaCollections\Models\Media::whereIn('id', $media)
-            ->update(['model_id' => $expenseList->id]);
+        abort_if(
+            ! in_array($expenseList->created_by_id, $this->getCompanyAllowedUserIds()),
+            Response::HTTP_FORBIDDEN
+        );
+
+        $expenseList->load(['category', 'payment', 'created_by']);
+
+        return view('admin.expenseLists.show', compact('expenseList'));
     }
-
-    return redirect()->route('admin.expense-lists.index')
-        ->with('success', 'Expense entry created successfully.');
-}
-
 
     public function edit(ExpenseList $expenseList)
     {
-        abort_if(Gate::denies('expense_list_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('expense_list_edit'), Response::HTTP_FORBIDDEN);
 
-        $categories = ExpenseCategory::pluck('expense_category', 'id')->prepend(trans('global.pleaseSelect'), '');
+        abort_if(
+            ! in_array($expenseList->created_by_id, $this->getCompanyAllowedUserIds()),
+            Response::HTTP_FORBIDDEN
+        );
 
-        $payments = BankAccount::pluck('account_name', 'id')->prepend(trans('global.pleaseSelect'), '');
-
-        $expenseList->load('category', 'payment', 'created_by');
-
-        return view('admin.expenseLists.edit', compact('categories', 'expenseList', 'payments'));
+        return redirect()->route('admin.expense-lists.index');
     }
 
     public function update(UpdateExpenseListRequest $request, ExpenseList $expenseList)
@@ -137,18 +171,14 @@ class ExpenseListController extends Controller
         return redirect()->route('admin.expense-lists.index');
     }
 
-    public function show(ExpenseList $expenseList)
-    {
-        abort_if(Gate::denies('expense_list_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $expenseList->load('category', 'payment', 'created_by');
-
-        return view('admin.expenseLists.show', compact('expenseList'));
-    }
-
     public function destroy(ExpenseList $expenseList)
     {
-        abort_if(Gate::denies('expense_list_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('expense_list_delete'), Response::HTTP_FORBIDDEN);
+
+        abort_if(
+            ! in_array($expenseList->created_by_id, $this->getCompanyAllowedUserIds()),
+            Response::HTTP_FORBIDDEN
+        );
 
         $expenseList->delete();
 
@@ -157,24 +187,8 @@ class ExpenseListController extends Controller
 
     public function massDestroy(MassDestroyExpenseListRequest $request)
     {
-        $expenseLists = ExpenseList::find(request('ids'));
-
-        foreach ($expenseLists as $expenseList) {
-            $expenseList->delete();
-        }
+        ExpenseList::whereIn('id', request('ids'))->delete();
 
         return response(null, Response::HTTP_NO_CONTENT);
-    }
-
-    public function storeCKEditorImages(Request $request)
-    {
-        abort_if(Gate::denies('expense_list_create') && Gate::denies('expense_list_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $model         = new ExpenseList();
-        $model->id     = $request->input('crud_id', 0);
-        $model->exists = true;
-        $media         = $model->addMediaFromRequest('upload')->toMediaCollection('ck-media');
-
-        return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
     }
 }

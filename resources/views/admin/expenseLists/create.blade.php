@@ -19,7 +19,7 @@
         {{ trans('cruds.expenseList.fields.entry_date') }}
     </label>
     <input type="date" name="entry_date" id="entry_date" 
-        value="{{ old('entry_date') }}" required
+        value="{{ date('Y-m-d') }}" required
         class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
     @error('entry_date')
         <span class="text-red-600 text-sm">{{ $message }}</span>
@@ -32,19 +32,77 @@
                         <label for="category_id" class="block font-medium text-gray-700">
                             Select Ledger
                         </label>
-                        <select id="category_id" name="category_id" required
-                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+                        <select id="ledger_id" name="category_id" required
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
                             <option value="">-- Select Ledger --</option>
-                            @foreach($ledgers as $id => $name)
-                                <option value="{{ $id }}" {{ old('category_id') == $id ? 'selected' : '' }}>
-                                    {{ $name }}
+
+                            @foreach($ledgers as $ledger)
+                                <option value="{{ $ledger->id }}"
+                                    data-ledger='@json([
+                                        "name" => $ledger->ledger_name,
+                                        "opening_balance" => $ledger->opening_balance,
+                                        "expense_category" => $ledger->expense_category?->expense_category
+                                    ])'>
+                                    {{ $ledger->ledger_name }}
                                 </option>
                             @endforeach
                         </select>
+
                         @error('category_id')
                             <span class="text-red-600 text-sm">{{ $message }}</span>
                         @enderror
                     </div>
+                    <!-- Ledger Info Card -->
+                    <div id="ledgerCard" class="hidden md:col-span-2">
+                        <div class="border rounded-lg bg-indigo-50 p-4 shadow-sm">
+                            <h4 class="font-semibold text-indigo-700 mb-2 flex items-center gap-2">
+                                <i class="fas fa-book"></i> Ledger Details
+                            </h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <p class="text-gray-500">Ledger Name</p>
+                                    <p class="font-semibold" id="ledger_name">—</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-gray-500">Expense Category</p>
+                                    <p class="font-semibold" id="ledger_category">—</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-gray-500">Opening Balance</p>
+                                    <p class="font-semibold text-green-700">
+                                        ₹ <span id="ledger_balance">0.00</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const ledgerSelect = document.getElementById('ledger_id');
+                        const ledgerCard = document.getElementById('ledgerCard');
+
+                        ledgerSelect.addEventListener('change', function () {
+                            const option = this.options[this.selectedIndex];
+                            const data = option.dataset.ledger;
+
+                            if (!data) {
+                                ledgerCard.classList.add('hidden');
+                                return;
+                            }
+
+                            const ledger = JSON.parse(data);
+
+                            document.getElementById('ledger_name').textContent = ledger.name ?? '—';
+                            document.getElementById('ledger_category').textContent = ledger.expense_category ?? '—';
+                            document.getElementById('ledger_balance').textContent = ledger.opening_balance ?? '0.00';
+
+                            ledgerCard.classList.remove('hidden');
+                        });
+                    });
+                    </script>
 
                     <!-- Amount -->
                     <div>

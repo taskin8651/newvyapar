@@ -51,12 +51,12 @@
                         <label for="category_type" class="block font-semibold text-gray-700 mb-1 required">
                             {{ trans('cruds.expenseCategory.fields.type') }}
                         </label>
-                        <select name="category_type" id="category_type" required
+                        <select name="type" id="category_type" required
                                 class="w-full p-2 border rounded-md focus:ring focus:ring-green-200">
                             <option value="" disabled>-- Select Category Type --</option>
                             @foreach(App\Models\ExpenseCategory::CATEGORY_TYPE_SELECT as $key => $label)
                                 <option value="{{ $key }}" 
-                                    {{ old('category_type', $expenseCategory->category_type) == $key ? 'selected' : '' }}>
+                                    {{ old('type', $expenseCategory->type) == $key ? 'selected' : '' }}>
                                     {{ $label }}
                                 </option>
                             @endforeach

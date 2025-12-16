@@ -8,89 +8,101 @@ use App\Http\Requests\MassDestroyExpenseCategoryRequest;
 use App\Http\Requests\StoreExpenseCategoryRequest;
 use App\Http\Requests\UpdateExpenseCategoryRequest;
 use App\Models\ExpenseCategory;
+use App\Traits\CompanyScopeTrait;
 use Gate;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-use Illuminate\Support\Facades\Auth;
 class ExpenseCategoryController extends Controller
 {
-    use CsvImportTrait;
+    use CsvImportTrait, CompanyScopeTrait;
 
-public function index()
-{
-    abort_if(Gate::denies('expense_category_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+    public function index()
+    {
+        abort_if(Gate::denies('expense_category_access'), Response::HTTP_FORBIDDEN);
 
-    $user = auth()->user();
-    $userRole = $user->roles->pluck('title')->first(); // assuming one role per user
+        $user = auth()->user();
+        $role = $user->roles->pluck('title')->first();
 
-    if ($userRole === 'Super Admin') {
-        // Super Admin ke liye saara data, global scopes ignore karke
-        $expenseCategories = ExpenseCategory::withoutGlobalScopes()
-            ->with([
-                'created_by' => function ($query) {
-                    $query->withoutGlobalScopes();
-                }
-            ])
-            ->get();
-    } else {
-        // Baaki users ke liye filter (apne created records)
-        $expenseCategories = ExpenseCategory::with(['created_by'])
-            ->where('created_by_id', $user->id)
-            ->get();
+        if ($role === 'Super Admin') {
+            $expenseCategories = ExpenseCategory::withoutGlobalScopes()
+                ->with(['created_by', 'ledgers'])
+                ->get();
+        } else {
+            $allowedUserIds = $this->getCompanyAllowedUserIds();
+
+            $expenseCategories = ExpenseCategory::with(['created_by', 'ledgers'])
+                ->whereIn('created_by_id', $allowedUserIds)
+                ->get();
+        }
+
+        return view('admin.expenseCategories.index', compact('expenseCategories'));
     }
-
-    return view('admin.expenseCategories.index', compact('expenseCategories'));
-}
-
 
     public function create()
     {
-        abort_if(Gate::denies('expense_category_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('expense_category_create'), Response::HTTP_FORBIDDEN);
 
         return view('admin.expenseCategories.create');
     }
 
-   public function store(StoreExpenseCategoryRequest $request)
-{
-    $data = $request->all();
-
-    // Add the current user ID to created_by_id
-    $data['created_by_id'] = Auth::id();
-
-    $expenseCategory = ExpenseCategory::create($data);
-
-    return redirect()->route('admin.expense-categories.index');
-}
-
-    public function edit(ExpenseCategory $expenseCategory)
+    public function store(StoreExpenseCategoryRequest $request)
     {
-        abort_if(Gate::denies('expense_category_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $data = $request->validated();
+        $data['created_by_id'] = Auth::id();
 
-        $expenseCategory->load('created_by');
-
-        return view('admin.expenseCategories.edit', compact('expenseCategory'));
-    }
-
-    public function update(UpdateExpenseCategoryRequest $request, ExpenseCategory $expenseCategory)
-    {
-        $expenseCategory->update($request->all());
+        ExpenseCategory::create($data);
 
         return redirect()->route('admin.expense-categories.index');
     }
 
     public function show(ExpenseCategory $expenseCategory)
     {
-        abort_if(Gate::denies('expense_category_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('expense_category_show'), Response::HTTP_FORBIDDEN);
 
-        $expenseCategory->load('created_by');
+        if (! auth()->user()->hasRole('Super Admin')) {
+            abort_if(
+                ! in_array($expenseCategory->created_by_id, $this->getCompanyAllowedUserIds()),
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
+        $expenseCategory->load(['created_by', 'ledgers']);
 
         return view('admin.expenseCategories.show', compact('expenseCategory'));
     }
 
+    public function edit(ExpenseCategory $expenseCategory)
+    {
+        abort_if(Gate::denies('expense_category_edit'), Response::HTTP_FORBIDDEN);
+
+        if (! auth()->user()->hasRole('Super Admin')) {
+            abort_if(
+                ! in_array($expenseCategory->created_by_id, $this->getCompanyAllowedUserIds()),
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
+        return view('admin.expenseCategories.edit', compact('expenseCategory'));
+    }
+
+    public function update(UpdateExpenseCategoryRequest $request, ExpenseCategory $expenseCategory)
+    {
+        $expenseCategory->update($request->validated());
+
+        return redirect()->route('admin.expense-categories.index');
+    }
+
     public function destroy(ExpenseCategory $expenseCategory)
     {
-        abort_if(Gate::denies('expense_category_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('expense_category_delete'), Response::HTTP_FORBIDDEN);
+
+        if (! auth()->user()->hasRole('Super Admin')) {
+            abort_if(
+                ! in_array($expenseCategory->created_by_id, $this->getCompanyAllowedUserIds()),
+                Response::HTTP_FORBIDDEN
+            );
+        }
 
         $expenseCategory->delete();
 
@@ -99,11 +111,7 @@ public function index()
 
     public function massDestroy(MassDestroyExpenseCategoryRequest $request)
     {
-        $expenseCategories = ExpenseCategory::find(request('ids'));
-
-        foreach ($expenseCategories as $expenseCategory) {
-            $expenseCategory->delete();
-        }
+        ExpenseCategory::whereIn('id', request('ids'))->delete();
 
         return response(null, Response::HTTP_NO_CONTENT);
     }
