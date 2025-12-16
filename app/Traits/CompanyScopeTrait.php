@@ -2,14 +2,13 @@
 
 namespace App\Traits;
 
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 trait CompanyScopeTrait
 {
     /**
-     * Get allowed created_by_ids for current company
-     * (Company Admin + Logged-in User)
+     * Get all user IDs of the selected company
+     * (Company Admin + All users under that admin)
      */
     protected function getCompanyAllowedUserIds(): array
     {
@@ -18,26 +17,23 @@ trait CompanyScopeTrait
         // Selected company
         $company = $user->select_companies()->first();
 
+        // If no company selected, fallback to own data
         if (! $company) {
             return [$user->id];
         }
 
-        // All users of company
+        /**
+         * Get ALL users linked with this company
+         * This includes:
+         * - Company Admin
+         * - All users created/assigned under admin
+         */
         $companyUserIds = DB::table('add_business_user')
             ->where('add_business_id', $company->id)
             ->pluck('user_id')
-            ->toArray();
-
-        // Company Admin
-        $companyAdminId = User::whereIn('id', $companyUserIds)
-            ->whereHas('roles', fn ($q) => $q->where('title', 'Admin'))
-            ->value('id');
-
-        // Allowed IDs = Admin + Login user
-        return collect([$companyAdminId, $user->id])
-            ->filter()
             ->unique()
-            ->values()
             ->toArray();
+
+        return $companyUserIds;
     }
 }

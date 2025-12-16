@@ -43,7 +43,7 @@ public function create()
     abort_if(Gate::denies('expense_list_create'), Response::HTTP_FORBIDDEN);
 
     $allowedUserIds = $this->getCompanyAllowedUserIds();
-
+  
     // 🔹 Ledgers
     $ledgers = Ledger::with('expense_category')
         ->whereIn('created_by_id', $allowedUserIds)
