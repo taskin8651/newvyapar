@@ -39,32 +39,54 @@
                     <div class="space-y-5">
                         <h3 class="text-lg font-medium text-gray-800 border-b border-gray-100 pb-2">Account Information</h3>
 
+            
+
+                        {{-- Account Display Name --}}
                         <div>
-                            <label for="account_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                {{ trans('cruds.bankAccount.fields.account_name') }} <span class="text-red-500">*</span>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Account Display Name <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" name="account_name" id="account_name" data-required="1"
-                                   value="{{ old('account_name') }}"
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('account_name') border-red-500 @enderror">
-                            @error('account_name')
-                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
-                            @enderror
+
+                            <select name="bank_account_id" id="bank_account_id"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                                <option value="">Select Account</option>
+                                @foreach($bankAccounts as $account)
+                                    <option value="{{ $account->id }}"
+                                        data-json='@json($account)'>
+                                        {{ $account->account_name }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
-                        <div>
-                            <label for="opening_balance" class="block text-sm font-medium text-gray-700 mb-1">
-                                {{ trans('cruds.bankAccount.fields.opening_balance') }}
-                            </label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-500">₹</span>
-                                <input type="text" name="opening_balance" id="opening_balance" data-required="1"
-                                       value="0.00"
-                                       class="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 @error('opening_balance') border-red-500 @enderror">
-                            </div>
-                            @error('opening_balance')
-                                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
-                            @enderror
+                        {{-- Bank Detail Card --}}
+                        <div id="bank-card" class="hidden mt-4 p-4 border rounded-lg bg-gray-50">
+                            <h4 class="font-semibold text-gray-700 mb-2">Bank Details</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li><strong>Bank:</strong> <span id="bank_name"></span></li>
+                                <li><strong>Account No:</strong> <span id="account_number"></span></li>
+                                <li><strong>IFSC:</strong> <span id="ifsc_code"></span></li>
+                                <li><strong>Holder:</strong> <span id="holder_name"></span></li>
+                                <li><strong>Opening Balance:</strong> ₹<span id="opening_balance"></span></li>
+                            </ul>
                         </div>
+
+                        <script>
+                        document.getElementById('bank_account_id').addEventListener('change', function () {
+                            const option = this.options[this.selectedIndex];
+                            if (!option.value) return;
+
+                            const data = JSON.parse(option.dataset.json);
+
+                            document.getElementById('bank_name').innerText = data.bank_name;
+                            document.getElementById('account_number').innerText = data.account_number;
+                            document.getElementById('ifsc_code').innerText = data.ifsc_code;
+                            document.getElementById('holder_name').innerText = data.account_holder_name;
+                            document.getElementById('opening_balance').innerText = data.opening_balance;
+
+                            document.getElementById('bank-card').classList.remove('hidden');
+                        });
+                        </script>
 
                         <div>
                             <label for="as_of_date" class="block text-sm font-medium text-gray-700 mb-1">
