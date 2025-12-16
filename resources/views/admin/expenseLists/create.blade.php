@@ -129,23 +129,29 @@
                     </div>
 
                     <!-- Combined Payment / Cash In Hand -->
-<div>
-    <label for="account_id" class="block font-medium text-gray-700">
-        Payment / Cash In Hand
-    </label>
-    <select id="account_id" name="account_id"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
-        <option value="">-- Select Account --</option>
-        @foreach($accounts as $account)
-            <option value="{{ $account['id'] }}" {{ old('account_id') == $account['id'] ? 'selected' : '' }}>
-                {{ $account['name'] }}
-            </option>
-        @endforeach
-    </select>
-    @error('account_id')
-        <span class="text-red-600 text-sm">{{ $message }}</span>
-    @enderror
-</div>
+                    <div>
+                        <label for="payment_id" class="block font-medium text-gray-700">
+                            Payment Account (Bank)
+                        </label>
+
+                        <select id="payment_id" name="payment_id" required
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
+
+                            <option value="">-- Select Bank Account --</option>
+
+                            @foreach($accounts as $account)
+                                <option value="{{ $account['id'] }}"
+                                    {{ old('payment_id') == $account['id'] ? 'selected' : '' }}>
+                                    {{ $account['name'] }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @error('payment_id')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                    </div>
+
 
 
                     <!-- 🆕 Main Cost Center -->

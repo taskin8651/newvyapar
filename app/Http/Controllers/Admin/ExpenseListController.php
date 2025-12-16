@@ -54,7 +54,7 @@ public function create()
         ->select('id', 'bank_name as name', 'opening_balance')
         ->get()
         ->map(fn ($b) => [
-            'id' => 'bank_' . $b->id,
+            'id' =>  $b->id,
             'name' => $b->name,
             'opening_balance' => $b->opening_balance,
         ]);
@@ -76,56 +76,42 @@ public function create()
     ));
 }
 
-    public function store(StoreExpenseListRequest $request)
-    {
-        $allowedUserIds = $this->getCompanyAllowedUserIds();
+public function store(StoreExpenseListRequest $request)
+{
+   
+    $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        $data = $request->all();
-        $data['created_by_id'] = auth()->id();
+    // ✅ Validate data
+    $data = $request->validated();
+    $data['created_by_id'] = auth()->id();
 
-        // 🔹 Handle combined payment_or_cash
-        if (!empty($data['payment_or_cash'])) {
+    // ✅ Find Bank Account (payment_id is numeric now)
+    $bank = BankAccount::whereIn('created_by_id', $allowedUserIds)
+        ->findOrFail($data['payment_id']);
 
-            // CASH
-            if (str_starts_with($data['payment_or_cash'], 'cash_')) {
-                $cashId = str_replace('cash_', '', $data['payment_or_cash']);
-
-                $cash = CashInHand::whereIn('created_by_id', $allowedUserIds)
-                    ->findOrFail($cashId);
-
-                // 🔻 Minus cash balance
-                $cash->decrement('amount', $data['amount']);
-
-                $data['cash_in_hand_id'] = $cashId;
-                $data['payment_id'] = null;
-            }
-
-            // BANK
-            if (str_starts_with($data['payment_or_cash'], 'bank_')) {
-                $bankId = str_replace('bank_', '', $data['payment_or_cash']);
-
-                $bank = BankAccount::whereIn('created_by_id', $allowedUserIds)
-                    ->findOrFail($bankId);
-
-                // 🔻 Minus opening balance
-                $bank->decrement('opening_balance', $data['amount']);
-
-                $data['payment_id'] = $bankId;
-                $data['cash_in_hand_id'] = null;
-            }
-        }
-
-        $expenseList = ExpenseList::create($data);
-
-        // 🔹 CKEditor media
-        if ($media = $request->input('ck-media', false)) {
-            Media::whereIn('id', $media)->update(['model_id' => $expenseList->id]);
-        }
-
-        return redirect()
-            ->route('admin.expense-lists.index')
-            ->with('success', 'Expense entry created successfully.');
+    // ❗ Optional safety: insufficient balance check
+    if ($bank->opening_balance < $data['amount']) {
+        return back()->withErrors([
+            'payment_id' => 'Insufficient bank balance.'
+        ])->withInput();
     }
+
+    // 🔻 Minus opening balance
+    $bank->decrement('opening_balance', $data['amount']);
+
+    // ✅ Save expense
+    $expenseList = ExpenseList::create($data);
+
+    // ✅ CKEditor media
+    if ($media = $request->input('ck-media', false)) {
+        \Spatie\MediaLibrary\MediaCollections\Models\Media::whereIn('id', $media)
+            ->update(['model_id' => $expenseList->id]);
+    }
+
+    return redirect()
+        ->route('admin.expense-lists.index')
+        ->with('success', 'Expense entry created successfully.');
+}
 
     public function show(ExpenseList $expenseList)
     {
