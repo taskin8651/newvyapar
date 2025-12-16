@@ -4,7 +4,7 @@
 <style>
     body {
         background: #f8f9fa;
-        font-family: "Helvetica", sans-serif;
+        font-family: Helvetica, sans-serif;
     }
 
     .invoice-wrapper {
@@ -21,19 +21,20 @@
         color: #fff;
         display: flex;
         justify-content: space-between;
+        align-items: center;
     }
 
     .brand-title {
-        font-size: 28px;
+        font-size: 26px;
         font-weight: bold;
     }
 
     .section {
-        padding: 18px 25px;
+        padding: 16px 24px;
     }
 
     .label-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         color: #444;
         margin-bottom: 6px;
@@ -49,62 +50,74 @@
     .table th {
         background: #f4f4f4;
         border: 1px solid #ddd;
-        font-weight: 600;
         padding: 6px;
-        text-transform: uppercase;
         font-size: 11px;
     }
 
     .table td {
-        padding: 6px 4px;
         border: 1px solid #ddd;
+        padding: 6px;
         font-size: 12px;
-    }
-
-    .totals-table td {
-        padding: 6px 4px;
-        font-size: 13px;
     }
 
     .box {
         border: 1px dashed #aaa;
         padding: 10px;
         font-size: 12px;
-        margin-top: 8px;
         background: #fafafa;
     }
 
     .signature-box {
         text-align: right;
-        margin-top: 40px;
+        margin-top: 30px;
     }
 
-    /* =========================
-        FIXED PRINT STYLE
-    ========================= */
+    /* ======================
+        PRINT FIX – A4 SINGLE PAGE
+    ====================== */
     @media print {
 
-        body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            background: #fff !important;
+        @page {
+            size: A4;
+            margin: 9mm;
         }
 
-        .no-print {
+        body {
+            background: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Hide everything */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Show only invoice */
+        #printArea,
+        #printArea * {
+            visibility: visible;
+        }
+
+        #printArea {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            transform: scale(0.95);
+            transform-origin: top left;
+        }
+
+        /* Hide navbar, sidebar, buttons */
+        header, nav, aside, .no-print {
             display: none !important;
         }
 
         .invoice-wrapper {
-            width: 100% !important;
-            max-width: 100% !important;
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-        }
-
-        pre.box {
-            background: #fafafa !important;
-            -webkit-print-color-adjust: exact !important;
+            max-width: 100% !important;
         }
 
         .table th {
@@ -113,8 +126,6 @@
     }
 </style>
 @endsection
-
-
 
 @section('content')
 
@@ -223,7 +234,7 @@ $c = $proformaInvoice->select_customer;
 
 
     <!-- INVOICE -->
-    <div id="printArea" class="invoice-wrapper shadow-xl">
+    <div id="printArea" class="invoice-wrapper shadow-xl" style="">
 
         <!-- HEADER -->
         <div class="brand-header">
@@ -329,7 +340,7 @@ $c = $proformaInvoice->select_customer;
 
 
         <!-- HSN SUMMARY -->
-        <div class="section">
+        {{-- <div class="section">
             <div class="label-title">HSN Summary</div>
 
             <table class="table">
@@ -369,7 +380,7 @@ $c = $proformaInvoice->select_customer;
 
                 </tbody>
             </table>
-        </div>
+        </div> --}}
 
         <!-- TOTALS -->
         <div class="section grid grid-cols-2 gap-6">
@@ -454,26 +465,40 @@ $c = $proformaInvoice->select_customer;
         </div>
 
 
-        <!-- E-INVOICE JSON -->
+        
+        <!-- TERMS & NOTES -->
         <div class="section">
-            <div class="label-title">Terms & Conditions</div>
+            <div class="grid grid-cols-2 gap-6">
 
-            <pre class="box" style="white-space:pre-wrap">
-            @if($terms->count())
-            <div class="section">
-                
-                <div class="box text-xs">
-                    <ul class="list-disc ml-4">
-                        @foreach($terms as $term)
-                            <li>{!! nl2br(e($term->description)) !!}</li>
-                        @endforeach
-                    </ul>
+                <!-- TERMS -->
+                <div>
+                    <div class="label-title">Terms & Conditions</div>
+
+                    @if($terms->count())
+                        <div class="box text-xs">
+                            <ul class="list-disc ml-4">
+                                @foreach($terms as $term)
+                                    <li>{!! nl2br(e($term->description)) !!}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @else
+                        <div class="box text-xs">—</div>
+                    @endif
                 </div>
-            </div>
-            @endif
 
-            </pre>
+                <!-- NOTES -->
+                <div>
+                    <div class="label-title">Notes</div>
+
+                    <div class="box text-xs">
+                        {!! nl2br(e($proformaInvoice->notes ?? '—')) !!}
+                    </div>
+                </div>
+
+            </div>
         </div>
+
 
 
         <!-- SIGNATURE -->
