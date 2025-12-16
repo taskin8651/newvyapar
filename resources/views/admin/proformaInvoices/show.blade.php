@@ -69,7 +69,7 @@
 
     .signature-box {
         text-align: right;
-        margin-top: 30px;
+        margin-top: -30px;
     }
 
     /* ======================
@@ -97,6 +97,7 @@
         #printArea,
         #printArea * {
             visibility: visible;
+           
         }
 
         #printArea {
@@ -106,6 +107,7 @@
             width: 100%;
             transform: scale(0.95);
             transform-origin: top left;
+            
         }
 
         /* Hide navbar, sidebar, buttons */
@@ -123,6 +125,10 @@
         .table th {
             background: #f4f4f4 !important;
         }
+        .signature-box {
+        text-align: right;
+        margin-top: -30px;
+    }
     }
 </style>
 @endsection
@@ -411,7 +417,7 @@ $c = $proformaInvoice->select_customer;
                                     @endphp
 
                                     @if($upiQr)
-                                        <div class="mt-2">
+                                        <div class="">
                                             <img src="{{ $upiQr }}" style="height:120px">
                                             <p class="text-xs text-gray-600">Scan & Pay (UPI)</p>
                                         </div>
@@ -467,8 +473,8 @@ $c = $proformaInvoice->select_customer;
 
         
         <!-- TERMS & NOTES -->
-        <div class="section">
-            <div class="grid grid-cols-2 gap-6">
+        <div class="section" style="margin-top: -20px;">
+            <div class="grid grid-cols-2 gap-6" >
 
                 <!-- TERMS -->
                 <div>
@@ -502,7 +508,7 @@ $c = $proformaInvoice->select_customer;
 
 
         <!-- SIGNATURE -->
-        <div class="section signature-box">
+        <div class="section signature-box" style="margin-top: -90px;">
 
             @if($company?->getFirstMediaUrl('stamp_upload'))
                 <img src="{{ $company->getFirstMediaUrl('stamp_upload') }}" style="height:80px; opacity:0.8;">
