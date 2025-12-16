@@ -421,3 +421,9 @@ Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 
     }
 });
 Route::get('/admin/get-customer-details/{id}', [PurchaseBillController::class, 'getCustomerDetails'])->name('admin.getCustomerDetails');
+
+Route::get('/download/pdf/{id}', function($id) {
+    $path = storage_path("app/public/user_pdfs/{$id}.pdf");
+
+    return response()->download($path, "document.pdf");
+});
