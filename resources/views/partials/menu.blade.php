@@ -1023,6 +1023,46 @@
 </div>
 @endcan
 
+            {{-- Expense Sub-section --}}
+            @can('expense_access')
+            <div class="space-y-1 mt-4">
+                <div class="px-3 py-2 text-xs font-semibold text-primary-500 uppercase tracking-wider">Expenses</div>
+            <div x-data="{ expenseOpen: {{ request()->is('admin/expense-categories*') || request()->is('admin/expense-lists*') ? 'true' : 'false' }} }" class="ml-3">
+                <button @click="expenseOpen = !expenseOpen"
+                    class="flex items-center justify-between w-full px-3 py-2 text-sm rounded-lg transition-all duration-200
+                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+                           {{ request()->is('admin/expense-categories*') || request()->is('admin/expense-lists*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+                    <span class="flex items-center">
+                        <i class="fab fa-accusoft w-4 mr-3"></i>
+                        <span>{{ trans('cruds.expense.title') }}</span>
+                    </span>
+                    <i class="fas transform transition-transform duration-300 text-xs"
+                       :class="expenseOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
+                </button>
+
+                <div x-show="expenseOpen" x-collapse.duration.300ms class="ml-5 mt-2 space-y-2">
+                    @can('expense_category_access')
+                    <a href="{{ route('admin.expense-categories.index') }}"
+                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
+                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+                       {{ request()->is('admin/expense-categories*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+                       <i class="fas fa-hand-holding-usd w-4 mr-3 {{ request()->is('admin/expense-categories*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+                       <span>{{ trans('cruds.expenseCategory.title') }}</span>
+                    </a>
+                    @endcan
+
+                    @can('expense_list_access')
+                    <a href="{{ route('admin.expense-lists.index') }}"
+                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
+                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
+                       {{ request()->is('admin/expense-lists*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
+                       <i class="fas fa-arrow-circle-right w-4 mr-3 {{ request()->is('admin/expense-lists*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
+                       <span>{{ trans('cruds.expenseList.title') }}</span>
+                    </a>
+                    @endcan
+                </div>
+            </div>
+            @endcan
 @can('item_access')
 <div class="space-y-1 mt-4">
     <div class="px-3 py-2 text-xs font-semibold text-primary-500 uppercase tracking-wider">Inventory</div>
@@ -1197,44 +1237,6 @@
             </a>
             @endcan
 
-            {{-- Expense Sub-section --}}
-            @can('expense_access')
-            <div x-data="{ expenseOpen: {{ request()->is('admin/expense-categories*') || request()->is('admin/expense-lists*') ? 'true' : 'false' }} }" class="ml-3">
-                <button @click="expenseOpen = !expenseOpen"
-                    class="flex items-center justify-between w-full px-3 py-2 text-sm rounded-lg transition-all duration-200
-                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
-                           {{ request()->is('admin/expense-categories*') || request()->is('admin/expense-lists*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
-                    <span class="flex items-center">
-                        <i class="fab fa-accusoft w-4 mr-3"></i>
-                        <span>{{ trans('cruds.expense.title') }}</span>
-                    </span>
-                    <i class="fas transform transition-transform duration-300 text-xs"
-                       :class="expenseOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
-                </button>
-
-                <div x-show="expenseOpen" x-collapse.duration.300ms class="ml-5 mt-2 space-y-2">
-                    @can('expense_category_access')
-                    <a href="{{ route('admin.expense-categories.index') }}"
-                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
-                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
-                       {{ request()->is('admin/expense-categories*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
-                       <i class="fas fa-hand-holding-usd w-4 mr-3 {{ request()->is('admin/expense-categories*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
-                       <span>{{ trans('cruds.expenseCategory.title') }}</span>
-                    </a>
-                    @endcan
-
-                    @can('expense_list_access')
-                    <a href="{{ route('admin.expense-lists.index') }}"
-                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
-                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
-                       {{ request()->is('admin/expense-lists*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
-                       <i class="fas fa-arrow-circle-right w-4 mr-3 {{ request()->is('admin/expense-lists*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
-                       <span>{{ trans('cruds.expenseList.title') }}</span>
-                    </a>
-                    @endcan
-                </div>
-            </div>
-            @endcan
 
         </div>
     </div>
