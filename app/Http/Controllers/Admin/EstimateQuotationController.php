@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-use Illuminate\Support\Str;
 
+use Illuminate\Support\Str;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\CsvImportTrait;
 use App\Http\Controllers\Traits\MediaUploadingTrait;
@@ -13,9 +13,8 @@ use App\Models\PartyDetail;
 use App\Models\MainCostCenter;
 use App\Models\SubCostCenter;
 use App\Models\TermAndCondition;
-use Illuminate\Http\Request;
 use App\Traits\CompanyScopeTrait;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Gate;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,83 +23,52 @@ class EstimateQuotationController extends Controller
 {
     use MediaUploadingTrait, CsvImportTrait, CompanyScopeTrait;
 
-    //================================================
-    // INDEX
-    //================================================
     public function index()
     {
-        abort_if(Gate::denies('estimate_quotation_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('estimate_quotation_access'), Response::HTTP_FORBIDDEN);
 
-        $user = auth()->user();
-        $userRole = $user->roles->pluck('title')->first();
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        if ($userRole === 'Super Admin') {
-            $estimateQuotations = EstimateQuotation::withoutGlobalScopes()
-                ->with(['select_customer', 'items', 'created_by', 'media'])
-                ->latest()
-                ->get();
-        } else {
-            $estimateQuotations = EstimateQuotation::with(['select_customer', 'items', 'created_by', 'media'])
-                ->where('created_by_id', $user->id)
-                ->latest()
-                ->get();
-        }
+        $estimateQuotations = EstimateQuotation::with([
+                'select_customer',
+                'items',
+                'created_by',
+                'media'
+            ])
+            ->whereIn('created_by_id', $allowedUserIds)
+            ->latest()
+            ->get();
 
         return view('admin.estimateQuotations.index', compact('estimateQuotations'));
     }
 
-    //================================================
-    // GET CUSTOMER DETAILS (AJAX)
-    //================================================
     public function getCustomerDetails($id)
     {
-        $customer = PartyDetail::withoutGlobalScopes()->find($id);
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        if (!$customer) {
-            return response()->json(['error' => 'Customer not found'], 404);
-        }
+        $customer = PartyDetail::whereIn('created_by_id', $allowedUserIds)
+            ->findOrFail($id);
 
-        return response()->json([
-            'party_name'           => $customer->party_name,
-            'phone_number'         => $customer->phone_number,
-            'email'                => $customer->email,
-            'gstin'                => $customer->gstin,
-            'pan_number'           => $customer->pan_number,
-            'billing_address'      => $customer->billing_address,
-            'shipping_address'     => $customer->shipping_address,
-            'state'                => $customer->state,
-            'city'                 => $customer->city,
-            'pincode'              => $customer->pincode,
-            'credit_limit'         => $customer->credit_limit,
-            'payment_terms'        => $customer->payment_terms,
-            'opening_balance'      => $customer->opening_balance,
-            'opening_balance_type' => $customer->opening_balance_type,
-            'opening_balance_date' => $customer->opening_balance_date,
-            'current_balance'      => $customer->current_balance,
-            'current_balance_type' => $customer->current_balance_type,
-            'updated_at'           => $customer->updated_at,
-        ]);
+        return response()->json($customer);
     }
 
-
-    //================================================
-    // GET ITEM COMPOSITION (AJAX)
-    //================================================
     public function getItemComposition($itemId)
     {
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
         $rows = DB::table('finished_goods_raw_material')
             ->where('item_id', $itemId)
             ->get();
 
-        // Attach raw material names + sale/purchase prices
-        $composition = $rows->map(function ($r) {
-            $item = AddItem::find($r->select_raw_material_id);
+        $composition = $rows->map(function ($r) use ($allowedUserIds) {
+            $item = AddItem::whereIn('created_by_id', $allowedUserIds)
+                ->find($r->select_raw_material_id);
 
             return [
-                'id'             => $r->select_raw_material_id,
-                'name'           => $item->item_name ?? 'Unknown',
-                'qty_used'       => $r->qty,
-                'sale_price'     => $item->sale_price ?? 0,
+                'id' => $r->select_raw_material_id,
+                'name' => $item->item_name ?? 'Unknown',
+                'qty_used' => $r->qty,
+                'sale_price' => $item->sale_price ?? 0,
                 'purchase_price' => $item->purchase_price ?? 0,
             ];
         });
@@ -108,54 +76,35 @@ class EstimateQuotationController extends Controller
         return response()->json(['composition' => $composition]);
     }
 
-
-    //================================================
-    // CREATE (copy from Proforma, STOCK REMOVED)
-    //================================================
     public function create()
     {
-        abort_if(Gate::denies('estimate_quotation_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('estimate_quotation_create'), Response::HTTP_FORBIDDEN);
 
-        $user = Auth::user();
-        $userId = $user->id;
-        $userRole = $user->roles->pluck('title')->first();
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        // customers
-        if ($userRole === 'Super Admin') {
-            $select_customers = PartyDetail::withoutGlobalScopes()->get();
-        } else {
-            $select_customers = PartyDetail::where('created_by_id', $userId)->get();
-        }
+        $select_customers = PartyDetail::whereIn('created_by_id', $allowedUserIds)
+            ->get()
+            ->mapWithKeys(function ($c) {
+                $balance = $c->current_balance ?? $c->opening_balance ?? 0;
+                $type = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
+                $label = $type === 'Debit'
+                    ? '₹' . number_format($balance, 2) . ' Dr'
+                    : '₹' . number_format($balance, 2) . ' Cr';
 
-        $select_customers = $select_customers->mapWithKeys(function ($c) {
-            $balance = $c->current_balance ?? $c->opening_balance ?? 0;
-            $type    = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
+                return [$c->id => "{$c->party_name} ({$label})"];
+            });
 
-            $balanceFormatted = number_format($balance, 2);
-            $display = $type === 'Debit'
-                ? "₹{$balanceFormatted} Dr - Payable ↑"
-                : "₹{$balanceFormatted} Cr - Receivable ↓";
+        $items = AddItem::whereIn('created_by_id', $allowedUserIds)
+            ->whereIn('item_type', ['product', 'service'])
+            ->with('select_unit')
+            ->get();
 
-            return [$c->id => "{$c->party_name} ({$display})"];
-        });
-
-        // items
-        if ($userRole === 'Super Admin') {
-            $items = AddItem::withoutGlobalScopes()
-                ->whereIn('item_type', ['product', 'service'])
-                ->with('select_unit')
-                ->get();
-        } else {
-            $items = AddItem::where('created_by_id', $userId)
-                ->with('select_unit')
-                ->get();
-        }
-
-        // Cost center
-        $cost = MainCostCenter::pluck('cost_center_name', 'id')
+        $cost = MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('cost_center_name', 'id')
             ->prepend('Please select', '');
 
-        $sub_cost = SubCostCenter::pluck('sub_cost_center_name', 'id')
+        $sub_cost = SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('sub_cost_center_name', 'id')
             ->prepend('Please select', '');
 
         return view('admin.estimateQuotations.create', compact(
@@ -166,506 +115,252 @@ class EstimateQuotationController extends Controller
         ));
     }
 
-
-    //================================================
-    // STORE (NO STOCK UPDATE)
-    //================================================
     public function store(Request $request)
     {
-    //    dd($request->all());
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
         $request->validate([
-            'select_customer_id'  => 'required|exists:party_details,id',
-            'po_no'               => 'required|string',
-            'po_date'             => 'required|date',
-            'items'               => 'required|array|min:1',
+            'select_customer_id' => 'required|exists:party_details,id',
+            'po_no' => 'required|string',
+            'po_date' => 'required|date',
+            'items' => 'required|array|min:1',
             'items.*.add_item_id' => 'required|exists:add_items,id',
-            'items.*.qty'         => 'required|numeric|min:1',
-            'main_cost_centers_id'=> 'required|exists:main_cost_centers,id',
-            'sub_cost_centers_id' => 'required|exists:sub_cost_centers,id',
+            'items.*.qty' => 'required|numeric|min:1',
+            'main_cost_centers_id' => 'required',
+            'sub_cost_centers_id' => 'required',
         ]);
 
         return DB::transaction(function () use ($request) {
 
-            $estimate_no = 'EST-' . now()->format('YmdHis') . rand(100, 999);
-
             $estimate = EstimateQuotation::create([
-                'estimate_quotations_number'        => $estimate_no,
-                'payment_type'           => $request->payment_type,
-                'select_customer_id'     => $request->select_customer_id,
-                'po_no'                  => $request->po_no,
-                'po_date'                => $request->po_date,
-                'due_date'               => $request->due_date,
-                'billing_address'        => $request->billing_address_invoice,
-                'shipping_address'       => $request->shipping_address_invoice,
-                'notes'                  => $request->notes,
-                'terms'                  => $request->terms,
-                'overall_discount'       => $request->overall_discount ?? 0,
-                'subtotal'               => $request->subtotal ?? 0,
-                'tax'                    => $request->tax ?? 0,
-                'discount'               => $request->discount ?? 0,
-                'total'                  => $request->total ?? 0,
-                'created_by_id'          => auth()->id(),
-                'json_data'              => json_encode($request->all()),
-                'main_cost_centers_id'   => $request->main_cost_centers_id,
-                'sub_cost_centers_id'    => $request->sub_cost_centers_id,
+                'estimate_quotations_number' => 'EST-' . now()->format('YmdHis') . rand(100, 999),
+                'payment_type' => $request->payment_type,
+                'select_customer_id' => $request->select_customer_id,
+                'po_no' => $request->po_no,
+                'po_date' => $request->po_date,
+                'due_date' => $request->due_date,
+                'billing_address' => $request->billing_address_invoice,
+                'shipping_address' => $request->shipping_address_invoice,
+                'notes' => $request->notes,
+                'terms' => $request->terms,
+                'overall_discount' => $request->overall_discount ?? 0,
+                'subtotal' => $request->subtotal ?? 0,
+                'tax' => $request->tax ?? 0,
+                'discount' => $request->discount ?? 0,
+                'total' => $request->total ?? 0,
+                'created_by_id' => auth()->id(),
+                'json_data' => json_encode($request->all()),
+                'main_cost_centers_id' => $request->main_cost_centers_id,
+                'sub_cost_centers_id' => $request->sub_cost_centers_id,
             ]);
-
-            if ($request->hasFile('attachment')) {
-                $estimate->addMediaFromRequest('attachment')->toMediaCollection('document');
-            }
 
             foreach ($request->items as $item) {
                 $estimate->items()->attach($item['add_item_id'], [
-                    'qty'           => $item['qty'],
-                    'unit'          => $item['unit'] ?? '',
-                    'price'         => $item['price'] ?? 0,
-                    'discount_type' => $item['discount_type'] ?? 'value',
-                    'discount'      => $item['discount'] ?? 0,
-                    'tax_type'      => $item['tax_type'] ?? 'without',
-                    'tax'           => $item['tax'] ?? 0,
-                    'amount'        => $item['amount'] ?? 0,
-                    'json_data'     => json_encode($item),
+                    'qty' => $item['qty'],
+                    'unit' => $item['unit'] ?? '',
+                    'price' => $item['price'] ?? 0,
+                    'discount' => $item['discount'] ?? 0,
+                    'tax' => $item['tax'] ?? 0,
+                    'amount' => $item['amount'] ?? 0,
+                    'json_data' => json_encode($item),
                     'created_by_id' => auth()->id(),
                 ]);
             }
 
-            // Token for QR Download
-$estimate->download_token = Str::random(40);
-$estimate->token_expires_at = now()->addHours(24);
-$estimate->save();
+            $estimate->update([
+                'download_token' => Str::random(40),
+                'token_expires_at' => now()->addHours(24),
+            ]);
 
-return redirect()
-    ->route('admin.estimate-quotations.index')
-    ->with('success', 'Estimate created successfully.');
-
+            return redirect()
+                ->route('admin.estimate-quotations.index')
+                ->with('success', 'Estimate created successfully.');
         });
     }
 
-    //================================================
-    // EDIT
-    //================================================
     public function edit(EstimateQuotation $estimateQuotation)
     {
-        abort_if(Gate::denies('estimate_quotation_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('estimate_quotation_edit'), Response::HTTP_FORBIDDEN);
 
-        $user = auth()->user();
-        $userId = $user->id;
-        $userRole = $user->roles->pluck('title')->first();
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        // Customers
-        if ($userRole === 'Super Admin') {
-            $select_customers = PartyDetail::withoutGlobalScopes()->get();
-        } else {
-            $select_customers = PartyDetail::where('created_by_id', $userId)->get();
-        }
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
 
-        $select_customers = $select_customers->mapWithKeys(function ($c) {
-            $balance = $c->current_balance ?? $c->opening_balance ?? 0;
-            $type    = $c->current_balance_type ?? $c->opening_balance_type ?? 'Debit';
+        $select_customers = PartyDetail::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('party_name', 'id');
 
-            $balanceFormatted = number_format($balance, 2);
-            $display = $type === 'Debit'
-                ? "₹{$balanceFormatted} Dr - Payable ↑"
-                : "₹{$balanceFormatted} Cr - Receivable ↓";
+        $items = AddItem::whereIn('created_by_id', $allowedUserIds)
+            ->with('select_unit')
+            ->get();
 
-            return [$c->id => "{$c->party_name} ({$display})"];
-        });
+        $cost = MainCostCenter::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('cost_center_name', 'id');
 
-        // items (no stock restrictions for estimates)
-        if ($userRole === 'Super Admin') {
-            $items = AddItem::withoutGlobalScopes()
-                ->whereIn('item_type', ['product', 'service'])
-                ->with('select_unit')
-                ->get();
-        } else {
-            $items = AddItem::where('created_by_id', $userId)
-                ->with('select_unit')
-                ->get();
-        }
+        $sub_cost = SubCostCenter::whereIn('created_by_id', $allowedUserIds)
+            ->pluck('sub_cost_center_name', 'id');
 
-        $cost = MainCostCenter::pluck('cost_center_name', 'id')
-            ->prepend('Please select', '');
-
-        $sub_cost = SubCostCenter::pluck('sub_cost_center_name', 'id')
-            ->prepend('Please select', '');
-
-        // load pivot data
-        $estimateQuotation->load([
-            'select_customer',
-            'items' => function ($q) {
-                $q->withPivot([
-                    'description','qty','unit','price',
-                    'discount_type','discount',
-                    'tax_type','tax','amount',
-                    'created_by_id','json_data'
-                ]);
-            },
-            'created_by',
-            'media'
-        ]);
+        $estimateQuotation->load(['select_customer','items','media']);
 
         return view('admin.estimateQuotations.edit', compact(
-            'estimateQuotation','items','select_customers','cost','sub_cost'
+            'estimateQuotation',
+            'items',
+            'select_customers',
+            'cost',
+            'sub_cost'
         ));
     }
 
-    //================================================
-    // UPDATE
-    //================================================
     public function update(Request $request, EstimateQuotation $estimateQuotation)
     {
-        abort_if(Gate::denies('estimate_quotation_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('estimate_quotation_edit'), Response::HTTP_FORBIDDEN);
 
-        $request->validate([
-            'select_customer_id'  => 'required|exists:party_details,id',
-            'po_no'               => 'required|string',
-            'po_date'             => 'required|date',
-            'items'               => 'required|array|min:1',
-            'items.*.add_item_id' => 'required|exists:add_items,id',
-            'items.*.qty'         => 'required|numeric|min:1',
-            'main_cost_centers_id' => 'required|exists:main_cost_centers,id',
-            'sub_cost_centers_id' => 'required|exists:sub_cost_centers,id',
-        ]);
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
 
         return DB::transaction(function () use ($request, $estimateQuotation) {
 
-            // media
-            if ($request->hasFile('attachment')) {
-                $estimateQuotation->clearMediaCollection('document');
-                $estimateQuotation->addMediaFromRequest('attachment')->toMediaCollection('document');
-            }
-
-            // update master
             $estimateQuotation->update([
-                'payment_type'           => $request->payment_type,
-                'select_customer_id'     => $request->select_customer_id,
-                'po_no'                  => $request->po_no,
-                'po_date'                => $request->po_date,
-                'due_date'               => $request->due_date,
-                'billing_address'        => $request->billing_address_invoice,
-                'shipping_address'       => $request->shipping_address_invoice,
-                'notes'                  => $request->notes,
-                'terms'                  => $request->terms,
-                'overall_discount'       => $request->overall_discount ?? 0,
-                'subtotal'               => $request->subtotal ?? 0,
-                'tax'                    => $request->tax ?? 0,
-                'discount'               => $request->discount ?? 0,
-                'total'                  => $request->total ?? 0,
-                'json_data'              => json_encode($request->all()),
-                'main_cost_centers_id'   => $request->main_cost_centers_id,
-                'sub_cost_centers_id'    => $request->sub_cost_centers_id,
+                'payment_type' => $request->payment_type,
+                'po_no' => $request->po_no,
+                'po_date' => $request->po_date,
+                'due_date' => $request->due_date,
+                'billing_address' => $request->billing_address_invoice,
+                'shipping_address' => $request->shipping_address_invoice,
+                'notes' => $request->notes,
+                'terms' => $request->terms,
+                'subtotal' => $request->subtotal ?? 0,
+                'tax' => $request->tax ?? 0,
+                'discount' => $request->discount ?? 0,
+                'total' => $request->total ?? 0,
+                'json_data' => json_encode($request->all()),
             ]);
 
-            // detach old pivot rows and attach new ones (no stock ops)
             $estimateQuotation->items()->detach();
 
             foreach ($request->items as $item) {
                 $estimateQuotation->items()->attach($item['add_item_id'], [
-                    'qty'           => $item['qty'],
-                    'unit'          => $item['unit'] ?? '',
-                    'price'         => $item['price'] ?? 0,
-                    'discount_type' => $item['discount_type'] ?? 'value',
-                    'discount'      => $item['discount'] ?? 0,
-                    'tax_type'      => $item['tax_type'] ?? 'without',
-                    'tax'           => $item['tax'] ?? 0,
-                    'amount'        => $item['amount'] ?? 0,
-                    'json_data'     => json_encode($item),
+                    'qty' => $item['qty'],
+                    'price' => $item['price'] ?? 0,
+                    'amount' => $item['amount'] ?? 0,
+                    'json_data' => json_encode($item),
                     'created_by_id' => auth()->id(),
                 ]);
             }
 
-            // Token Refresh on Update
-$estimateQuotation->download_token = Str::random(40);
-$estimateQuotation->token_expires_at = now()->addHours(24);
-$estimateQuotation->save();
+            $estimateQuotation->update([
+                'download_token' => Str::random(40),
+                'token_expires_at' => now()->addHours(24),
+            ]);
 
-return redirect()
-    ->route('admin.estimate-quotations.index')
-    ->with('success', 'Estimate updated successfully.');
-
+            return redirect()
+                ->route('admin.estimate-quotations.index')
+                ->with('success', 'Estimate updated successfully.');
         });
     }
 
-    //================================================
-    // SHOW
-    //================================================
     public function show(EstimateQuotation $estimateQuotation)
     {
-        abort_if(Gate::denies('estimate_quotation_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('estimate_quotation_show'), Response::HTTP_FORBIDDEN);
 
         $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        abort_if(
-            ! in_array($estimateQuotation->created_by_id, $allowedUserIds),
-            Response::HTTP_FORBIDDEN
-        );
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
 
-        $estimateQuotation->load([
-            'select_customer',
-            'items' => function ($q) {
-                $q->withPivot([
-                    'description',
-                    'qty',
-                    'unit',
-                    'price',
-                    'discount_type',
-                    'discount',
-                    'tax_type',
-                    'tax',
-                    'amount',
-                    'created_by_id',
-                    'json_data'
-                ]);
-            },
-            'created_by',
-            'media'
-        ]);
+        $estimateQuotation->load(['select_customer','items','created_by']);
 
         $bankDetails = BankAccount::whereIn('created_by_id', $allowedUserIds)
             ->where('print_bank_details', 1)
             ->get();
 
-        $terms = TermAndCondition::where('status', 'active')
+        $terms = TermAndCondition::
+            where('status', 'active')
             ->get();
 
-        return view(
-            'admin.estimateQuotations.show',
-            compact('estimateQuotation', 'bankDetails', 'terms')
-        );
-    }
-    //================================================
-    // DESTROY
-    //================================================
-    public function destroy(EstimateQuotation $estimateQuotation)
-    {
-        abort_if(Gate::denies('estimate_quotation_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        DB::transaction(function() use ($estimateQuotation) {
-            // no stock reverse (estimates don't change stock)
-            $estimateQuotation->items()->detach();
-            $estimateQuotation->delete();
-        });
-
-        return back()->with('success', 'Estimate deleted successfully.');
+        return view('admin.estimateQuotations.show', compact(
+            'estimateQuotation',
+            'bankDetails',
+            'terms'
+        ));
     }
 
-    //================================================
-    // MASS DESTROY
-    //================================================
-    public function massDestroy(Request $request)
-    {
-        abort_if(Gate::denies('estimate_quotation_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $ids = $request->input('ids', []);
-        $estimates = EstimateQuotation::whereIn('id', $ids)->get();
-
-        foreach ($estimates as $estimate) {
-            $estimate->items()->detach();
-            $estimate->delete();
-        }
-
-        return response(null, Response::HTTP_NO_CONTENT);
-    }
-
-    //================================================
-    // PDF (simple loader - uses company logo & bank terms if needed)
-    //================================================
     public function pdf(EstimateQuotation $estimateQuotation)
     {
         $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        abort_if(
-            ! in_array($estimateQuotation->created_by_id, $allowedUserIds),
-            Response::HTTP_FORBIDDEN
-        );
-        // You can customize this to use BankAccount / TermAndCondition models like proforma
-        $estimateQuotation->load([
-            'select_customer',
-            'items' => function ($q) {
-                $q->withPivot([
-                    'description','qty','unit','price','discount_type','discount','tax_type','tax','amount','created_by_id','json_data',
-                ]);
-            },
-            'created_by',
-        ]);
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
 
-        $user    = auth()->user();
-        $company = $user->select_companies()->first();
-        $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+        $estimateQuotation->load(['select_customer','items','created_by']);
+
+        $company = auth()->user()->select_companies()->first();
+
         $bankDetails = BankAccount::whereIn('created_by_id', $allowedUserIds)
             ->where('print_bank_details', 1)
             ->get();
 
         $terms = TermAndCondition::where('status', 'active')
             ->get();
-        return view('admin.estimateQuotations.invoice', compact('estimateQuotation','company','logoUrl', 'bankDetails', 'terms'));
+
+        return view('admin.estimateQuotations.invoice', compact(
+            'estimateQuotation',
+            'company',
+            'bankDetails',
+            'terms'
+        ));
     }
 
-    //================================================
-    // CKEditor images
-    //================================================
-    public function storeCKEditorImages(Request $request)
+    public function destroy(EstimateQuotation $estimateQuotation)
     {
-        abort_if(Gate::denies('estimate_quotation_create') && Gate::denies('estimate_quotation_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        abort_if(Gate::denies('estimate_quotation_delete'), Response::HTTP_FORBIDDEN);
 
-        $model         = new EstimateQuotation();
-        $model->id     = $request->input('crud_id', 0);
-        $model->exists = true;
-        $media         = $model->addMediaFromRequest('upload')->toMediaCollection('ck-media');
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        return response()->json(['id' => $media->id, 'url' => $media->getUrl()], Response::HTTP_CREATED);
-    }
-public function convert(Request $request, EstimateQuotation $estimate)
-{
-    
-    abort_if(Gate::denies('estimate_quotation_show'), 403);
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
 
-    // ensure status exists
-    if ($estimate->status === 'converted') {
-        return back()->with('info', 'Already converted to Sale.');
+        $estimateQuotation->items()->detach();
+        $estimateQuotation->delete();
+
+        return back()->with('success', 'Estimate deleted successfully.');
     }
 
-    return DB::transaction(function () use ($estimate) {
+    public function massDestroy(Request $request)
+    {
+        abort_if(Gate::denies('estimate_quotation_delete'), Response::HTTP_FORBIDDEN);
 
-        // CREATE SALE INVOICE NUMBER
-        $sale_no = 'SI-' . now()->format('YmdHis') . rand(100, 999);
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-        // SALE INVOICE CREATE
-        $invoice = \App\Models\SaleInvoice::create([
-            'sale_invoice_number' => $sale_no,
-            'payment_type'        => $estimate->payment_type,
-            'select_customer_id'  => $estimate->select_customer_id,
-            'po_no'               => $estimate->po_no,
-            'po_date'             => $estimate->po_date,
-            'due_date'            => $estimate->due_date,
-            'billing_address'     => $estimate->billing_address,
-            'shipping_address'    => $estimate->shipping_address,
-            'notes'               => $estimate->notes,
-            'terms'               => $estimate->terms,
-            'subtotal'            => $estimate->subtotal,
-            'tax'                 => $estimate->tax,
-            'discount'            => $estimate->discount,
-            'overall_discount'    => $estimate->overall_discount,
-            'total'               => $estimate->total,
-            'status'              => 'converted from estimate',
+        EstimateQuotation::whereIn('id', $request->ids ?? [])
+            ->whereIn('created_by_id', $allowedUserIds)
+            ->delete();
 
-            // FIXED — correct field names for sale invoice table
-            'main_cost_center_id' => $estimate->main_cost_centers_id,
-            'sub_cost_center_id'  => $estimate->sub_cost_centers_id,
+        return response(null, Response::HTTP_NO_CONTENT);
+    }
 
-            'created_by_id'       => auth()->id(),
-            'docket_no'           => $estimate->docket_no,
-            'e_way_bill_no'       => $estimate->e_way_bill_no,
-            'phone_number'        => $estimate->customer_phone_invoice,
-            'terms'               => $estimate->terms,
-            'notes'               => $estimate->notes,
+    public function cancel(EstimateQuotation $estimateQuotation)
+    {
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-            'created_by_id'       => auth()->id(),
-          
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
 
-            // Only store sanitized JSON
-                'json_data'     => json_encode([
-                'estimate_id'   => $estimate->id,
-                'estimate_no'   => $estimate->estimate_quotations_number,
-                'customer_id'   => $estimate->select_customer_id,
-                'subtotal'      => $estimate->subtotal,
-                'tax'           => $estimate->tax,
-                'discount'      => $estimate->discount,
-                'total'         => $estimate->total,
-            ], JSON_UNESCAPED_UNICODE),
-        ]);
-
-
-        // ATTACH ITEMS + STOCK REDUCE
-        foreach ($estimate->items as $it) {
-
-            // Attach to invoice pivot
-            $invoice->items()->attach($it->id, [
-                'qty'           => $it->pivot->qty,
-                'unit'          => $it->pivot->unit,
-                'price'         => $it->pivot->price,
-                'discount'      => $it->pivot->discount,
-                'tax'           => $it->pivot->tax,
-                'tax_type'      => $it->pivot->tax_type,
-                'amount'        => $it->pivot->amount,
-                'created_by_id' => auth()->id(),
-                'json_data'     => $it->pivot->json_data,
-            ]);
-
-            // STOCK REDUCE (CurrentStock)
-            if ($it->item_type === 'product') {
-
-                $currentStock = \App\Models\CurrentStock::where('item_id', $it->id)
-                    ->latest()
-                    ->first();
-
-                if ($currentStock) {
-
-                    $currentStock->qty -= $it->pivot->qty;
-                    if ($currentStock->qty < 0) {
-                        $currentStock->qty = 0;
-                    }
-                    $currentStock->save();
-
-                } else {
-                    \App\Models\CurrentStock::create([
-                        'user_id'       => auth()->id(),
-                        'created_by_id' => auth()->id(),
-                        'item_id'       => $it->id,
-                        'qty'           => 0 - $it->pivot->qty,
-                        'type'          => 'Sale Minus',
-                        'product_type'  => 'product',
-                        'json_data'     => json_encode(['source' => 'estimate convert']),
-                    ]);
-                }
-            }
+        if ($estimateQuotation->status === 'converted') {
+            return back()->with('error', 'Converted estimate cannot be cancelled.');
         }
 
-        // CUSTOMER BALANCE UPDATE
-        $customer = PartyDetail::find($estimate->select_customer_id);
-        if ($customer) {
-            $customer->current_balance = ($customer->current_balance ?? 0) + $estimate->total;
-            $customer->save();
-        }
+        $estimateQuotation->update(['status' => 'cancelled']);
 
-        // UPDATE ESTIMATE STATUS
-        $estimate->update([
-            'status' => 'converted',
-            'converted_sale_invoice_id' => $invoice->id
-        ]);
-
-        return redirect()
-            ->route('admin.sale-invoices.edit', $invoice->id)
-            ->with('success', 'Estimate Converted to Sale Invoice.');
-    });
-}
-
-
-
-public function cancel(EstimateQuotation $estimateQuotation)
-{
-    if ($estimateQuotation->status === 'converted') {
-        return back()->with('error', 'Converted estimate cannot be cancelled.');
+        return back()->with('success', 'Estimate cancelled.');
     }
 
-    $estimateQuotation->update([
-        'status' => 'cancelled'
-    ]);
+    public function updateDate(Request $request, EstimateQuotation $estimateQuotation)
+    {
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
 
-    return back()->with('success', 'Estimate cancelled.');
+        abort_if(!in_array($estimateQuotation->created_by_id, $allowedUserIds), 403);
+
+        $request->validate(['due_date' => 'required|date']);
+
+        $estimateQuotation->update(['due_date' => $request->due_date]);
+
+        return back()->with('success', 'Valid date updated.');
+    }
 }
-public function updateDate(Request $request, EstimateQuotation $estimateQuotation)
-{
-    $request->validate([
-        'due_date' => 'required|date'
-    ]);
-
-    $estimateQuotation->update([
-        'due_date' => $request->due_date
-    ]);
-
-    return back()->with('success', 'Valid date updated.');
-}
-
-}
-

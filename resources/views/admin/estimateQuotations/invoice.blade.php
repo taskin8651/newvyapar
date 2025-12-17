@@ -297,13 +297,13 @@ body.dark .control-select, body.dark .control-btn { background:#0b1220; color:#e
           <img src="{{ $logoUrl }}" alt="logo">
         @else
           <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--primary);">
-            {{ strtoupper(substr($company->company_name ?? 'YC',0,2)) }}
+            {{ ucwords($company->company_name ?? 'YC',0,2) }}
           </div>
         @endif
       </div>
 
       <div class="company-meta">
-        <div class="company-title">{{ $company->company_name ?? 'Your Company' }}</div>
+        <div class="company-title">{{ ucwords($company->company_name ?? 'Your Company' )}}</div>
         <div class="company-sub">{!! nl2br(e($company->address ?? '')) !!}</div>
         <div class="company-sub">Phone: {{ $company->phone ?? '-' }} • Email: {{ $company->email ?? '-' }}</div>
       </div>
@@ -470,7 +470,7 @@ body.dark .control-select, body.dark .control-btn { background:#0b1220; color:#e
                         <div class="label-title" ><b>Bank Details</b></div>
 
                         @foreach($bankDetails as $bank)
-                        <div style="display: flex ;border: 2px solid;border-style:double;border-color:#10b981; padding:10px;" >
+                        <div style="display: flex ;border: 2px solid;border-style:double;border-color:var(--primary); padding:10px;" >
                             <div class="box mb-3">
                                 <p><b>Bank:</b> {{ $bank->bank_name }}</p>
                                 <p><b>Account No:</b> {{ $bank->account_number }}</p>
