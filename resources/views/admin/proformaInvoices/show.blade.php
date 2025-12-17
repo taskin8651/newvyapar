@@ -246,7 +246,10 @@ $c = $proformaInvoice->select_customer;
         <div class="brand-header">
 
             <div>
-                <div class="brand-title">{{ $company?->company_name }}</div>
+                <div class="brand-title">
+                    {{ ucwords($company?->company_name) }}
+                </div>
+
                 <div style="font-size:13px">GSTIN: {{ $company?->gst_number }}</div>
                 <div style="font-size:13px">Status: {{ $proformaInvoice->status }}</div>
             </div>
@@ -259,7 +262,7 @@ $c = $proformaInvoice->select_customer;
 
         <!-- INVOICE TITLE -->
         <div class="section">
-            <h1 class="text-2xl font-bold text-blue-700">TAX INVOICE</h1>
+            <h1 class="text-2xl font-bold text-blue-700">DC INVOICE</h1>
 
             <p class="text-xs text-gray-600 mt-1">
                 Invoice No: <b>{{ $proformaInvoice->delivery_challan_number }}</b><br>
