@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use Illuminate\Support\Str;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\CsvImportTrait;
@@ -176,7 +177,7 @@ class EstimateQuotationController extends Controller
             'items'               => 'required|array|min:1',
             'items.*.add_item_id' => 'required|exists:add_items,id',
             'items.*.qty'         => 'required|numeric|min:1',
-            'main_cost_centers_id' => 'required|exists:main_cost_centers,id',
+            'main_cost_centers_id'=> 'required|exists:main_cost_centers,id',
             'sub_cost_centers_id' => 'required|exists:sub_cost_centers,id',
         ]);
 
@@ -225,9 +226,15 @@ class EstimateQuotationController extends Controller
                 ]);
             }
 
-            return redirect()
-                ->route('admin.estimate-quotations.index')
-                ->with('success', 'Estimate created successfully.');
+            // Token for QR Download
+$estimate->download_token = Str::random(40);
+$estimate->token_expires_at = now()->addHours(24);
+$estimate->save();
+
+return redirect()
+    ->route('admin.estimate-quotations.index')
+    ->with('success', 'Estimate created successfully.');
+
         });
     }
 
@@ -364,9 +371,15 @@ class EstimateQuotationController extends Controller
                 ]);
             }
 
-            return redirect()
-                ->route('admin.estimate-quotations.index')
-                ->with('success', 'Estimate updated successfully.');
+            // Token Refresh on Update
+$estimateQuotation->download_token = Str::random(40);
+$estimateQuotation->token_expires_at = now()->addHours(24);
+$estimateQuotation->save();
+
+return redirect()
+    ->route('admin.estimate-quotations.index')
+    ->with('success', 'Estimate updated successfully.');
+
         });
     }
 

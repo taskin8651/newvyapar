@@ -13,7 +13,7 @@ class ExpenseCategory extends Model
 {
     use SoftDeletes, MultiTenantModelTrait, Auditable, HasFactory;
 
-    public $table = 'expense_categories';
+    protected $table = 'expense_categories';
 
     protected $dates = [
         'created_at',
@@ -21,7 +21,9 @@ class ExpenseCategory extends Model
         'deleted_at',
     ];
 
-    // 🆕 Combined options
+    /**
+     * Category Types
+     */
     public const CATEGORY_TYPE_SELECT = [
         'Asset'     => 'Asset',
         'Liability' => 'Liability',
@@ -40,12 +42,11 @@ class ExpenseCategory extends Model
 
     protected $fillable = [
         'expense_category',
-        'category_type', // now handles all options
+        'category_type',
         'created_by_id',
         'created_at',
         'updated_at',
         'deleted_at',
-        
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -53,6 +54,9 @@ class ExpenseCategory extends Model
         return $date->format('Y-m-d H:i:s');
     }
 
+    /**
+     * Creator
+     */
     public function created_by()
     {
         return $this->belongsTo(User::class, 'created_by_id');
