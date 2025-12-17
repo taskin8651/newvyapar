@@ -30,7 +30,7 @@
                     <!-- Ledger -->
                     <div>
                         <label for="category_id" class="block font-medium text-gray-700">
-                            Select Ledger
+                            Select Ledgers
                         </label>
                         <select id="ledger_id" name="category_id" required
                             class="w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50">
