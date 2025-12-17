@@ -67,15 +67,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             {{ trans('cruds.expenseList.fields.payment') }}
                         </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            {{ trans('cruds.bankAccount.fields.account_number') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            {{ trans('cruds.bankAccount.fields.ifsc_code') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            {{ trans('cruds.bankAccount.fields.bank_name') }}
-                        </th>
+                        
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             {{ trans('cruds.expenseList.fields.tax_include') }}
                         </th>
@@ -93,16 +85,13 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->category->expense_category ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 @if($expenseList->category)
-                                   {{ \App\Models\ExpenseCategory::CATEGORY_TYPE_SELECT[$expenseList->category->category_type] ?? '' }}
-
+                                    {{ $expenseList->category::TYPE_SELECT[$expenseList->category->type] ?? '' }}
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->amount ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->description ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->payment->account_name ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->payment->account_number ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->payment->ifsc_code ?? '' }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseList->payment->bank_name ?? '' }}</td>
+                            
                             <td class="px-4 py-3 text-sm text-gray-700">{{ App\Models\ExpenseList::TAX_INCLUDE_RADIO[$expenseList->tax_include] ?? '' }}</td>
                             <td class="px-4 py-3 text-center space-x-1">
                                 @can('expense_list_show')

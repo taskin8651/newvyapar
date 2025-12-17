@@ -16,6 +16,7 @@ use App\Models\SubCostCenter;
 use App\Models\TermAndCondition;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Traits\CompanyScopeTrait;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ProformaInvoiceController extends Controller
 {
-    use MediaUploadingTrait, CsvImportTrait;
+    use MediaUploadingTrait, CsvImportTrait,CompanyScopeTrait;
 
     //================================================
     // INDEX
@@ -694,24 +695,48 @@ public function show(ProformaInvoice $proformaInvoice)
 {
     abort_if(Gate::denies('proforma_invoice_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+    $user = auth()->user();
+    $company = $user->select_companies()->first();
+
+    // 🔥 REUSABLE COMPANY SCOPE LOGIC
+    $allowedCreatedByIds = $this->getCompanyAllowedUserIds();
+
+    // ===============================
+    // BANK DETAILS (Admin + Login user)
+    // ===============================
+    $bankDetails = BankAccount::whereIn('created_by_id', $allowedCreatedByIds)
+        ->where('print_bank_details', 1)
+        ->get();
+
+    // ===============================
+    // TERMS (Admin + Login user)
+    // ===============================
+    $terms = TermAndCondition::
+        where('status', 'active')
+        ->get();
+
     $proformaInvoice->load([
         'select_customer',
-        'items' => function ($q) {
-            $q->withPivot([
-                'description','qty','unit','price',
-                'discount_type','discount',
-                'tax_type','tax','amount',
-                'created_by_id','json_data'
-            ]);
-        },
+        'items' => fn ($q) => $q->withPivot([
+            'description','qty','unit','price',
+            'discount_type','discount',
+            'tax_type','tax','amount','json_data'
+        ]),
         'created_by',
         'main_cost_center',
         'sub_cost_center',
         'media',
     ]);
 
-    return view('admin.proformaInvoices.show', compact('proformaInvoice'));
+    return view('admin.proformaInvoices.show', compact(
+        'proformaInvoice',
+        'bankDetails',
+        'terms',
+        'company'
+    ));
 }
+
+
 
 
     //================================================

@@ -16,18 +16,16 @@ class StoreExpenseListRequest extends FormRequest
 
     public function rules()
     {
-        return [
-            'entry_date' => [
-                'required',
-                'date_format:' . config('panel.date_format'),
-            ],
-            'amount' => [
-                'required',
-            ],
-            'description' => [
-                'string',
-                'nullable',
-            ],
-        ];
+    return [
+        'entry_date' => ['required', 'date'],
+        'category_id' => ['required', 'integer'],
+        'amount' => ['required', 'numeric', 'min:0.01'],
+        'description' => ['nullable', 'string'],
+        'payment_id' => ['required', 'integer', 'exists:bank_accounts,id'], // ✅ THIS LINE
+        'main_cost_center_id' => ['nullable', 'integer'],
+        'sub_cost_center_id' => ['nullable', 'integer'],
+        'tax_include' => ['required'],
+        'notes' => ['nullable', 'string'],
+    ];
     }
 }

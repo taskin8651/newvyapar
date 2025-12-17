@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\Auditable;
 use Carbon\Carbon;
+use App\Traits\CompanyScopeTrait;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +15,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class BankAccount extends Model implements HasMedia
 {
-    use SoftDeletes, Auditable, HasFactory, InteractsWithMedia;
+    use SoftDeletes, Auditable, HasFactory, InteractsWithMedia, CompanyScopeTrait;
 
     public $table = 'bank_accounts';
 

@@ -61,6 +61,9 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Category Type
                         </th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Ledger Name
+                        </th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ trans('global.actions') }}
                         </th>
@@ -74,7 +77,18 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseCategory->id ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expenseCategory->expense_category ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
-                                {{ ucfirst($expenseCategory->category_type ?? '—') }}
+                                {{ ucfirst($expenseCategory->type ?? '—') }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                @if($expenseCategory->ledgers->count())
+                                    <ul class="mb-0 pl-3">
+                                        @foreach($expenseCategory->ledgers as $ledger)
+                                            <li>{{ $ledger->ledger_name }}</li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-center space-x-1">
                                 @can('expense_category_show')

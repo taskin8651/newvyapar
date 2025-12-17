@@ -27,9 +27,17 @@ class ExpenseCategory extends Model
     public const CATEGORY_TYPE_SELECT = [
         'Asset'     => 'Asset',
         'Liability' => 'Liability',
-        'Sale'      => 'Sale',
-        'Purchase'  => 'Purchase',
+        'Revenue'      => 'Revenue',
+        'Equity'  => 'Equity',
         'Capital'   => 'Capital',
+        'Expense'   => 'Expense',
+        'Other'     => 'Other',
+        'Income'    => 'Income',
+        'All'       => 'All',
+        'Cost of Goods Sold' => 'Cost of Goods Sold',
+        'Direct Expense' => 'Direct Expense',
+        'Indirect Expense' => 'Indirect Expense',
+
     ];
 
     protected $fillable = [
@@ -53,4 +61,9 @@ class ExpenseCategory extends Model
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+    public function ledgers()
+{
+    return $this->hasMany(\App\Models\Ledger::class, 'expense_category_id');
+}
+
 }

@@ -4,7 +4,7 @@
 <style>
     body {
         background: #f8f9fa;
-        font-family: "Helvetica", sans-serif;
+        font-family: Helvetica, sans-serif;
     }
 
     .invoice-wrapper {
@@ -21,19 +21,20 @@
         color: #fff;
         display: flex;
         justify-content: space-between;
+        align-items: center;
     }
 
     .brand-title {
-        font-size: 28px;
+        font-size: 26px;
         font-weight: bold;
     }
 
     .section {
-        padding: 18px 25px;
+        padding: 16px 24px;
     }
 
     .label-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         color: #444;
         margin-bottom: 6px;
@@ -49,72 +50,88 @@
     .table th {
         background: #f4f4f4;
         border: 1px solid #ddd;
-        font-weight: 600;
         padding: 6px;
-        text-transform: uppercase;
         font-size: 11px;
     }
 
     .table td {
-        padding: 6px 4px;
         border: 1px solid #ddd;
+        padding: 6px;
         font-size: 12px;
-    }
-
-    .totals-table td {
-        padding: 6px 4px;
-        font-size: 13px;
     }
 
     .box {
         border: 1px dashed #aaa;
         padding: 10px;
         font-size: 12px;
-        margin-top: 8px;
         background: #fafafa;
     }
 
     .signature-box {
         text-align: right;
-        margin-top: 40px;
+        margin-top: -30px;
     }
 
-    /* =========================
-        FIXED PRINT STYLE
-    ========================= */
+    /* ======================
+        PRINT FIX – A4 SINGLE PAGE
+    ====================== */
     @media print {
 
-        body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            background: #fff !important;
+        @page {
+            size: A4;
+            margin: 9mm;
         }
 
-        .no-print {
+        body {
+            background: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Hide everything */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Show only invoice */
+        #printArea,
+        #printArea * {
+            visibility: visible;
+           
+        }
+
+        #printArea {
+            position: relative;
+            left: 0;
+            top: 0;
+            width: 100%;
+            transform: scale(0.95);
+            transform-origin: top left;
+            
+        }
+
+        /* Hide navbar, sidebar, buttons */
+        header, nav, aside, .no-print {
             display: none !important;
         }
 
         .invoice-wrapper {
-            width: 100% !important;
-            max-width: 100% !important;
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-        }
-
-        pre.box {
-            background: #fafafa !important;
-            -webkit-print-color-adjust: exact !important;
+            max-width: 100% !important;
         }
 
         .table th {
             background: #f4f4f4 !important;
         }
+        .signature-box {
+        text-align: right;
+        margin-top: -30px;
+    }
     }
 </style>
 @endsection
-
-
 
 @section('content')
 
@@ -223,7 +240,7 @@ $c = $proformaInvoice->select_customer;
 
 
     <!-- INVOICE -->
-    <div id="printArea" class="invoice-wrapper shadow-xl">
+    <div id="printArea" class="invoice-wrapper shadow-xl" style="">
 
         <!-- HEADER -->
         <div class="brand-header">
@@ -276,24 +293,24 @@ $c = $proformaInvoice->select_customer;
         </div>
 
         <!-- DELIVERY -->
-        <div class="section">
-            <div class="label-title">Delivery Details</div>
+            {{-- <div class="section">
+                <div class="label-title">Delivery Details</div>
 
-            <table class="table">
-                <tr>
-                    <td>Mode of Transport</td>
-                    <td>{{ $proformaInvoice->json_data['transport_mode'] ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td>Vehicle Number</td>
-                    <td>{{ $proformaInvoice->json_data['vehicle_number'] ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td>Transporter</td>
-                    <td>{{ $proformaInvoice->json_data['transporter_name'] ?? '-' }}</td>
-                </tr>
-            </table>
-        </div>
+                <table class="table">
+                    <tr>
+                        <td>Mode of Transport</td>
+                        <td>{{ $proformaInvoice->json_data['transport_mode'] ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Vehicle Number</td>
+                        <td>{{ $proformaInvoice->json_data['vehicle_number'] ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Transporter</td>
+                        <td>{{ $proformaInvoice->json_data['transporter_name'] ?? '-' }}</td>
+                    </tr>
+                </table>
+            </div> --}}
 
         <!-- ITEMS -->
         <div class="section">
@@ -329,7 +346,7 @@ $c = $proformaInvoice->select_customer;
 
 
         <!-- HSN SUMMARY -->
-        <div class="section">
+        {{-- <div class="section">
             <div class="label-title">HSN Summary</div>
 
             <table class="table">
@@ -369,22 +386,49 @@ $c = $proformaInvoice->select_customer;
 
                 </tbody>
             </table>
-        </div>
-
+        </div> --}}
 
         <!-- TOTALS -->
         <div class="section grid grid-cols-2 gap-6">
 
             <div>
-                <div class="label-title">Payment Terms</div>
-                <div class="box">
-                    {!! nl2br(e($proformaInvoice->terms ?? 'Payment due within 7 days.')) !!}
-                </div>
+               
+                    @if($bankDetails->count())
+                    <div class="section">
+                        <div class="label-title">Bank Details</div>
 
-                <div class="label-title mt-3">Reverse Charge</div>
-                <div class="box">
-                    {{ $proformaInvoice->json_data['reverse_charge'] ?? 'No' }}
-                </div>
+                        @foreach($bankDetails as $bank)
+                        <div style="display: flex">
+                            <div class="box mb-3">
+                                <p><b>Bank:</b> {{ $bank->bank_name }}</p>
+                                <p><b>Account No:</b> {{ $bank->account_number }}</p>
+                                <p><b>IFSC:</b> {{ $bank->ifsc_code }}</p>
+                                <p><b>Branch:</b> {{ $bank->branch_name }}</p>
+
+
+                            </div>
+                            <div>
+                                {{-- =====================
+                                    UPI QR CODE
+                                ====================== --}}
+                                @if($bank->print_upi_qr)
+                                    @php
+                                        $upiQr = $bank->getFirstMediaUrl('upi_qr');
+                                    @endphp
+
+                                    @if($upiQr)
+                                        <div class="">
+                                            <img src="{{ $upiQr }}" style="height:120px">
+                                            <p class="text-xs text-gray-600">Scan & Pay (UPI)</p>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @endif
+
             </div>
 
 
@@ -427,23 +471,44 @@ $c = $proformaInvoice->select_customer;
         </div>
 
 
-        <!-- E-INVOICE JSON -->
-        <div class="section">
-            <div class="label-title">E-Invoice JSON</div>
+        
+        <!-- TERMS & NOTES -->
+        <div class="section" style="margin-top: -20px;">
+            <div class="grid grid-cols-2 gap-6" >
 
-            <pre class="box" style="white-space:pre-wrap">
-{{ json_encode([
-    "InvoiceNo" => $proformaInvoice->delivery_challan_number,
-    "InvoiceDate" => $proformaInvoice->created_at?->format('Y-m-d'),
-    "BuyerGST" => $c?->gstin,
-    "Total" => $proformaInvoice->total,
-], JSON_PRETTY_PRINT) }}
-            </pre>
+                <!-- TERMS -->
+                <div>
+                    <div class="label-title">Terms & Conditions</div>
+
+                    @if($terms->count())
+                        <div class="box text-xs">
+                            <ul class="list-disc ml-4">
+                                @foreach($terms as $term)
+                                    <li>{!! nl2br(e($term->description)) !!}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @else
+                        <div class="box text-xs">—</div>
+                    @endif
+                </div>
+
+                <!-- NOTES -->
+                <div>
+                    <div class="label-title">Notes</div>
+
+                    <div class="box text-xs">
+                        {!! nl2br(e($proformaInvoice->notes ?? '—')) !!}
+                    </div>
+                </div>
+
+            </div>
         </div>
 
 
+
         <!-- SIGNATURE -->
-        <div class="section signature-box">
+        <div class="section signature-box" style="margin-top: -90px;">
 
             @if($company?->getFirstMediaUrl('stamp_upload'))
                 <img src="{{ $company->getFirstMediaUrl('stamp_upload') }}" style="height:80px; opacity:0.8;">

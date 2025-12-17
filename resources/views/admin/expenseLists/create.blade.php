@@ -23,30 +23,38 @@
             <!-- Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <!-- Entry Date -->
-                <div class="bg-blue-50 p-4 rounded-lg shadow-inner">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">
-                        {{ trans('cruds.expenseList.fields.entry_date') }} <span class="text-red-500">*</span>
-                    </label>
-                    <input type="date" name="entry_date" value="{{ old('entry_date') }}" required
-                        class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
+                    <!-- Entry Date -->
+<div>
+    <label for="entry_date" class="block font-medium text-gray-700">
+        {{ trans('cruds.expenseList.fields.entry_date') }}
+    </label>
+    <input type="date" name="entry_date" id="entry_date" 
+        value="{{ old('entry_date') }}" required
+        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+    @error('entry_date')
+        <span class="text-red-600 text-sm">{{ $message }}</span>
+    @enderror
+</div>
 
-                <!-- Ledger -->
-                <div class="bg-green-50 p-4 rounded-lg shadow-inner">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">
-                        Select Ledger <span class="text-red-500">*</span>
-                    </label>
-                    <select name="category_id" required
-                        class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">-- Select Ledger --</option>
-                        @foreach($ledgers as $id => $name)
-                            <option value="{{ $id }}" {{ old('category_id') == $id ? 'selected' : '' }}>
-                                {{ $name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+
+                    <!-- Ledger -->
+                    <div>
+                        <label for="category_id" class="block font-medium text-gray-700">
+                            Select Ledger
+                        </label>
+                        <select id="category_id" name="category_id" required
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">-- Select Ledger --</option>
+                            @foreach($ledgers as $id => $name)
+                                <option value="{{ $id }}" {{ old('category_id') == $id ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('category_id')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                    </div>
 
                 <!-- Amount -->
                 <div class="bg-purple-50 p-4 rounded-lg shadow-inner">
@@ -66,37 +74,44 @@
                         class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
 
-                <!-- Payment / Cash -->
-                <div class="bg-indigo-50 p-4 rounded-lg shadow-inner">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">
-                        Payment / Cash In Hand
-                    </label>
-                    <select name="account_id"
-                        class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">-- Select Account --</option>
-                        @foreach($accounts as $account)
-                            <option value="{{ $account['id'] }}" {{ old('account_id') == $account['id'] ? 'selected' : '' }}>
-                                {{ $account['name'] }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                    <!-- Combined Payment / Cash In Hand -->
+<div>
+    <label for="account_id" class="block font-medium text-gray-700">
+        Payment / Cash In Hand
+    </label>
+    <select id="account_id" name="account_id"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">-- Select Account --</option>
+        @foreach($accounts as $account)
+            <option value="{{ $account['id'] }}" {{ old('account_id') == $account['id'] ? 'selected' : '' }}>
+                {{ $account['name'] }}
+            </option>
+        @endforeach
+    </select>
+    @error('account_id')
+        <span class="text-red-600 text-sm">{{ $message }}</span>
+    @enderror
+</div>
 
-                <!-- Main Cost Center -->
-                <div class="bg-red-50 p-4 rounded-lg shadow-inner">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">
-                        Main Cost Center
-                    </label>
-                    <select name="main_cost_center_id"
-                        class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">-- Select --</option>
-                        @foreach($mainCostCenters as $id => $entry)
-                            <option value="{{ $id }}" {{ old('main_cost_center_id') == $id ? 'selected' : '' }}>
-                                {{ $entry }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+
+                    <!-- 🆕 Main Cost Center -->
+                    <div>
+                        <label for="main_cost_center_id" class="block font-medium text-gray-700">
+                            Main Cost Center
+                        </label>
+                        <select id="main_cost_center_id" name="main_cost_center_id"
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">-- Select Main Cost Center --</option>
+                            @foreach($mainCostCenters as $id => $entry)
+                                <option value="{{ $id }}" {{ old('main_cost_center_id') == $id ? 'selected' : '' }}>
+                                    {{ $entry }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('main_cost_center_id')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                    </div>
 
                 <!-- Sub Cost Center -->
                 <div class="bg-pink-50 p-4 rounded-lg shadow-inner">
