@@ -222,6 +222,41 @@ body.dark .control-select, body.dark .control-btn { background:#0b1220; color:#e
     
   }
 }
+/* =========================
+   PRINT MODE CUSTOM FIXES
+========================= */
+.print-only { display: none; }
+
+@media print {
+
+  /* Hide HSN summary */
+  .hsn { display: none !important; }
+
+  /* Show print-only blocks */
+  .print-only { display: block !important; }
+
+  /* Bank + Terms + Notes layout */
+  .print-bank {
+    border: 2px double var(--primary);
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+
+  .print-terms-notes {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .print-terms-notes > div {
+    width: 50%;
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+}
 
 </style>
 </head>
@@ -370,51 +405,112 @@ body.dark .control-select, body.dark .control-btn { background:#0b1220; color:#e
   <!-- continued marker placeholder (not used in preview) -->
   <div id="continuedMarkerPlaceholder"></div>
 
-  <!-- SUMMARY + HSN + PROFIT -->
-  <div class="summary-row" id="summaryRow">
-    <div class="summary-left">
-      <div class="hsn" aria-label="HSN summary">
-        <strong>HSN Summary</strong>
-        <table style="width:100%; margin-top:8px; border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="text-align:left; padding:6px 8px; font-weight:700;">HSN</th>
-              <th style="text-align:right; padding:6px 8px; font-weight:700;">Qty</th>
-              <th style="text-align:right; padding:6px 8px; font-weight:700;">Tax Amt</th>
-              <th style="text-align:right; padding:6px 8px; font-weight:700;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach($hsnSummary as $h => $row)
-              <tr>
-                <td style="padding:6px 8px;">{{ $h }}</td>
-                <td style="padding:6px 8px; text-align:right;">{{ number_format($row['qty'],2) }}</td>
-                <td style="padding:6px 8px; text-align:right;">₹ {{ number_format($row['tax'],2) }}</td>
-                <td style="padding:6px 8px; text-align:right;">₹ {{ number_format($row['amount'],2) }}</td>
-              </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
+      <div class="summary-row" id="summaryRow">
 
-      <div class="profit" id="profitBox" aria-hidden="true">
-        <strong>Profit / Loss</strong>
-        <div style="margin-top:8px; font-size:20px; font-weight:900; color:{{ $overallProfit >=0 ? '#067f3b' : '#b91c1c' }}" id="profitValue">
-          ₹ {{ number_format($overallProfit,2) }}
+        <!-- LEFT -->
+        <div class="summary-left">
+
+          <!-- SCREEN: HSN -->
+          <div class="hsn">
+            <strong>HSN Summary</strong>
+            <table style="width:100%; margin-top:8px;">
+              @foreach($hsnSummary as $h => $row)
+                <tr>
+                  <td>{{ $h }}</td>
+                  <td style="text-align:right">{{ number_format($row['qty'],2) }}</td>
+                  <td style="text-align:right">₹ {{ number_format($row['tax'],2) }}</td>
+                  <td style="text-align:right">₹ {{ number_format($row['amount'],2) }}</td>
+                </tr>
+              @endforeach
+            </table>
+          </div>
+
+          <!-- PRINT: BANK DETAILS -->
+          <div class="print-only print-bank">
+            <div class="">
+
+            <div>
+              <strong>Terms & Conditions</strong>
+              <ul style="margin-top:6px;padding-left:16px">
+                @foreach($terms as $term)
+                  <li>{!! nl2br(e($term->description)) !!}</li>
+                @endforeach
+              </ul>
+            </div>
+
+            <div>
+              <strong>Notes</strong>
+              <p style="margin-top:6px">
+                {!! nl2br(e($estimateQuotation->notes ?? '—')) !!}
+              </p>
+            </div>
+
+          </div>
+          </div>
+
         </div>
-        <div class="muted" style="margin-top:6px; font-size:12px;">(Profit = rate - purchase cost) × qty — if purchase cost missing, assumed 0</div>
+
+        <!-- RIGHT -->
+        <div class="totals" id="totalsBox">
+          <div class="line"><div>Subtotal</div><div>₹ {{ number_format($estimateQuotation->subtotal,2) }}</div></div>
+          <div class="line"><div>Tax</div><div>₹ {{ number_format($estimateQuotation->tax,2) }}</div></div>
+          <div class="line"><div>Discount</div><div>₹ {{ number_format($estimateQuotation->discount,2) }}</div></div>
+          <div class="grand"><div>Total</div><div>₹ {{ number_format($estimateQuotation->total,2) }}</div></div>
+        </div>
+
       </div>
 
-    </div>
+          <!-- TOTALS -->
+        <div class="section grid grid-cols-2 gap-6">
 
-    <div class="totals" role="region" aria-label="Totals" id="totalsBox">
-      <div class="line"><div class="muted">Subtotal</div><div>₹ {{ number_format($estimateQuotation->subtotal ?? 0,2) }}</div></div>
-      <div class="line"><div class="muted">Tax</div><div>₹ {{ number_format($estimateQuotation->tax ?? 0,2) }}</div></div>
-      <div class="line"><div class="muted">Discount</div><div>₹ {{ number_format($estimateQuotation->discount ?? 0,2) }}</div></div>
-      <div class="grand"><div>Total</div><div>₹ {{ number_format($estimateQuotation->total ?? 0,2) }}</div></div>
-      <div style="margin-top:8px;" class="muted">Payment Terms: {{ $estimateQuotation->payment_type ?? '—' }} • Notes: {{ \Illuminate\Support\Str::limit($estimateQuotation->notes ?? '-', 120) }}</div>
-    </div>
-  </div>
+            <div >
+               
+                    @if($bankDetails->count())
+                    <div class="section" >
+                        <div class="label-title" ><b>Bank Details</b></div>
+
+                        @foreach($bankDetails as $bank)
+                        <div style="display: flex ;border: 2px solid;border-style:double;border-color:#10b981; padding:10px;" >
+                            <div class="box mb-3">
+                                <p><b>Bank:</b> {{ $bank->bank_name }}</p>
+                                <p><b>Account No:</b> {{ $bank->account_number }}</p>
+                                <p><b>IFSC:</b> {{ $bank->ifsc_code }}</p>
+                                <p><b>Branch:</b> {{ $bank->branch_name }}</p>
+
+
+                            </div>
+                            <div>
+                                {{-- =====================
+                                    UPI QR CODE
+                                ====================== --}}
+                                @if($bank->print_upi_qr)
+                                    @php
+                                        $upiQr = $bank->getFirstMediaUrl('upi_qr');
+                                    @endphp
+
+                                    @if($upiQr)
+                                        <div class="">
+                                            <img src="{{ $upiQr }}" style="height:120px">
+                                            <p class="text-xs text-gray-600">Scan & Pay (UPI)</p>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @endif
+
+            </div>
+
+
+            
+
+        </div>
+
+
+<!-- PRINT ONLY: TERMS + NOTES -->
+
 
   <div class="sign-area" aria-label="Signature area" id="signatureArea">
     <div>

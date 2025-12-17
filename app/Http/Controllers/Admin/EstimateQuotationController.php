@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\CsvImportTrait;
 use App\Http\Controllers\Traits\MediaUploadingTrait;
 use App\Models\AddItem;
+use App\Models\BankAccount;
 use App\Models\EstimateQuotation;
 use App\Models\PartyDetail;
 use App\Models\MainCostCenter;
 use App\Models\SubCostCenter;
+use App\Models\TermAndCondition;
 use Illuminate\Http\Request;
+use App\Traits\CompanyScopeTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Gate;
@@ -19,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EstimateQuotationController extends Controller
 {
-    use MediaUploadingTrait, CsvImportTrait;
+    use MediaUploadingTrait, CsvImportTrait, CompanyScopeTrait;
 
     //================================================
     // INDEX
@@ -390,23 +393,46 @@ return redirect()
     {
         abort_if(Gate::denies('estimate_quotation_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
+        abort_if(
+            ! in_array($estimateQuotation->created_by_id, $allowedUserIds),
+            Response::HTTP_FORBIDDEN
+        );
+
         $estimateQuotation->load([
             'select_customer',
             'items' => function ($q) {
                 $q->withPivot([
-                    'description','qty','unit','price',
-                    'discount_type','discount',
-                    'tax_type','tax','amount',
-                    'created_by_id','json_data'
+                    'description',
+                    'qty',
+                    'unit',
+                    'price',
+                    'discount_type',
+                    'discount',
+                    'tax_type',
+                    'tax',
+                    'amount',
+                    'created_by_id',
+                    'json_data'
                 ]);
             },
             'created_by',
             'media'
         ]);
 
-        return view('admin.estimateQuotations.show', compact('estimateQuotation'));
-    }
+        $bankDetails = BankAccount::whereIn('created_by_id', $allowedUserIds)
+            ->where('print_bank_details', 1)
+            ->get();
 
+        $terms = TermAndCondition::where('status', 'active')
+            ->get();
+
+        return view(
+            'admin.estimateQuotations.show',
+            compact('estimateQuotation', 'bankDetails', 'terms')
+        );
+    }
     //================================================
     // DESTROY
     //================================================
@@ -446,6 +472,12 @@ return redirect()
     //================================================
     public function pdf(EstimateQuotation $estimateQuotation)
     {
+        $allowedUserIds = $this->getCompanyAllowedUserIds();
+
+        abort_if(
+            ! in_array($estimateQuotation->created_by_id, $allowedUserIds),
+            Response::HTTP_FORBIDDEN
+        );
         // You can customize this to use BankAccount / TermAndCondition models like proforma
         $estimateQuotation->load([
             'select_customer',
@@ -460,8 +492,13 @@ return redirect()
         $user    = auth()->user();
         $company = $user->select_companies()->first();
         $logoUrl = $company?->getFirstMediaUrl('logo_upload') ?? null;
+        $bankDetails = BankAccount::whereIn('created_by_id', $allowedUserIds)
+            ->where('print_bank_details', 1)
+            ->get();
 
-        return view('admin.estimateQuotations.invoice', compact('estimateQuotation','company','logoUrl'));
+        $terms = TermAndCondition::where('status', 'active')
+            ->get();
+        return view('admin.estimateQuotations.invoice', compact('estimateQuotation','company','logoUrl', 'bankDetails', 'terms'));
     }
 
     //================================================
