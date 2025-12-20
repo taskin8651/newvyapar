@@ -57,6 +57,7 @@ public function index()
 
     $expenseLists = ExpenseList::with([
             'category',
+            'category.ledgers',
             'payment',
             'created_by'
         ])

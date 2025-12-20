@@ -56,6 +56,10 @@
                             {{ trans('cruds.expenseList.fields.category') }}
                         </th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Ledger
+                        </th>
+
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             {{ trans('cruds.expenseCategory.fields.type') }}
                         </th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -95,6 +99,17 @@
                         <!-- Category Name -->
                         <td class="px-4 py-3 text-sm text-gray-700">
                             {{ optional($expenseList->category)->expense_category }}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-700">
+                            @if(optional($expenseList->category)->ledgers && $expenseList->category->ledgers->count())
+                                @foreach($expenseList->category->ledgers as $ledger)
+                                    <span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">
+                                        {{ $ledger->ledger_name }}
+                                    </span>
+                                @endforeach
+                            @else
+                                <span class="text-gray-400 italic">No Ledger</span>
+                            @endif
                         </td>
 
                         <!-- Category Type -->
