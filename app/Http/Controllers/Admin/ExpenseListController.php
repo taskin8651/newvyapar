@@ -56,8 +56,7 @@ public function index()
     abort_if(Gate::denies('expense_list_access'), Response::HTTP_FORBIDDEN);
 
     $expenseLists = ExpenseList::with([
-            'category',
-            'category.ledgers',
+            'ledger.expense_category', // ✅ CORRECT CHAIN
             'payment',
             'created_by'
         ])
@@ -66,6 +65,7 @@ public function index()
 
     return view('admin.expenseLists.index', compact('expenseLists'));
 }
+
 
     public function create()
     {
