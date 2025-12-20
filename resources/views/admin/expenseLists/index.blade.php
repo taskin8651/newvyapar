@@ -11,25 +11,13 @@
                 {{ trans('cruds.expenseList.title_singular') }} {{ trans('global.list') }}
             </h2>
 
-            <div class="flex gap-2 items-center" x-data="{ openCsvModal: false }">
+            <div class="flex gap-2 items-center">
                 @can('expense_list_create')
                     <a href="{{ route('admin.expense-lists.create') }}"
                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
                         <i class="fas fa-plus mr-1"></i>
                         {{ trans('global.add') }} {{ trans('cruds.expenseList.title_singular') }}
                     </a>
-
-                    <button
-                        @click="openCsvModal = true"
-                        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow">
-                        <i class="fas fa-file-csv mr-1"></i>
-                        {{ trans('global.app_csvImport') }}
-                    </button>
-
-                    @include('csvImport.modal', [
-                        'model' => 'ExpenseList',
-                        'route' => 'admin.expense-lists.parseCsvImport'
-                    ])
                 @endcan
 
                 <input type="text" id="expenseListSearch"
@@ -53,12 +41,11 @@
                             {{ trans('cruds.expenseList.fields.entry_date') }}
                         </th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            {{ trans('cruds.expenseList.fields.category') }}
-                        </th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             Ledger
                         </th>
-
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            {{ trans('cruds.expenseList.fields.category') }}
+                        </th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             {{ trans('cruds.expenseCategory.fields.type') }}
                         </th>
@@ -94,29 +81,20 @@
                             {{ $expenseList->entry_date }}
                         </td>
 
-
-                        <!-- Category Name -->
-                        <!-- Category Name -->
+                        <!-- Ledger -->
                         <td class="px-4 py-3 text-sm text-gray-700">
-                            {{ optional($expenseList->category)->expense_category }}
+                            {{ optional($expenseList->ledger)->ledger_name ?? 'N/A' }}
                         </td>
+
+                        <!-- Expense Category -->
                         <td class="px-4 py-3 text-sm text-gray-700">
-                            @if(optional($expenseList->category)->ledgers && $expenseList->category->ledgers->count())
-                                @foreach($expenseList->category->ledgers as $ledger)
-                                    <span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">
-                                        {{ $ledger->ledger_name }}
-                                    </span>
-                                @endforeach
-                            @else
-                                <span class="text-gray-400 italic">No Ledger</span>
-                            @endif
+                            {{ optional(optional($expenseList->ledger)->expense_category)->expense_category ?? 'N/A' }}
                         </td>
 
                         <!-- Category Type -->
                         <td class="px-4 py-3 text-sm text-gray-700">
-                            {{ optional($expenseList->category)->category_type }}
+                            {{ optional(optional($expenseList->ledger)->expense_category)->type ?? 'N/A' }}
                         </td>
-
 
                         <td class="px-4 py-3 text-sm text-gray-700">
                             {{ $expenseList->amount }}
@@ -127,7 +105,7 @@
                         </td>
 
                         <td class="px-4 py-3 text-sm text-gray-700">
-                            {{ optional($expenseList->payment)->account_name }}
+                            {{ optional($expenseList->payment)->account_name ?? 'N/A' }}
                         </td>
 
                         <td class="px-4 py-3 text-sm text-gray-700">
@@ -155,8 +133,8 @@
                                       method="POST"
                                       class="inline-block"
                                       onsubmit="return confirm('{{ trans('global.areYouSure') }}');">
-                                    @method('DELETE')
                                     @csrf
+                                    @method('DELETE')
                                     <button type="submit"
                                             class="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">
                                         <i class="fas fa-trash"></i>
@@ -170,6 +148,7 @@
                 </tbody>
             </table>
         </div>
+
     </div>
 </div>
 @endsection
