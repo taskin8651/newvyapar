@@ -9,13 +9,10 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class ExpenseList extends Model implements HasMedia
+class ExpenseList extends Model
 {
-    use SoftDeletes, MultiTenantModelTrait, InteractsWithMedia, Auditable, HasFactory;
+    use SoftDeletes, MultiTenantModelTrait, Auditable, HasFactory;
 
     protected $table = 'expense_lists';
 
@@ -33,19 +30,15 @@ class ExpenseList extends Model implements HasMedia
 
     protected $fillable = [
         'entry_date',
-        'category_id', // refers to ledger
+        'category_id',
         'amount',
         'description',
-        'payment_id', // BankAccount or CashInHand
+        'payment_id',
         'tax_include',
         'notes',
         'main_cost_center_id',
         'sub_cost_center_id',
-        'cash_in_hand_id',
         'created_by_id',
-        'created_at',
-        'updated_at',
-        'deleted_at',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -53,63 +46,40 @@ class ExpenseList extends Model implements HasMedia
         return $date->format('Y-m-d H:i:s');
     }
 
-    public function registerMediaConversions(Media $media = null): void
+    /* ---------------- Relations ---------------- */
+
+    // ✅ Expense Category
+    public function category()
     {
-        $this->addMediaConversion('thumb')->fit('crop', 50, 50);
-        $this->addMediaConversion('preview')->fit('crop', 120, 120);
+        return $this->belongsTo(ExpenseCategory::class, 'category_id');
     }
 
-    // 🔹 Entry Date formatting
-    public function getEntryDateAttribute($value)
-    {
-        return $value ? Carbon::parse($value)->format(config('panel.date_format')) : null;
-    }
-
-    public function setEntryDateAttribute($value)
-    {
-        $this->attributes['entry_date'] =
-            $value ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d') : null;
-    }
-
-    // 🔹 Ledger Relation (Category)
-    public function ledger()
-    {
-        return $this->belongsTo(Ledger::class, 'category_id');
-    }
-
-    // 🔹 Bank Account Relation
+    // ✅ Payment (Bank / Cash)
     public function payment()
     {
         return $this->belongsTo(BankAccount::class, 'payment_id');
     }
 
-    // 🔹 Cash In Hand Relation
-    public function cash_in_hand()
-    {
-        return $this->belongsTo(CashInHand::class, 'cash_in_hand_id');
-    }
-
-    // 🔹 Main Cost Center Relation
-    public function main_cost_center()
-    {
-        return $this->belongsTo(MainCostCenter::class, 'main_cost_center_id');
-    }
-
-    // 🔹 Sub Cost Center Relation
-    public function sub_cost_center()
-    {
-        return $this->belongsTo(SubCostCenter::class, 'sub_cost_center_id');
-    }
-
-    // 🔹 Created By Relation
+    // ✅ Created By
     public function created_by()
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
-   public function category()
-{
-    return $this->belongsTo(\App\Models\ExpenseCategory::class, 'category_id');
-}
 
+    /* ---------------- Accessors ---------------- */
 
+    public function getEntryDateAttribute($value)
+    {
+        return $value
+            ? Carbon::parse($value)->format(config('panel.date_format'))
+            : null;
+    }
+
+    public function setEntryDateAttribute($value)
+    {
+        $this->attributes['entry_date'] =
+            $value
+                ? Carbon::createFromFormat(config('panel.date_format'), $value)->format('Y-m-d')
+                : null;
+    }
 }

@@ -51,16 +51,20 @@ class ExpenseListController extends Controller
         ];
     }
 
-    public function index()
-    {
-        abort_if(Gate::denies('expense_list_access'), Response::HTTP_FORBIDDEN);
+public function index()
+{
+    abort_if(Gate::denies('expense_list_access'), Response::HTTP_FORBIDDEN);
 
-        $expenseLists = ExpenseList::with(['category', 'payment', 'created_by'])
-            ->whereIn('created_by_id', $this->getCompanyAllowedUserIds())
-            ->get();
+    $expenseLists = ExpenseList::with([
+            'category',
+            'payment',
+            'created_by'
+        ])
+        ->whereIn('created_by_id', $this->getCompanyAllowedUserIds())
+        ->get();
 
-        return view('admin.expenseLists.index', compact('expenseLists'));
-    }
+    return view('admin.expenseLists.index', compact('expenseLists'));
+}
 
     public function create()
     {
