@@ -163,7 +163,7 @@ body {
     <i style="--clr:#cbca63;"></i>
 
     <div class="login">
-        <h2>Vendor Login</h2>
+        <h2>Shuru Karein</h2>
 
         @if(session('message'))
             <p class="alert alert-info">{{ session('message') }}</p>
