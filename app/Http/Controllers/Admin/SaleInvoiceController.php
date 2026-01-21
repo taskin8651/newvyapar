@@ -473,246 +473,248 @@ public function getCustomerDetails($id)
     // -----------------------------
     // Store (same logic as shared, wrapped in transaction + minor hardening)
     // -----------------------------
-    public function store(Request $request)
-    {
-        abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function store(Request $request)
+{
+    abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $request->validate([
-            'select_customer_id' => 'required|exists:party_details,id',
-            'po_no'              => 'required|string',
-            'po_date'            => 'required|date',
-            'docket_no'          => 'nullable|string',
-            'billing_address_invoice' => 'nullable|string',
-            'items'              => 'required|array|min:1',
-            'items.*.add_item_id'=> 'required|exists:add_items,id',
-            'items.*.qty'        => 'required|numeric|min:1',
-            'attachment'         => 'nullable|file|max:10240',
+    $request->validate([
+        'select_customer_id' => 'required|exists:party_details,id',
+        'po_no'              => 'required|string',
+        'po_date'            => 'required|date',
+        'docket_no'          => 'nullable|string',
+        'billing_address_invoice' => 'nullable|string',
+        'items'              => 'required|array|min:1',
+        'items.*.add_item_id'=> 'required|exists:add_items,id',
+        'items.*.qty'        => 'required|numeric|min:1',
+        'attachment'         => 'nullable|file|max:10240',
+    ]);
+
+    return DB::transaction(function () use ($request) {
+
+        $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
+
+        $invoice = \App\Models\SaleInvoice::create([
+            'sale_invoice_number' => $sale_invoice_number,
+            'payment_type'        => $request->payment_type,
+            'select_customer_id'  => $request->select_customer_id,
+            'po_no'               => $request->po_no,
+            'docket_no'           => $request->docket_no,
+            'po_date'             => $request->po_date,
+            'due_date'            => $request->due_date,
+            'e_way_bill_no'       => $request->e_way_bill_no,
+            'phone_number'        => $request->customer_phone_invoice,
+            'billing_address'     => $request->billing_address_invoice,
+            'shipping_address'    => $request->shipping_address_invoice,
+            'notes'               => $request->notes,
+            'terms'               => $request->terms,
+            'overall_discount'    => $request->overall_discount ?? 0,
+            'subtotal'            => $request->subtotal ?? 0,
+            'tax'                 => $request->tax ?? 0,
+            'discount'            => $request->discount ?? 0,
+            'total'               => $request->total ?? 0,
+            'created_by_id'       => auth()->id(),
+            'json_data'           => json_encode($request->all()),
+            'status'              => $request->status ?? 'Draft',
+            'main_cost_center_id' => $request->main_cost_center_id,
+            'sub_cost_center_id'  => $request->sub_cost_center_id,
+            'price'               => $request->price ?? 0,
         ]);
 
-        return DB::transaction(function () use ($request) {
+        if ($request->hasFile('attachment')) {
+            $invoice->addMediaFromRequest('attachment')->toMediaCollection('document');
+        }
 
-            // Unique invoice no
-            $sale_invoice_number = 'ET-' . now()->format('YmdHis') . rand(100, 999);
+        $customer = \App\Models\PartyDetail::findOrFail($request->select_customer_id);
 
-            $invoice = \App\Models\SaleInvoice::create([
-                'sale_invoice_number' => $sale_invoice_number,
-                'payment_type'        => $request->payment_type,
-                'select_customer_id'  => $request->select_customer_id,
-                'po_no'               => $request->po_no,
-                'docket_no'           => $request->docket_no,
-                'po_date'             => $request->po_date,
-                'due_date'            => $request->due_date,
-                'e_way_bill_no'       => $request->e_way_bill_no,
-                'phone_number'        => $request->customer_phone_invoice,
-                'billing_address'     => $request->billing_address_invoice,
-                'shipping_address'    => $request->shipping_address_invoice,
-                'notes'               => $request->notes,
-                'terms'               => $request->terms,
-                'overall_discount'    => $request->overall_discount ?? 0,
-                'subtotal'            => $request->subtotal ?? 0,
-                'tax'                 => $request->tax ?? 0,
-                'discount'            => $request->discount ?? 0,
-                'total'               => $request->total ?? 0,
-                'created_by_id'       => auth()->id(),
-                'json_data'           => json_encode($request->all()),
-                'status'              => $request->status ?? 'Draft',
-                'main_cost_center_id' => $request->main_cost_center_id,
-                'sub_cost_center_id'  => $request->sub_cost_center_id,
-                'price'               => $request->price ?? 0,
+        $baseBalance = $customer->current_balance ?? $customer->opening_balance ?? 0;
+        $baseType    = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
+
+        $totalSaleAmount = $request->total ?? 0;
+        [$closingBalance, $closingType] =
+            $this->applySaleOnBalance($baseBalance, $baseType, $totalSaleAmount);
+
+        $customer->current_balance      = $closingBalance;
+        $customer->current_balance_type = $closingType;
+        $customer->save();
+
+        // 🔴 ONLY SAFE ADDITION
+        $invoice->items()->detach();
+
+        $invoice_total_purchase_cost = 0;
+        $composition_master = [];
+
+        foreach ($request->items as $itemData) {
+
+            $item = \App\Models\AddItem::findOrFail($itemData['add_item_id']);
+
+            // 🔴 ONLY REAL FIX (timestamps)
+            $invoice->items()->attach($item->id, [
+                'description'   => $itemData['description'] ?? null,
+                'qty'           => $itemData['qty'],
+                'unit'          => $itemData['unit'] ?? null,
+                'price'         => $itemData['price'] ?? 0,
+                'discount_type' => $itemData['discount_type'] ?? 'value',
+                'discount'      => $itemData['discount'] ?? 0,
+                'overall_discount' =>$itemData['overall_discount'] ?? 0,
+                'tax_type'      => $itemData['tax_type'] ?? 'without',
+                'tax'           => $itemData['tax'] ?? 0,
+                'amount'        => $itemData['amount'] ?? 0,
+                'created_by_id' => auth()->id(),
+                'json_data'     => json_encode($itemData),
+                'created_at'    => now(),
+                'updated_at'    => now(),
             ]);
 
-            if ($request->hasFile('attachment')) {
-                $invoice->addMediaFromRequest('attachment')->toMediaCollection('document');
-            }
+            /** ================= PRODUCT ================= */
+            if ($item->item_type === 'product') {
 
-            $customer = \App\Models\PartyDetail::findOrFail($request->select_customer_id);
+                $compositionRows = $this->fetchCompositionRowsForItem($item->id);
 
-            // Compute customer current balance
-            $baseBalance = $customer->current_balance ?? $customer->opening_balance ?? 0;
-            $baseType    = $customer->current_balance_type ?? $customer->opening_balance_type ?? 'Debit';
+                foreach ($compositionRows as $c) {
+                    $qtyPerFinished        = (float)$c->qty;
+                    $salePriceAtTime       = (float)($c->sale_price_at_time ?? 0);
+                    $purchasePriceAtTime   = (float)($c->purchase_price_at_time ?? 0);
+                    $usedTotalQty          = $qtyPerFinished * (float)$itemData['qty'];
+                    $lineSaleValue         = $usedTotalQty * $salePriceAtTime;
+                    $linePurchaseValue     = $usedTotalQty * $purchasePriceAtTime;
 
-            $totalSaleAmount = $request->total ?? 0;
-            [$closingBalance, $closingType] = $this->applySaleOnBalance($baseBalance, $baseType, $totalSaleAmount);
+                    $invoice_total_purchase_cost += $linePurchaseValue;
 
-            $customer->current_balance      = $closingBalance;
-            $customer->current_balance_type = $closingType;
-            $customer->save();
+                    $rawStock = \App\Models\CurrentStock::where(
+                        'item_id',
+                        $c->select_raw_material_id
+                    )->first();
 
-            // Attach items + stock + composition
-            $invoice_total_purchase_cost = 0;
-            $composition_master = [];
-
-            foreach ($request->items as $itemData) {
-                $item = \App\Models\AddItem::findOrFail($itemData['add_item_id']);
-
-                $invoice->items()->attach($item->id, [
-                    'description'   => $itemData['description'] ?? null,
-                    'qty'           => $itemData['qty'],
-                    'unit'          => $itemData['unit'] ?? null,
-                    'price'         => $itemData['price'] ?? 0,
-                    'discount_type' => $itemData['discount_type'] ?? 'value',
-                    'discount'      => $itemData['discount'] ?? 0,
-                    'tax_type'      => $itemData['tax_type'] ?? 'without',
-                    'tax'           => $itemData['tax'] ?? 0,
-                    'amount'        => $itemData['amount'] ?? 0,
-                    'created_by_id' => auth()->id(),
-                    'json_data'     => json_encode($itemData),
-                ]);
-
-                if ($item->item_type === 'product') {
-                    // Deduct composition raw materials
-                    $compositionRows = $this->fetchCompositionRowsForItem($item->id);
-
-                    foreach ($compositionRows as $c) {
-                        $qtyPerFinished        = (float) $c->qty;
-                        $salePriceAtTime       = (float) ($c->sale_price_at_time ?? 0);
-                        $purchasePriceAtTime   = (float) ($c->purchase_price_at_time ?? 0);
-                        $usedTotalQty          = $qtyPerFinished * (float)$itemData['qty'];
-                        $lineSaleValue         = $usedTotalQty * $salePriceAtTime;
-                        $linePurchaseValue     = $usedTotalQty * $purchasePriceAtTime;
-
-                        $invoice_total_purchase_cost += $linePurchaseValue;
-
-                        $rawStock = \App\Models\CurrentStock::where('item_id', $c->select_raw_material_id)->first();
-                        if ($rawStock) {
-                            $previousQty   = $rawStock->qty;
-                            $rawStock->qty = max(0, $rawStock->qty - $usedTotalQty);
-                            $rawStock->save();
-
-                            \App\Models\SaleLog::create([
-                                'sale_invoice_id' => $invoice->id,
-                                'item_id'         => $c->select_raw_material_id,
-                                'item_type'       => 'raw_material',
-                                'stock_id'        => $rawStock->id,
-                                'previous_qty'    => $previousQty,
-                                'sold_qty'        => $usedTotalQty,
-                                'sold_amount'     => 0,
-                                'price'           => 0,
-                                'sold_to_user_id' => $request->select_customer_id,
-                                'created_by_id'   => auth()->id(),
-                                'json_data_add_item_sale_invoice' => json_encode($itemData),
-                                'json_data_current_stock'         => json_encode($rawStock),
-                                'json_data_sale_invoice'          => json_encode($invoice),
-                            ]);
-                        }
-
-                        $composition_master[] = [
-                            'finished_item_id'        => $item->id,
-                            'finished_item_name'      => $item->item_name,
-                            'raw_material_id'         => $c->select_raw_material_id,
-                            'raw_material_name'       => $c->item_name ?? \App\Models\AddItem::find($c->select_raw_material_id)->item_name ?? 'Unnamed',
-                            'qty_used_per_finished'   => $qtyPerFinished,
-                            'used_total_qty'          => $usedTotalQty,
-                            'sale_price_at_time'      => $salePriceAtTime,
-                            'purchase_price_at_time'  => $purchasePriceAtTime,
-                            'total_sale_value'        => $lineSaleValue,
-                            'total_purchase_value'    => $linePurchaseValue,
-                        ];
-                    }
-
-                    // Deduct finished product stock
-                    $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
-                    if ($stock) {
-                        $previousQty    = $stock->qty;
-                        $previousAmount = $previousQty * ($itemData['price'] ?? 0);
-                        $stock->qty     -= $itemData['qty'];
-                        $stock->save();
+                    if ($rawStock) {
+                        $previousQty   = $rawStock->qty;
+                        $rawStock->qty = max(0, $rawStock->qty - $usedTotalQty);
+                        $rawStock->save();
 
                         \App\Models\SaleLog::create([
                             'sale_invoice_id' => $invoice->id,
-                            'item_id'         => $item->id,
-                            'item_type'       => 'product',
-                            'stock_id'        => $stock->id,
+                            'item_id'         => $c->select_raw_material_id,
+                            'item_type'       => 'raw_material',
+                            'stock_id'        => $rawStock->id,
                             'previous_qty'    => $previousQty,
-                            'sold_qty'        => $itemData['qty'],
-                            'previous_amount' => $previousAmount,
-                            'sold_amount'     => $itemData['amount'] ?? 0,
-                            'price'           => $itemData['price'] ?? 0,
+                            'sold_qty'        => $usedTotalQty,
+                            'sold_amount'     => 0,
+                            'price'           => 0,
                             'sold_to_user_id' => $request->select_customer_id,
                             'created_by_id'   => auth()->id(),
                             'json_data_add_item_sale_invoice' => json_encode($itemData),
-                            'json_data_current_stock'         => json_encode($stock),
+                            'json_data_current_stock'         => json_encode($rawStock),
                             'json_data_sale_invoice'          => json_encode($invoice),
                         ]);
                     }
-                } else {
-                    // service: pseudo composition
-                    $qty       = (float)$itemData['qty'];
-                    $sale      = ((float)($itemData['price'] ?? 0)) * $qty;
-                    $purchase  = ((float)($item->purchase_price ?? 0)) * $qty;
-                    $invoice_total_purchase_cost += $purchase;
 
                     $composition_master[] = [
                         'finished_item_id'        => $item->id,
                         'finished_item_name'      => $item->item_name,
-                        'raw_material_id'         => null,
-                        'raw_material_name'       => $item->item_name,
-                        'qty_used_per_finished'   => 1,
-                        'used_total_qty'          => $qty,
-                        'sale_price_at_time'      => (float)($itemData['price'] ?? 0),
-                        'purchase_price_at_time'  => (float)($item->purchase_price ?? 0),
-                        'total_sale_value'        => $sale,
-                        'total_purchase_value'    => $purchase,
+                        'raw_material_id'         => $c->select_raw_material_id,
+                        'raw_material_name'       => $c->item_name ?? 'Unnamed',
+                        'qty_used_per_finished'   => $qtyPerFinished,
+                        'used_total_qty'          => $usedTotalQty,
+                        'sale_price_at_time'      => $salePriceAtTime,
+                        'purchase_price_at_time'  => $purchasePriceAtTime,
+                        'total_sale_value'        => $lineSaleValue,
+                        'total_purchase_value'    => $linePurchaseValue,
                     ];
+                }
+
+                $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
+                if ($stock) {
+                    $previousQty = $stock->qty;
+                    $stock->qty -= $itemData['qty'];
+                    $stock->save();
 
                     \App\Models\SaleLog::create([
                         'sale_invoice_id' => $invoice->id,
                         'item_id'         => $item->id,
-                        'item_type'       => 'service',
+                        'item_type'       => 'product',
+                        'stock_id'        => $stock->id,
+                        'previous_qty'    => $previousQty,
                         'sold_qty'        => $itemData['qty'],
                         'sold_amount'     => $itemData['amount'] ?? 0,
                         'price'           => $itemData['price'] ?? 0,
                         'sold_to_user_id' => $request->select_customer_id,
-                        'json_data_sale_invoice'          => json_encode($invoice),
+                        'created_by_id'   => auth()->id(),
                         'json_data_add_item_sale_invoice' => json_encode($itemData),
+                        'json_data_current_stock'         => json_encode($stock),
+                        'json_data_sale_invoice'          => json_encode($invoice),
                     ]);
                 }
+
+            } 
+            /** ================= SERVICE ================= */
+            else {
+
+                $qty       = (float)$itemData['qty'];
+                $sale      = ((float)($itemData['price'] ?? 0)) * $qty;
+                $purchase  = ((float)($item->purchase_price ?? 0)) * $qty;
+                $invoice_total_purchase_cost += $purchase;
+
+                $composition_master[] = [
+                    'finished_item_id'        => $item->id,
+                    'finished_item_name'      => $item->item_name,
+                    'raw_material_id'         => null,
+                    'raw_material_name'       => $item->item_name,
+                    'qty_used_per_finished'   => 1,
+                    'used_total_qty'          => $qty,
+                    'sale_price_at_time'      => (float)($itemData['price'] ?? 0),
+                    'purchase_price_at_time'  => (float)($item->purchase_price ?? 0),
+                    'total_sale_value'        => $sale,
+                    'total_purchase_value'    => $purchase,
+                ];
+
+                \App\Models\SaleLog::create([
+                    'sale_invoice_id' => $invoice->id,
+                    'item_id'         => $item->id,
+                    'item_type'       => 'service',
+                    'sold_qty'        => $itemData['qty'],
+                    'sold_amount'     => $itemData['amount'] ?? 0,
+                    'price'           => $itemData['price'] ?? 0,
+                    'sold_to_user_id' => $request->select_customer_id,
+                    'json_data_sale_invoice'          => json_encode($invoice),
+                    'json_data_add_item_sale_invoice' => json_encode($itemData),
+                ]);
             }
+        }
 
-            // Profit/Loss
-            $profit_loss_amount = floatval($invoice->total) - floatval($invoice_total_purchase_cost);
-            $is_profit = $profit_loss_amount >= 0;
+        // Profit/Loss
+        $profit_loss_amount = floatval($invoice->total) - floatval($invoice_total_purchase_cost);
+        $is_profit = $profit_loss_amount >= 0;
 
-            DB::table('sale_profit_losses')->insert([
-                'sale_invoice_id'      => $invoice->id,
-                'select_customer_id'   => $invoice->select_customer_id,
-                'main_cost_center_id'  => $invoice->main_cost_center_id,
-                'sub_cost_center_id'   => $invoice->sub_cost_center_id,
-                'total_purchase_value' => $invoice_total_purchase_cost,
-                'total_sale_value'     => $invoice->total,
-                'profit_loss_amount'   => $profit_loss_amount,
-                'is_profit'            => $is_profit ? 1 : 0,
-                'composition_json'     => json_encode($composition_master),
-                'created_by_id'        => auth()->id(),
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ]);
+        DB::table('sale_profit_losses')->insert([
+            'sale_invoice_id'      => $invoice->id,
+            'select_customer_id'   => $invoice->select_customer_id,
+            'main_cost_center_id'  => $invoice->main_cost_center_id,
+            'sub_cost_center_id'   => $invoice->sub_cost_center_id,
+            'total_purchase_value' => $invoice_total_purchase_cost,
+            'total_sale_value'     => $invoice->total,
+            'profit_loss_amount'   => $profit_loss_amount,
+            'is_profit'            => $is_profit ? 1 : 0,
+            'composition_json'     => json_encode($composition_master),
+            'created_by_id'        => auth()->id(),
+            'created_at'           => now(),
+            'updated_at'           => now(),
+        ]);
 
-            // Transaction (store both opening & closing)
-            \App\Models\Transaction::create([
-                'sale_invoice_id'      => $invoice->id,
-                'select_customer_id'   => $customer->id,
-                'payment_type_id'      => $request->payment_type_id ?? null,
-                'main_cost_center_id'  => $request->main_cost_center_id,
-                'sub_cost_center_id'   => $request->sub_cost_center_id,
-                'sale_amount'          => $request->total ?? 0,
-                'opening_balance'      => $baseBalance,
-                'closing_balance'      => $closingBalance,
-                'transaction_type'     => 'sale',
-                'transaction_id'       => strtoupper('TXN' . rand(1000000000, 9999999999)),
-                'created_by_id'        => auth()->id(),
-                'json_data'            => json_encode([
-                    'request' => $request->all(),
-                    'invoice' => $invoice->toArray(),
-                    'customer_before' => ['balance' => $baseBalance, 'type' => $baseType],
-                    'customer_after'  => ['balance' => $closingBalance, 'type' => $closingType],
-                ]),
-            ]);
+        \App\Models\Transaction::create([
+            'sale_invoice_id' => $invoice->id,
+            'select_customer_id' => $customer->id,
+            'sale_amount' => $request->total ?? 0,
+            'opening_balance' => $baseBalance,
+            'closing_balance' => $closingBalance,
+            'transaction_type' => 'sale',
+            'transaction_id' => strtoupper('TXN' . rand(1000000000, 9999999999)),
+            'created_by_id' => auth()->id(),
+        ]);
 
-            return redirect()->route('admin.sale-invoices.index')
-                ->with('success', 'Sale Invoice Created Successfully.');
-        });
-    }
+        return redirect()
+            ->route('admin.sale-invoices.index')
+            ->with('success', 'Sale Invoice Created Successfully.');
+    });
+}
 
     // -----------------------------
     // Balance helper

@@ -409,6 +409,10 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('sale-invoices/{saleInvoice}/profit-loss', [SaleInvoiceController::class, 'getProfitLoss'])->name('sale-invoices.get-profit-loss');
     Route::post('sale-invoices/{saleInvoice}/profit-loss', [SaleInvoiceController::class, 'updateProfitLoss'])->name('sale-invoices.update-profit-loss');
 
+    // report section
+    Route::get('gst-1', [\App\Http\Controllers\Admin\Gst1Controller::class, 'index'])
+        ->name('gst-1.index');
+
 
 });
 Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 'middleware' => ['auth']], function () {
