@@ -109,7 +109,7 @@ public function edit(PaymentIn $paymentIn)
 }
 
 
-public function update( $request, PaymentIn $paymentIn)
+public function update(UpdatePaymentInRequest $request, PaymentIn $paymentIn)
 {
     DB::transaction(function () use ($request, $paymentIn) {
 
