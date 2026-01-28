@@ -54,16 +54,18 @@ public function index(Request $request)
     /* =====================================================
        ✅ GST PDF DATA (SAFE FOR BLADE)
        ===================================================== */
-    $gstInvoices = $invoices->map(function ($i) {
-        return [
-            'date'    => $i->po_date,
-            'invoice' => $i->sale_invoice_number,
-            'party'   => optional($i->select_customer)->party_name ?? '-',
-            'taxable' => number_format($i->total - $i->tax, 2),
-            'gst'     => number_format($i->tax, 2),
-            'total'   => number_format($i->total, 2),
-        ];
-    })->values();
+        $gstInvoices = $invoices->map(function ($i) {
+            return [
+                'date'    => $i->po_date,
+                'invoice' => $i->sale_invoice_number,
+                'party'   => optional($i->select_customer)->party_name ?? '-',
+                'gstin'   => optional($i->select_customer)->gstin ?? '-', // ✅ FIXED
+                'taxable' => number_format($i->total - $i->tax, 2),
+                'gst'     => number_format($i->tax, 2),
+                'total'   => number_format($i->total, 2),
+            ];
+        })->values();
+
 
     /* =====================================================
        ✅ AUTH USER NAME + ROLE (CUSTOM ROLE SYSTEM)

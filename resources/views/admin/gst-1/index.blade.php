@@ -390,7 +390,8 @@ function downloadPdf() {
 function generateCleanPdf(monthValue, partyName) {
 
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdf = new jsPDF('l', 'mm', 'a4'); // 👈 LANDSCAPE
+
 
     const today = new Date();
     const selected = new Date(monthValue + '-01');
@@ -431,9 +432,11 @@ function generateCleanPdf(monthValue, partyName) {
         inv.date ?? '',
         inv.invoice ?? '',
         inv.party ?? '',
+        inv.gstin ?? '',
         inv.taxable ?? '0.00',
         inv.gst ?? '0.00',
         inv.total ?? '0.00'
+        
     ]);
 
     pdf.autoTable({
@@ -442,6 +445,7 @@ function generateCleanPdf(monthValue, partyName) {
             'Date',
             'Invoice No',
             'Party',
+            'GST NO',
             'Taxable Amount',
             'GST Amount',
             'Total Amount'
