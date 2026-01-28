@@ -14,6 +14,7 @@ use App\Models\BankTransaction;
 use App\Models\PartyDetail;
 use App\Models\BankAccount;
 use DB;
+use Illuminate\Support\Facades\DB as FacadesDB;
 
 class PaymentInController extends Controller
 {
@@ -108,63 +109,107 @@ public function edit(PaymentIn $paymentIn)
 }
 
 
-    public function update(UpdatePaymentInRequest $request, PaymentIn $paymentIn)
-    {
-        DB::transaction(function () use ($request, $paymentIn) {
+public function update(UpdatePaymentInRequest $request, PaymentIn $paymentIn)
+{
+    DB::transaction(function () use ($request, $paymentIn) {
 
-            /** 🔁 OLD DATA */
-            $oldAmount = $paymentIn->amount;
-            $oldParty  = $paymentIn->parties;
-            $oldBank   = $paymentIn->payment_type;
+        /** ===============================
+         * 1️⃣ OLD (LAST SAVED) DATA
+         * =============================== */
+        $oldAmount = $paymentIn->amount;
+        $oldParty  = $paymentIn->parties;
+        $oldBank   = $paymentIn->payment_type;
 
-            /** 🔙 OLD REVERSE */
-            $oldBank->opening_balance -= $oldAmount;
+        /** ===============================
+         * 2️⃣ REVERSE OLD EFFECT
+         * =============================== */
+        // Reverse from OLD bank
+        if ($oldBank) {
+            $oldBank->opening_balance =
+                ($oldBank->opening_balance ?? 0) - $oldAmount;
             $oldBank->save();
+        }
 
-            $oldParty->current_balance += $oldAmount;
+        // Reverse to OLD party
+        if ($oldParty) {
+            $oldParty->current_balance =
+                ($oldParty->current_balance ?? 0) + $oldAmount;
             $oldParty->save();
+        }
 
-            /** 🔄 UPDATE PAYMENT IN */
-            $data = $request->all();
-            $data['updated_by_id'] = auth()->id();
-            $paymentIn->update($data);
+        /** ===============================
+         * 3️⃣ UPDATE PAYMENT IN
+         * =============================== */
+        $data = $request->all();
+        $data['updated_by_id'] = auth()->id();
+        $paymentIn->update($data);
 
-            if ($request->input('attechment')) {
-                $paymentIn->clearMediaCollection('attechment');
-                $paymentIn->addMedia(storage_path('tmp/uploads/' . basename($request->attechment)))
-                    ->toMediaCollection('attechment');
-            }
+        // Attachment update
+        if ($request->input('attechment')) {
+            $paymentIn->clearMediaCollection('attechment');
+            $paymentIn->addMedia(
+                storage_path('tmp/uploads/' . basename($request->attechment))
+            )->toMediaCollection('attechment');
+        }
 
-            /** 🔄 NEW DATA */
-            $newParty  = $paymentIn->parties;
-            $newBank   = $paymentIn->payment_type;
-            $newAmount = $paymentIn->amount;
+        /** ===============================
+         * 4️⃣ NEW (UPDATED) DATA
+         * =============================== */
+        $newAmount = $paymentIn->amount;
+        $newParty  = $paymentIn->parties;
+        $newBank   = $paymentIn->payment_type;
 
-            /** ➕ APPLY NEW */
-            $newBank->opening_balance += $newAmount;
+        /** ===============================
+         * 5️⃣ APPLY NEW EFFECT
+         * =============================== */
+        // Add to NEW bank
+        if ($newBank) {
+            $newBank->opening_balance =
+                ($newBank->opening_balance ?? 0) + $newAmount;
             $newBank->save();
+        }
 
-            $newParty->current_balance -= $newAmount;
+        // Minus from NEW party
+        if ($newParty) {
+            $newParty->current_balance =
+                ($newParty->current_balance ?? 0) - $newAmount;
             $newParty->save();
+        }
 
-            /** 🧾 BANK TRANSACTION UPDATE */
-            BankTransaction::updateOrCreate(
-                ['payment_in_id' => $paymentIn->id],
-                [
-                    'party_id'        => $newParty->id,
-                    'party_name'      => $newParty->party_name,
-                    'payment_type_id' => $newBank->id,
-                    'amount'          => $newAmount,
-                    'updated_by_id'   => auth()->id(),
-                    'description'     => $paymentIn->description,
-                    'json'            => json_encode(compact('paymentIn', 'newParty', 'newBank')),
-                ]
-            );
-        });
+        /** ===============================
+         * 6️⃣ BANK TRANSACTION UPDATE
+         * =============================== */
+        BankTransaction::updateOrCreate(
+            ['payment_in_id' => $paymentIn->id],
+            [
+                'party_id'        => $newParty?->id,
+                'party_name'      => $newParty?->party_name,
+                'payment_type_id' => $newBank?->id,
+                'amount'          => $newAmount,
+                'updated_by_id'   => auth()->id(),
+                'description'     => $paymentIn->description,
+                'json'            => json_encode([
+                    'payment_in' => $paymentIn->toArray(),
+                    'old' => [
+                        'bank_id'  => $oldBank?->id,
+                        'party_id' => $oldParty?->id,
+                        'amount'   => $oldAmount,
+                    ],
+                    'new' => [
+                        'bank_id'  => $newBank?->id,
+                        'party_id' => $newParty?->id,
+                        'amount'   => $newAmount,
+                    ],
+                ]),
+            ]
+        );
+    });
 
-        return redirect()->route('admin.payment-ins.index')
-            ->with('success', 'Payment In updated successfully with correct balances.');
-    }
+    return redirect()
+        ->route('admin.payment-ins.index')
+        ->with('success', 'Payment In updated successfully. Bank & Party balances adjusted correctly.');
+}
+
 
     public function destroy(PaymentIn $paymentIn)
     {
