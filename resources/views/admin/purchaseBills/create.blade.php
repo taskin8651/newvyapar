@@ -232,39 +232,76 @@
 $(document).ready(function() {
     $('.select2').select2({ width: '100%' });
 
+    /* ===============================
+       🔥 CALCULATE SINGLE ROW
+       (GST-INCLUSIVE LOGIC)
+    =============================== */
     function calculateRow(row){
         let qty = parseFloat(row.find('.qty').val()) || 0;
-        let price = parseFloat(row.find('.price').val()) || 0;
-        let discount = parseFloat(row.find('.discount').val()) || 0;
+        let priceIncl = parseFloat(row.find('.price').val()) || 0; // GST INCLUDED
+        let discountVal = parseFloat(row.find('.discount').val()) || 0;
         let discountType = row.find('.discount_type').val();
         let taxRate = parseFloat(row.find('.tax_rate').val()) || 0;
         let taxType = row.find('.tax_type').val();
 
-        if(discountType==='percentage'){ discount = price * qty * (discount/100); }
-        let amount = (price * qty) - discount;
-        if(taxType==='with'){ amount += amount * (taxRate/100); }
+        let basePerUnit = priceIncl;
+        let gstPerUnit = 0;
 
-        row.find('.amount').val(amount.toFixed(2));
+        // ✅ Reverse GST (price ke andar se)
+        if(taxType === 'with' && taxRate > 0){
+            let divisor = 1 + (taxRate / 100);
+            basePerUnit = priceIncl / divisor;
+            gstPerUnit = priceIncl - basePerUnit;
+        }
+
+        let baseTotal = basePerUnit * qty;
+
+        // ✅ Discount ONLY on base
+        let discountAmt = discountType === 'percentage'
+            ? baseTotal * (discountVal / 100)
+            : discountVal;
+
+        discountAmt = Math.min(discountAmt, baseTotal);
+
+        let baseAfterDiscount = baseTotal - discountAmt;
+
+        // ✅ GST on discounted base
+        let taxAmt = (taxType === 'with')
+            ? baseAfterDiscount * (taxRate / 100)
+            : 0;
+
+        let finalAmount = baseAfterDiscount + taxAmt;
+
+        row.find('.amount').val(finalAmount.toFixed(2));
+
+        // Store values for totals
+        row.data({
+            base: baseAfterDiscount,
+            tax: taxAmt,
+            discount: discountAmt,
+            gross: finalAmount
+        });
     }
 
+    /* ===============================
+       🔥 CALCULATE TOTALS
+    =============================== */
     function calculateTotals(){
-        let subtotal=0, discountTotal=0, taxTotal=0;
+        let subtotal = 0;
+        let taxTotal = 0;
+        let discountTotal = 0;
+        let grossTotal = 0;
+
         $('#itemsTable tbody tr').each(function(){
-            let row = $(this);
-            let amount = parseFloat(row.find('.amount').val()) || 0;
-            subtotal += amount;
-
-            let discount = parseFloat(row.find('.discount').val()) || 0;
-            if(row.find('.discount_type').val()==='percentage'){
-                discount = parseFloat(row.find('.price').val())*parseFloat(row.find('.qty').val())*(discount/100);
-            }
-            discountTotal += discount;
-
-            if(row.find('.tax_type').val()==='with'){ taxTotal += amount*(parseFloat(row.find('.tax_rate').val())||0)/100; }
+            let d = $(this).data();
+            subtotal += d?.base || 0;
+            taxTotal += d?.tax || 0;
+            discountTotal += d?.discount || 0;
+            grossTotal += d?.gross || 0;
         });
 
         let overallDiscount = parseFloat($('#overall_discount').val()) || 0;
-        let total = subtotal + taxTotal - overallDiscount;
+        let total = Math.max(grossTotal - overallDiscount, 0);
 
         $('#subtotal_display').text(subtotal.toFixed(2));
         $('#tax_display').text(taxTotal.toFixed(2));
@@ -277,41 +314,63 @@ $(document).ready(function() {
         $('#total_input').val(total.toFixed(2));
     }
 
-    $(document).on('input change', '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount', function(){
-        let row = $(this).closest('tr');
+    /* ===============================
+       🔁 INPUT CHANGE RECALC
+    =============================== */
+    $(document).on(
+        'input change',
+        '.qty, .price, .discount, .discount_type, .tax_type, .tax_rate, #overall_discount',
+        function(){
+            let row = $(this).closest('tr');
 
-        // Prevent quantity exceeding stock
-        let maxQty = parseFloat(row.find('.qty').attr('max'));
-        if(maxQty && parseFloat(row.find('.qty').val())>maxQty){
-            row.find('.qty').val(maxQty);
+            // Prevent qty > stock
+            let maxQty = parseFloat(row.find('.qty').attr('max'));
+            if(maxQty && parseFloat(row.find('.qty').val()) > maxQty){
+                row.find('.qty').val(maxQty);
+            }
+
+            // Show/hide tax rate
+            if(row.find('.tax_type').val() === 'with'){
+                row.find('.tax_rate').show();
+            } else {
+                row.find('.tax_rate').hide().val(0);
+            }
+
+            calculateRow(row);
+            calculateTotals();
         }
+    );
 
-        if(row.find('.tax_type').val()==='with'){ row.find('.tax_rate').show(); } else { row.find('.tax_rate').hide().val(0); }
-
-        calculateRow(row); calculateTotals();
-    });
-
+    /* ===============================
+       🔥 ITEM SELECT
+       (AUTO 18% GST)
+    =============================== */
     $(document).on('change', '.item-select', function(){
         let row = $(this).closest('tr');
         let selected = $(this).find(':selected');
-        if(selected.val()==='') return;
+        if(!selected.val()) return;
 
-        // Description with HSN & Code
+        // Description
         row.find('.description').html(
-            `<div class="text-sm text-gray-700 bg-gray-100 p-1 rounded">${selected.data('hsn')} | ${selected.data('code')}</div>`
+            `<div class="text-sm text-gray-700 bg-gray-100 p-1 rounded">
+                ${selected.data('hsn')} | ${selected.data('code')}
+             </div>`
         );
 
-        // Set price to purchase_price
+        // Purchase price (GST-INCLUSIVE)
         row.find('.price').val(selected.data('purchase-price'));
 
-        // Set unit
+        // Unit
         row.find('.unit').text(selected.data('unit'));
 
+        // 🔥 AUTO GST 18%
+        row.find('.tax_type').val('with').trigger('change');
+        row.find('.tax_rate').val(18).show();
 
+        calculateRow(row);
+        calculateTotals();
 
-        calculateRow(row); calculateTotals();
-
-        // Remove selected option from other rows
+        // Remove selected item from other rows
         $('.item-select').not(this).each(function(){
             if($(this).find('option[value="'+selected.val()+'"]').length){
                 $(this).find('option[value="'+selected.val()+'"]').remove();
@@ -320,6 +379,9 @@ $(document).ready(function() {
         });
     });
 
+    /* ===============================
+       ➕ ADD ROW
+    =============================== */
     $('#addRow').click(function(){
         let tbody = $('#itemsTable tbody');
         let newRow = tbody.find('tr:first').clone();
@@ -327,33 +389,33 @@ $(document).ready(function() {
 
         newRow.find('input, select').each(function(){
             let name = $(this).attr('name');
-            if(name){ $(this).attr('name', name.replace(/\d+/, rowCount)); }
-            if($(this).is('input')){ 
-                $(this).val($(this).hasClass('qty') ? 1 : ($(this).hasClass('amount') ? 0 : 0)); 
+            if(name){
+                $(this).attr('name', name.replace(/\d+/, rowCount));
+            }
+            if($(this).is('input')){
+                $(this).val(
+                    $(this).hasClass('qty') ? 1 :
+                    $(this).hasClass('amount') ? 0 : 0
+                );
             }
         });
+
         newRow.find('.description, .unit, .amount').text('');
-
-        // Remove already selected items from dropdown
-        let selectedItems = [];
-        $('.item-select').each(function(){
-            let val = $(this).val();
-            if(val) selectedItems.push(val);
-        });
-        newRow.find('option').each(function(){
-            if(selectedItems.includes($(this).val())) $(this).remove();
-        });
-
         tbody.append(newRow);
         newRow.find('select.select2').select2({ width: '100%' });
     });
 
+    /* ===============================
+       ❌ REMOVE ROW
+    =============================== */
     $(document).on('click', '.removeRow', function(){
         let tbody = $('#itemsTable tbody');
-        if(tbody.find('tr').length>1){
+        if(tbody.find('tr').length > 1){
             $(this).closest('tr').remove();
             calculateTotals();
-        } else { alert('At least one row is required'); }
+        } else {
+            alert('At least one row is required');
+        }
     });
 });
 </script>
