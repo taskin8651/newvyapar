@@ -405,7 +405,6 @@ $c = $proformaInvoice->select_customer;
                                 <p><b>IFSC:</b> {{ $bank->ifsc_code }}</p>
                                 <p><b>Branch:</b> {{ $bank->branch_name }}</p>
 
-
                             </div>
                             <div>
                                 {{-- =====================
@@ -428,7 +427,6 @@ $c = $proformaInvoice->select_customer;
                         @endforeach
                     </div>
                     @endif
-
             </div>
 
 
@@ -469,8 +467,6 @@ $c = $proformaInvoice->select_customer;
             </div>
 
         </div>
-
-
         
         <!-- TERMS & NOTES -->
         <div class="section" style="margin-top: -20px;">
