@@ -8,52 +8,48 @@
 <div class="space-y-6">
 
     {{-- ================= FILTER ================= --}}
-    <div class="bg-white rounded-2xl shadow-sm p-6">
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800">GST-1 Report</h2>
-                <p class="text-sm text-gray-500">Sales GST summary & invoice details</p>
-            </div>
+   <div class="bg-[#0f172a] text-white rounded-3xl p-6 shadow-xl">
 
-            <button type="button"
-                    onclick="openPdfModal()"
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2">
-                ⬇ Download PDF
-            </button>
-        </div>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold tracking-wide">
+            GST-1 REPORT
+        </h2>
 
-        <form method="GET" class="grid md:grid-cols-4 gap-4 items-end">
-            <div>
-                <label class="text-sm font-medium text-gray-600">Month</label>
-                <input type="month" name="month" value="{{ $month }}"
-                       class="w-full rounded-lg border-gray-300 focus:ring focus:ring-indigo-200">
-            </div>
-
-            <div>
-                <label class="text-sm font-medium text-gray-600">Party</label>
-                <select name="select_customer_id"
-                        class="w-full rounded-lg border-gray-300 focus:ring focus:ring-indigo-200">
-                    <option value="">All Parties</option>
-                    @foreach($parties as $party)
-                        <option value="{{ $party->id }}"
-                            {{ $partyId == $party->id ? 'selected' : '' }}>
-                            {{ $party->party_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex items-center gap-2 mt-6">
-                <input type="checkbox" name="show_no_gst" value="1"
-                       {{ $showNoGst ? 'checked' : '' }}>
-                <span class="text-sm text-gray-600">Show without GST</span>
-            </div>
-
-            <button class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-lg">
-                Apply
-            </button>
-        </form>
+        <button onclick="openPdfModal()"
+                class="px-5 py-2 rounded-xl bg-cyan-500 text-black font-semibold hover:bg-cyan-400">
+            Download PDF
+        </button>
     </div>
+
+    <form method="GET" class="grid md:grid-cols-4 gap-4">
+        <input type="month" name="month" value="{{ $month }}"
+               class="bg-[#020617] border border-cyan-400 rounded-xl text-white">
+
+        <select name="select_customer_id"
+                class="bg-[#020617] border border-cyan-400 rounded-xl text-white">
+            <option value="">All Parties</option>
+            @foreach($parties as $party)
+                <option value="{{ $party->id }}">{{ $party->party_name }}</option>
+            @endforeach
+        </select>
+
+       <label class="flex items-center gap-2 text-sm text-cyan-300">
+    <input
+        type="checkbox"
+        name="show_no_gst"
+        value="1"
+        {{ request()->has('show_no_gst') ? 'checked' : '' }}
+        class="w-4 h-4 accent-cyan-400"
+    >
+    Without GST
+</label>
+        <button class="bg-cyan-500 text-black rounded-xl py-2 font-semibold hover:bg-cyan-400">
+            APPLY
+        </button>
+    </form>
+
+</div>
+
 
     {{-- ================= PDF MODAL ================= --}}
     <div id="pdfModal"
@@ -109,22 +105,78 @@
     {{-- ================= PARTY MODE ================= --}}
     @if($selectedParty)
 
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl shadow p-6">
-            <h2 class="text-2xl font-bold">{{ $selectedParty->party_name }}</h2>
+       <!-- PARTY DETAILS CARD -->
+<div class="bg-[#0f172a] border border-slate-700 rounded-3xl p-6 text-white">
 
-            <div class="grid md:grid-cols-3 gap-4 mt-4 text-sm">
-                <div><b>GSTIN:</b> {{ $selectedParty->gstin ?? '-' }}</div>
-                <div><b>Phone:</b> {{ $selectedParty->phone_number ?? '-' }}</div>
-                <div><b>Email:</b> {{ $selectedParty->email ?? '-' }}</div>
-                <div><b>State:</b> {{ $selectedParty->state ?? '-' }}</div>
-                <div><b>City:</b> {{ $selectedParty->city ?? '-' }}</div>
-                <div>
-                    <b>Balance:</b>
-                    {{ number_format($selectedParty->current_balance ?? 0,2) }}
-                    ({{ $selectedParty->current_balance_type ?? '-' }})
-                </div>
-            </div>
+    <!-- Header -->
+    <div class="flex justify-between items-start">
+        <h2 class="text-2xl font-bold tracking-wide">
+            {{ $selectedParty->party_name }}
+        </h2>
+
+        <div class="text-right">
+            <p class="text-xs text-slate-400">Balance</p>
+
+            <!-- 🔥 Animated Balance -->
+            <p class="text-xl font-bold
+                {{ ($selectedParty->current_balance ?? 0) < 0 ? 'text-red-400' : 'text-emerald-400' }}">
+                ₹<span
+                    id="animatedBalance"
+                    data-balance="{{ abs($selectedParty->current_balance ?? 0) }}">
+                    0.00
+                </span>
+            </p>
+
+            <p class="text-xs text-slate-400">
+                {{ $selectedParty->current_balance_type ?? '-' }}
+            </p>
         </div>
+    </div>
+
+    <!-- Party Info -->
+    <div class="grid md:grid-cols-3 gap-4 mt-6 text-sm text-slate-300">
+        <div><span class="text-slate-400">GSTIN:</span> {{ $selectedParty->gstin ?? '-' }}</div>
+        <div><span class="text-slate-400">Phone:</span> {{ $selectedParty->phone_number ?? '-' }}</div>
+        <div><span class="text-slate-400">Email:</span> {{ $selectedParty->email ?? '-' }}</div>
+        <div><span class="text-slate-400">State:</span> {{ $selectedParty->state ?? '-' }}</div>
+        <div><span class="text-slate-400">City:</span> {{ $selectedParty->city ?? '-' }}</div>
+    </div>
+
+</div>
+
+<!-- 🔹 BALANCE COUNT ANIMATION SCRIPT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const el = document.getElementById("animatedBalance");
+    if (!el) return;
+
+    const target = parseFloat(el.dataset.balance);
+    let current = 0;
+
+    const duration = 1200; // total animation time (ms)
+    const fps = 60;
+    const totalSteps = duration / (1000 / fps);
+    const increment = target / totalSteps;
+
+    const counter = setInterval(() => {
+        current += increment;
+
+        if (current >= target) {
+            current = target;
+            clearInterval(counter);
+        }
+
+        el.innerText = current.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+    }, 1000 / fps);
+
+});
+</script>
+
 
         <div class="bg-white rounded-2xl shadow p-6">
             <h3 class="text-lg font-semibold mb-4">Sales Invoices</h3>
@@ -293,9 +345,6 @@
     </div>
 
 </div>
-
-
-
     @endif
 </div>
 @endsection

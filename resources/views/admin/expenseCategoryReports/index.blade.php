@@ -14,10 +14,7 @@
                     </p>
                 </div>
             </div>
-
-
-
         </div>
     </div>
 </div>
-@endsection
+@endsection 

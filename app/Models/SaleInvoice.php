@@ -103,7 +103,7 @@ class SaleInvoice extends Model implements HasMedia
                 'amount',
                 'created_by_id',
                 'json_data',
-                'overall_discount'
+                // 'overall_discount'
             ])->withTimestamps();
     }
 
