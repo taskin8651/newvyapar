@@ -30,69 +30,102 @@ class ProformaInvoiceController extends Controller
     //================================================
     // INDEX
     //================================================
-    public function index()
-    {
-        abort_if(Gate::denies('proforma_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+public function index()
+{
+    abort_if(Gate::denies('proforma_invoice_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $user   = auth()->user();
-        $userId = $user->id;
-        $userRole = $user->roles->pluck('title')->first();
+    $user = auth()->user();
+    $userId = $user->id;
+    $userRole = $user->roles->pluck('title')->first();
 
-        $allowedUserIds = collect([$userId]);
-        $company   = $user->select_companies()->first();
-        $companyId = $company?->id;
+    $allowedUserIds = collect([$userId]);
 
-        if ($companyId) {
-            $companyUserIds = DB::table('add_business_user')
-                ->where('add_business_id', $companyId)
-                ->pluck('user_id')
-                ->toArray();
+    $company = $user->select_companies()->first();
+    $companyId = $company?->id;
 
-            $companyAdminId = User::whereIn('id', $companyUserIds)
-                ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
-                ->value('id');
+    if ($companyId) {
 
-            if ($companyAdminId) $allowedUserIds->push($companyAdminId);
+        $companyUserIds = DB::table('add_business_user')
+            ->where('add_business_id', $companyId)
+            ->pluck('user_id')
+            ->toArray();
 
-            $parentId = $user->created_by_id;
-            if ($parentId) {
-                $allowedUserIds->push($parentId);
+        $companyAdminId = User::whereIn('id', $companyUserIds)
+            ->whereHas('roles', fn ($q) => $q->where('title', 'Admin'))
+            ->value('id');
 
-                $parent = User::find($parentId);
-                if ($parent) {
-                    $parentCompanyId = $parent->select_companies()->first()?->id;
-                    if ($parentCompanyId) {
-                        $parentCompanyUsers = DB::table('add_business_user')
-                            ->where('add_business_id', $parentCompanyId)
-                            ->pluck('user_id')
-                            ->toArray();
+        if ($companyAdminId) {
+            $allowedUserIds->push($companyAdminId);
+        }
 
-                        $parentAdminId = User::whereIn('id', $parentCompanyUsers)
-                            ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
-                            ->value('id');
+        if ($user->created_by_id) {
 
-                        if ($parentAdminId) $allowedUserIds->push($parentAdminId);
+            $parent = User::find($user->created_by_id);
+
+            if ($parent) {
+
+                $allowedUserIds->push($parent->id);
+
+                $parentCompanyId = $parent->select_companies()->first()?->id;
+
+                if ($parentCompanyId) {
+
+                    $parentCompanyUsers = DB::table('add_business_user')
+                        ->where('add_business_id', $parentCompanyId)
+                        ->pluck('user_id')
+                        ->toArray();
+
+                    $parentAdminId = User::whereIn('id', $parentCompanyUsers)
+                        ->whereHas('roles', fn ($q) => $q->where('title', 'Admin'))
+                        ->value('id');
+
+                    if ($parentAdminId) {
+                        $allowedUserIds->push($parentAdminId);
                     }
                 }
             }
-
-            if ($userRole === 'Admin') $allowedUserIds = collect($companyUserIds);
         }
 
-        $allowedUserIds = $allowedUserIds->unique()->toArray();
-
-        if ($userRole === 'Super Admin') {
-            $challans = ProformaInvoice::withoutGlobalScopes()
-                ->with(['select_customer','main_cost_center','sub_cost_center','created_by','media','items' => fn($q)=>$q->withoutGlobalScopes(),'items','created_by','media'])
-                ->latest()->paginate(10);
-        } else {
-            $challans = ProformaInvoice::with(['select_customer','items','created_by','media','main_cost_center','sub_cost_center'])
-                ->whereIn('created_by_id', $allowedUserIds)
-                ->latest()->paginate(10);
+        if ($userRole === 'Admin') {
+            $allowedUserIds = collect($companyUserIds);
         }
-
-        return view('admin.proformaInvoices.index', compact('challans'));
     }
+
+    $allowedUserIds = $allowedUserIds->unique()->toArray();
+
+    // 🔥 DATA FETCH FIX
+    if ($userRole === 'Super Admin') {
+
+        $challans = ProformaInvoice::withoutGlobalScopes()
+            ->with([
+                'select_customer',
+                'main_cost_center',
+                'sub_cost_center',
+                'created_by',
+                'media',
+                'items' => fn ($q) => $q->withoutGlobalScopes(),
+            ])
+            ->latest()
+            ->paginate(10); // Super Admin → pagination
+
+    } else {
+
+        $challans = ProformaInvoice::with([
+                'select_customer',
+                'items',
+                'created_by',
+                'media',
+                'main_cost_center',
+                'sub_cost_center'
+            ])
+            ->whereIn('created_by_id', $allowedUserIds)
+            ->latest()
+            ->get(); // ✅ Branch/Admin → ALL records
+    }
+
+    return view('admin.proformaInvoices.index', compact('challans'));
+}
+
 
     //================================================
     // GET CUSTOMER DETAILS AJAX
@@ -251,7 +284,7 @@ class ProformaInvoiceController extends Controller
     //================================================
     public function store(Request $request)
     {
-       
+
         $request->validate([
             'select_customer_id'      => 'required|exists:party_details,id',
             'po_no'                   => 'required|string',
@@ -266,14 +299,14 @@ class ProformaInvoiceController extends Controller
             'total'                => 'required',
 
         ]);
-        
+
         return DB::transaction(function () use ($request) {
 
             $challan_no = 'DC-' . now()->format('YmdHis') . rand(100, 999);
 
             $challan = ProformaInvoice::create([
                 'delivery_challan_number' => $challan_no,
-                'payment_type'            => $request->payment_type, 
+                'payment_type'            => $request->payment_type,
                 'select_customer_id'      => $request->select_customer_id,
                 'po_no'                   => $request->po_no,
                 'docket_no'               => $request->docket_no,
@@ -607,8 +640,8 @@ public function convertToSale(Request $request, ProformaInvoice $proformaInvoice
             'status'              => 'converted dc to sale',
 
             // FIXED HERE 👇
-            'main_cost_center_id' => $request->main_cost_center_id ?? null,  
-            'sub_cost_center_id'  => $request->sub_cost_center_id ?? null, 
+            'main_cost_center_id' => $request->main_cost_center_id ?? null,
+            'sub_cost_center_id'  => $request->sub_cost_center_id ?? null,
 
             'price'               => 0,
         ]);
@@ -645,7 +678,7 @@ public function convertToSale(Request $request, ProformaInvoice $proformaInvoice
                     $proformaInvoice->update([
                         'status' => 'Converted to Sale Invoice',
                         'converted_sale_invoice_id' => $invoice->id
-                    ]);             
+                    ]);
 
         return redirect()
             ->route('admin.sale-invoices.edit', $invoice->id)

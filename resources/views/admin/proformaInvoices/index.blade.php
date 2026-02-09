@@ -91,7 +91,7 @@
 
             <div class="flex gap-2">
                 @can('proforma_invoice_create')
-                    <a href="{{ route('admin.proforma-invoices.create') }}" 
+                    <a href="{{ route('admin.proforma-invoices.create') }}"
                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
                         <i class="fas fa-plus mr-1"></i> {{ trans('global.add') }} {{ trans('cruds.proformaInvoice.title_singular') }}
                     </a>
@@ -99,13 +99,13 @@
 
                 @can('proforma_invoice_create')
                 <div x-data="{ openCsvModal: false }">
-                    <button 
+                    <button
                         @click="openCsvModal = true"
                         class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow">
                         <i class="fas fa-file-csv mr-1"></i> {{ trans('global.app_csvImport') }}
                     </button>
                     @include('csvImport.modal', [
-                        'model' => 'ProformaInvoice', 
+                        'model' => 'ProformaInvoice',
                         'route' => 'admin.proforma-invoices.parseCsvImport'
                     ])
                 </div>
@@ -171,7 +171,7 @@
                         <!-- Qty -->
                         <td class="px-4 py-3 text-sm">
                             @foreach($proformaInvoice->items as $item)
-                                <span 
+                                <span
                                     class="cursor-pointer text-blue-600 hover:underline item-details"
                                     data-name="{{ $item->item_name }}"
                                     data-description="{{ $item->pivot->description }}"
