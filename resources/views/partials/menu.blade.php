@@ -3,16 +3,16 @@
 @can('user_management_access')
 <div class="space-y-1 mt-4">
     <div class="px-3 py-2 text-xs font-semibold text-primary-500 uppercase tracking-wider">Management</div>
-    
-    <div 
-        x-data="{ userManagementOpen: {{ request()->is('admin/permissions*') || request()->is('admin/roles*') || request()->is('admin/add-businesses*') || request()->is('admin/users*') || request()->is('admin/audit-logs*') ? 'true' : 'false' }} }" 
+
+    <div
+        x-data="{ userManagementOpen: {{ request()->is('admin/permissions*') || request()->is('admin/roles*') || request()->is('admin/add-businesses*') || request()->is('admin/users*') || request()->is('admin/audit-logs*') ? 'true' : 'false' }} }"
         class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="userManagementOpen = !userManagementOpen" 
+        <button @click="userManagementOpen = !userManagementOpen"
             class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="userManagementOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                      :class="userManagementOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -20,7 +20,7 @@
                 </div>
                 <span class="ml-3">{{ trans('cruds.userManagement.title') }}</span>
             </span>
-            
+
             <i class="fas transform transition-transform duration-300 text-xs"
                 :class="userManagementOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
         </button>
@@ -78,19 +78,19 @@
             </a>
             @endcan
 
-            
+
         </div>
         @can('cost_center_access')
 <div class="space-y-1 mt-4">
-    <div 
-        x-data="{ costCenterOpen: {{ request()->is('admin/main-cost-centers*') || request()->is('admin/sub-cost-centers*') ? 'true' : 'false' }} }" 
+    <div
+        x-data="{ costCenterOpen: {{ request()->is('admin/main-cost-centers*') || request()->is('admin/sub-cost-centers*') ? 'true' : 'false' }} }"
         class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="costCenterOpen = !costCenterOpen" 
+        <button @click="costCenterOpen = !costCenterOpen"
             class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="costCenterOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                      :class="costCenterOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -98,7 +98,7 @@
                 </div>
                 <span class="ml-3">{{ trans('cruds.costCenter.title') }}</span>
             </span>
-            
+
             <i class="fas transform transition-transform duration-300 text-xs"
                 :class="costCenterOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
         </button>
@@ -133,20 +133,77 @@
     </div>
 </div>
 @endcan
+@can('crm_access')
+<div x-data="{ crmOpen: {{ request()->is('admin/raw-materials*') || request()->is('admin/productions*') ? 'true' : 'false' }} }">
 
+    <button @click="crmOpen = !crmOpen"
+        class="flex items-center justify-between w-full px-4 py-3 rounded-xl
+               hover:bg-primary-100 transition-all duration-200"
+        :class="crmOpen ? 'bg-primary-100 text-primary-700' : 'text-gray-700'">
+
+        <span class="flex items-center">
+            <i class="fas fa-industry mr-3"></i>
+            CRM
+        </span>
+
+        <i :class="crmOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+    </button>
+
+    <div x-show="crmOpen" x-collapse class="ml-8 mt-2 space-y-2">
+
+        <!-- 🔹 Raw Material List -->
+        @can('raw_material_access')
+        <a href="{{ route('admin.raw-materials.index') }}"
+           class="block py-2 text-sm rounded-lg px-3
+           {{ request()->is('admin/raw-materials') ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:text-primary-600' }}">
+            Raw Materials
+        </a>
+        @endcan
+
+        <!-- 🔹 Create Raw Material -->
+        @can('raw_material_create')
+        <a href="{{ route('admin.raw-materials.create') }}"
+           class="block py-2 text-sm rounded-lg px-3
+           {{ request()->is('admin/raw-materials/create') ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:text-primary-600' }}">
+            Add Raw Material
+        </a>
+        @endcan
+
+
+        <!-- 🔹 Production List -->
+        @can('production_access')
+        <a href="{{ route('admin.productions.index') }}"
+           class="block py-2 text-sm rounded-lg px-3
+           {{ request()->is('admin/productions') ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:text-primary-600' }}">
+            Production List
+        </a>
+        @endcan
+
+        <!-- 🔹 Create Production -->
+        @can('production_create')
+        <a href="{{ route('admin.productions.create') }}"
+           class="block py-2 text-sm rounded-lg px-3
+           {{ request()->is('admin/productions/create') ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:text-primary-600' }}">
+            Add Production
+        </a>
+        @endcan
+
+    </div>
+</div>
+@endcan
 @can('party_access')
 <div class="space-y-1 mt-4">
     <div class="px-3 py-2 text-xs font-semibold text-primary-500 uppercase tracking-wider">Party</div>
-    
-    <div 
-        x-data="{ partyOpen: {{ request()->is('admin/party-details*') || request()->is('admin/loyalty-points*') || request()->is('admin/whatsapp-connects*') ? 'true' : 'false' }} }" 
+
+    <div
+        x-data="{ partyOpen: {{ request()->is('admin/party-details*') || request()->is('admin/loyalty-points*') || request()->is('admin/whatsapp-connects*') ? 'true' : 'false' }} }"
         class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="partyOpen = !partyOpen" 
+        <button @click="partyOpen = !partyOpen"
             class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="partyOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                      :class="partyOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -154,7 +211,7 @@
                 </div>
                 <span class="ml-3">{{ trans('cruds.party.title') }}</span>
             </span>
-            
+
             <i class="fas transform transition-transform duration-300 text-xs"
                 :class="partyOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
         </button>
@@ -238,16 +295,16 @@
 @can('item_access')
 <div class="space-y-1 mt-4">
     <div class="px-3 py-2 text-xs font-semibold text-primary-500 uppercase tracking-wider">Inventory</div>
-    
-    <div 
-        x-data="{ itemOpen: {{ request()->is('admin/add-items*') ? 'true' : 'false' }} }" 
+
+    <div
+        x-data="{ itemOpen: {{ request()->is('admin/add-items*') ? 'true' : 'false' }} }"
         class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="itemOpen = !itemOpen" 
+        <button @click="itemOpen = !itemOpen"
             class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="itemOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                      :class="itemOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -255,7 +312,7 @@
                 </div>
                 <span class="ml-3">{{ trans('cruds.item.title') }}</span>
             </span>
-            
+
             <i class="fas transform transition-transform duration-300 text-xs"
                 :class="itemOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
         </button>
@@ -281,16 +338,16 @@
 @can('sale_access')
 <div class="space-y-1 mt-4">
     <div class="px-3 py-2 text-xs font-semibold text-primary-500 uppercase tracking-wider">Sales</div>
-    
-    <div 
-        x-data="{ saleOpen: {{ request()->is('admin/sale-invoices*') || request()->is('admin/estimate-quotations*') || request()->is('admin/proforma-invoices*') ? 'true' : 'false' }} }" 
+
+    <div
+        x-data="{ saleOpen: {{ request()->is('admin/sale-invoices*') || request()->is('admin/estimate-quotations*') || request()->is('admin/proforma-invoices*') ? 'true' : 'false' }} }"
         class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="saleOpen = !saleOpen" 
+        <button @click="saleOpen = !saleOpen"
             class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="saleOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                      :class="saleOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -298,7 +355,7 @@
                 </div>
                 <span class="ml-3">{{ trans('cruds.sale.title') }}</span>
             </span>
-            
+
             <i class="fas transform transition-transform duration-300 text-xs"
                 :class="saleOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
         </button>
@@ -363,7 +420,7 @@
         <button @click="purchaseOpen = !purchaseOpen"
             class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="purchaseOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                      :class="purchaseOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -425,15 +482,15 @@
     </div>
 
     <!-- Dropdown -->
-    <div x-data="{ stockOpen: {{ request()->is('admin/current-stocks*') || request()->is('admin/stocks-reports*') || request()->is('admin/stock-histories*') ? 'true' : 'false' }} }" 
+    <div x-data="{ stockOpen: {{ request()->is('admin/current-stocks*') || request()->is('admin/stocks-reports*') || request()->is('admin/stock-histories*') ? 'true' : 'false' }} }"
          class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="stockOpen = !stockOpen" 
-            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 
+        <button @click="stockOpen = !stockOpen"
+            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200
                    hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="stockOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                     :class="stockOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -451,7 +508,7 @@
 
             @can('current_stock_access')
                 <a href="{{ route('admin.current-stocks.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/current-stocks*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-cubes w-4 mr-3 {{ request()->is('admin/current-stocks*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -461,7 +518,7 @@
 
             @can('stocks_report_access')
                 <a href="{{ route('admin.stocks-reports.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/stocks-reports*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fab fa-accusoft w-4 mr-3 {{ request()->is('admin/stocks-reports*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -471,7 +528,7 @@
 
             @can('stock_history_access')
                 <a href="{{ route('admin.stock-histories.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/stock-histories*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-history w-4 mr-3 {{ request()->is('admin/stock-histories*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -491,24 +548,24 @@
         {{ trans('cruds.bank.title') }}
     </div>
 
-    <div x-data="{ bankOpen: {{ request()->is('admin/bank-accounts*') || request()->is('admin/cash-in-hands*') || request()->is('admin/bank-to-cashes*') || request()->is('admin/cash-to-banks*') || request()->is('admin/bank-to-banks*') || request()->is('admin/adjust-bank-balances*') ? 'true' : 'false' }} }" 
+    <div x-data="{ bankOpen: {{ request()->is('admin/bank-accounts*') || request()->is('admin/cash-in-hands*') || request()->is('admin/bank-to-cashes*') || request()->is('admin/cash-to-banks*') || request()->is('admin/bank-to-banks*') || request()->is('admin/adjust-bank-balances*') ? 'true' : 'false' }} }"
          class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="bankOpen = !bankOpen" 
-            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 
-                   hover:bg-primary-100 hover:shadow-sm hover:pl-5" 
+        <button @click="bankOpen = !bankOpen"
+            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200
+                   hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="bankOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
-                <div class="p-2 rounded-lg transition-colors" 
+                <div class="p-2 rounded-lg transition-colors"
                      :class="bankOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
                     <i class="fas fa-university w-5"></i>
                 </div>
                 <span class="ml-3">{{ trans('cruds.bank.title') }}</span>
             </span>
 
-            <i class="fas transform transition-transform duration-300 text-xs" 
+            <i class="fas transform transition-transform duration-300 text-xs"
                :class="bankOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
         </button>
 
@@ -516,9 +573,9 @@
         <div x-show="bankOpen" x-collapse.duration.300ms class="ml-9 space-y-2 mt-2">
 
             @can('bank_account_access')
-            <a href="{{ route('admin.bank-accounts.index') }}" 
-               class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
-                      hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium 
+            <a href="{{ route('admin.bank-accounts.index') }}"
+               class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+                      hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/bank-accounts*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-university w-4 mr-3 {{ request()->is('admin/bank-accounts*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                 <span>{{ trans('cruds.bankAccount.title') }}</span>
@@ -526,9 +583,9 @@
             @endcan
 
             @can('bank_transaction_access')
-    <a href="{{ route('admin.bank-transactions.index') }}" 
-       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
-              hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium 
+    <a href="{{ route('admin.bank-transactions.index') }}"
+       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+              hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
               {{ request()->is('admin/bank-transactions*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
         <i class="fas fa-exchange-alt w-4 mr-3 {{ request()->is('admin/bank-transactions*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
         <span>Bank Transactions</span>
@@ -537,9 +594,9 @@
 
 
             @can('cash_in_hand_access')
-            <a href="{{ route('admin.cash-in-hands.index') }}" 
-               class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
-                      hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium 
+            <a href="{{ route('admin.cash-in-hands.index') }}"
+               class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+                      hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/cash-in-hands*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-handshake w-4 mr-3 {{ request()->is('admin/cash-in-hands*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                 <span>{{ trans('cruds.cashInHand.title') }}</span>
@@ -550,15 +607,15 @@
             <div x-data="{ dwOpen: {{ request()->is('admin/bank-to-cashes*') || request()->is('admin/cash-to-banks*') || request()->is('admin/bank-to-banks*') || request()->is('admin/adjust-bank-balances*') ? 'true' : 'false' }} }">
 
                 <!-- Sub Parent -->
-                <button @click="dwOpen = !dwOpen" 
-                        class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 
-                               hover:bg-primary-50 hover:pl-4 font-medium 
+                <button @click="dwOpen = !dwOpen"
+                        class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200
+                               hover:bg-primary-50 hover:pl-4 font-medium
                                {{ request()->is('admin/bank-to-cashes*') || request()->is('admin/cash-to-banks*') || request()->is('admin/bank-to-banks*') || request()->is('admin/adjust-bank-balances*') ? 'bg-primary-50 text-primary-700' : 'text-gray-600' }}">
                     <span class="flex items-center">
                         <i class="fas fa-cogs w-4 mr-3 {{ request()->is('admin/bank-to-cashes*') || request()->is('admin/cash-to-banks*') || request()->is('admin/bank-to-banks*') || request()->is('admin/adjust-bank-balances*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                         <span>{{ trans('cruds.depositWithdraw.title') }}</span>
                     </span>
-                    <i class="fas transform transition-transform duration-300 text-xs" 
+                    <i class="fas transform transition-transform duration-300 text-xs"
                        :class="dwOpen ? 'fa-chevron-up text-primary-600' : 'fa-chevron-down text-primary-400'"></i>
                 </button>
 
@@ -566,9 +623,9 @@
                 <div x-show="dwOpen" x-collapse.duration.300ms class="ml-8 space-y-2 mt-2">
 
                     @can('bank_to_cash_access')
-                    <a href="{{ route('admin.bank-to-cashes.index') }}" 
-                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
-                              hover:bg-primary-50 hover:pl-4 font-medium 
+                    <a href="{{ route('admin.bank-to-cashes.index') }}"
+                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
+                              hover:bg-primary-50 hover:pl-4 font-medium
                               {{ request()->is('admin/bank-to-cashes*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                         <i class="fas fa-money-check-alt w-4 mr-3 {{ request()->is('admin/bank-to-cashes*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                         <span>{{ trans('cruds.bankToCash.title') }}</span>
@@ -576,9 +633,9 @@
                     @endcan
 
                     @can('cash_to_bank_access')
-                    <a href="{{ route('admin.cash-to-banks.index') }}" 
-                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
-                              hover:bg-primary-50 hover:pl-4 font-medium 
+                    <a href="{{ route('admin.cash-to-banks.index') }}"
+                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
+                              hover:bg-primary-50 hover:pl-4 font-medium
                               {{ request()->is('admin/cash-to-banks*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                         <i class="fas fa-money-check-alt w-4 mr-3 {{ request()->is('admin/cash-to-banks*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                         <span>{{ trans('cruds.cashToBank.title') }}</span>
@@ -586,9 +643,9 @@
                     @endcan
 
                     @can('bank_to_bank_access')
-                    <a href="{{ route('admin.bank-to-banks.index') }}" 
-                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
-                              hover:bg-primary-50 hover:pl-4 font-medium 
+                    <a href="{{ route('admin.bank-to-banks.index') }}"
+                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
+                              hover:bg-primary-50 hover:pl-4 font-medium
                               {{ request()->is('admin/bank-to-banks*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                         <i class="fas fa-money-check-alt w-4 mr-3 {{ request()->is('admin/bank-to-banks*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                         <span>{{ trans('cruds.bankToBank.title') }}</span>
@@ -596,9 +653,9 @@
                     @endcan
 
                     @can('adjust_bank_balance_access')
-                    <a href="{{ route('admin.adjust-bank-balances.index') }}" 
-                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
-                              hover:bg-primary-50 hover:pl-4 font-medium 
+                    <a href="{{ route('admin.adjust-bank-balances.index') }}"
+                       class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
+                              hover:bg-primary-50 hover:pl-4 font-medium
                               {{ request()->is('admin/adjust-bank-balances*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                         <i class="fas fa-money-check-alt w-4 mr-3 {{ request()->is('admin/adjust-bank-balances*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
                         <span>{{ trans('cruds.adjustBankBalance.title') }}</span>
@@ -623,15 +680,15 @@
     </div>
 
     <!-- Dropdown -->
-    <div x-data="{ masterOpen: {{ request()->is('admin/user-alerts*') || request()->is('admin/units*') || request()->is('admin/categories*') || request()->is('admin/tax-rates*') ? 'true' : 'false' }} }" 
+    <div x-data="{ masterOpen: {{ request()->is('admin/user-alerts*') || request()->is('admin/units*') || request()->is('admin/categories*') || request()->is('admin/tax-rates*') ? 'true' : 'false' }} }"
          class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="masterOpen = !masterOpen" 
-            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 
+        <button @click="masterOpen = !masterOpen"
+            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200
                    hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="masterOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
-            
+
             <span class="flex items-center">
                 <div class="p-2 rounded-lg transition-colors"
                     :class="masterOpen ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-600'">
@@ -649,7 +706,7 @@
 
             @can('user_alert_access')
                 <a href="{{ route('admin.user-alerts.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/user-alerts*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-bell w-4 mr-3 {{ request()->is('admin/user-alerts*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -658,7 +715,7 @@
             @endcan
             @can('term_access')
                 <a href="{{ route('admin.terms.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/user-alerts*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-bell w-4 mr-3 {{ request()->is('admin/user-alerts*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -668,7 +725,7 @@
 
             @can('unit_access')
                 <a href="{{ route('admin.units.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/units*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-universal-access w-4 mr-3 {{ request()->is('admin/units*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -678,7 +735,7 @@
 
             @can('category_access')
                 <a href="{{ route('admin.categories.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/categories*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-cart-arrow-down w-4 mr-3 {{ request()->is('admin/categories*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -688,7 +745,7 @@
 
             @can('tax_rate_access')
                 <a href="{{ route('admin.tax-rates.index') }}"
-                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
                           hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                           {{ request()->is('admin/tax-rates*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                     <i class="fas fa-cogs w-4 mr-3 {{ request()->is('admin/tax-rates*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -699,7 +756,7 @@
 
             @can('terms_access')
     <a href="{{ route('admin.terms.index') }}"
-       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200 
+       class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
               hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
               {{ request()->is('admin/terms*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
         <i class="fas fa-file-contract w-4 mr-3 {{ request()->is('admin/terms*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -723,12 +780,12 @@
     </div>
 
     <!-- Main Dropdown -->
-    <div x-data="{ reportOpen: {{ request()->is('admin/sale-reports*') || request()->is('admin/purchase-reports*') || request()->is('admin/day-books*') || request()->is('admin/all-transactions*') || request()->is('admin/profit-losses*') || request()->is('admin/bill-wise-profits*') || request()->is('admin/balance-sheets*') ? 'true' : 'false' }} }" 
+    <div x-data="{ reportOpen: {{ request()->is('admin/sale-reports*') || request()->is('admin/purchase-reports*') || request()->is('admin/day-books*') || request()->is('admin/all-transactions*') || request()->is('admin/profit-losses*') || request()->is('admin/bill-wise-profits*') || request()->is('admin/balance-sheets*') ? 'true' : 'false' }} }"
          class="rounded-xl overflow-hidden">
 
         <!-- Parent Button -->
-        <button @click="reportOpen = !reportOpen" 
-            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200 
+        <button @click="reportOpen = !reportOpen"
+            class="flex items-center justify-between w-full px-4 py-3 rounded-xl transition-all duration-200
                    hover:bg-primary-100 hover:shadow-sm hover:pl-5"
             :class="reportOpen ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-700 font-medium'">
 
@@ -749,13 +806,13 @@
 
             @can('transaction_report_access')
             <div x-data="{ transactionOpen: {{ request()->is('admin/sale-reports*') || request()->is('admin/purchase-reports*') || request()->is('admin/day-books*') || request()->is('admin/all-transactions*') || request()->is('admin/profit-losses*') || request()->is('admin/bill-wise-profits*') || request()->is('admin/balance-sheets*') ? 'true' : 'false' }} }">
-                
+
                 <!-- Sub Dropdown Button -->
                 <button @click="transactionOpen = !transactionOpen"
-                    class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 
+                    class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200
                            hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                            {{ request()->is('admin/sale-reports*') || request()->is('admin/purchase-reports*') || request()->is('admin/day-books*') || request()->is('admin/all-transactions*') || request()->is('admin/profit-losses*') || request()->is('admin/bill-wise-profits*') || request()->is('admin/balance-sheets*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
-                    
+
                     <span class="flex items-center">
                         <i class="fas fa-exchange-alt w-4 mr-3"></i>
                         <span>{{ trans('cruds.transactionReport.title') }}</span>
@@ -769,7 +826,7 @@
                 <div x-show="transactionOpen" x-collapse.duration.300ms class="ml-7 mt-2 space-y-2">
                     @can('sale_report_access')
                         <a href="{{ route('admin.sale-reports.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/sale-reports*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fas fa-bookmark w-4 mr-3 {{ request()->is('admin/sale-reports*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -779,7 +836,7 @@
 
                     @can('purchase_report_access')
                         <a href="{{ route('admin.purchase-reports.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/purchase-reports*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fas fa-shopping-cart w-4 mr-3 {{ request()->is('admin/purchase-reports*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -789,7 +846,7 @@
 
                     @can('day_book_access')
                         <a href="{{ route('admin.day-books.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/day-books*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fas fa-book w-4 mr-3 {{ request()->is('admin/day-books*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -799,7 +856,7 @@
 
                     @can('all_transaction_access')
                         <a href="{{ route('admin.all-transactions.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/all-transactions*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fas fa-exchange-alt w-4 mr-3 {{ request()->is('admin/all-transactions*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -809,7 +866,7 @@
 
                     @can('profit_loss_access')
                         <a href="{{ route('admin.profit-losses.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/profit-losses*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fab fa-gratipay w-4 mr-3 {{ request()->is('admin/profit-losses*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -819,7 +876,7 @@
 
                     @can('bill_wise_profit_access')
                         <a href="{{ route('admin.bill-wise-profits.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/bill-wise-profits*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fas fa-file-invoice w-4 mr-3 {{ request()->is('admin/bill-wise-profits*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -829,7 +886,7 @@
 
                     @can('balance_sheet_access')
                         <a href="{{ route('admin.balance-sheets.index') }}"
-                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+                           class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                                   hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                                   {{ request()->is('admin/balance-sheets*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                             <i class="fas fa-balance-scale w-4 mr-3 {{ request()->is('admin/balance-sheets*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -842,25 +899,25 @@
             <div x-show="reportOpen" x-collapse.duration.300ms class="ml-9 space-y-2 mt-2">
 
     @can('gst_report_access')
-    <div 
-        x-data="{ gstOpen: {{ 
-            request()->is('admin/gst-1*') || 
-            request()->is('admin/gst-2*') || 
-            request()->is('admin/gst-3*') 
-            ? 'true' : 'false' 
+    <div
+        x-data="{ gstOpen: {{
+            request()->is('admin/gst-1*') ||
+            request()->is('admin/gst-2*') ||
+            request()->is('admin/gst-3*')
+            ? 'true' : 'false'
         }} }"
     >
 
         <!-- GST Dropdown Button -->
         <button @click="gstOpen = !gstOpen"
-            class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 
+            class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200
                    hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
-                   {{ 
-                       request()->is('admin/gst-1*') || 
-                       request()->is('admin/gst-2*') || 
-                       request()->is('admin/gst-3*') 
-                       ? 'bg-primary-100 text-primary-700 shadow-sm' 
-                       : 'text-gray-600' 
+                   {{
+                       request()->is('admin/gst-1*') ||
+                       request()->is('admin/gst-2*') ||
+                       request()->is('admin/gst-3*')
+                       ? 'bg-primary-100 text-primary-700 shadow-sm'
+                       : 'text-gray-600'
                    }}">
 
             <span class="flex items-center">
@@ -878,7 +935,7 @@
 
             @can('gst_1_access')
             <a href="{{ route('admin.gst-1.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/gst-1*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-receipt w-4 mr-3 {{ request()->is('admin/gst-1*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -888,7 +945,7 @@
 
             @can('gst_2_access')
             <a href=""
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/gst-2*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-file-alt w-4 mr-3 {{ request()->is('admin/gst-2*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -898,7 +955,7 @@
 
             @can('gst_3_access')
             <a href=""
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/gst-3*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-balance-scale w-4 mr-3 {{ request()->is('admin/gst-3*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -914,7 +971,7 @@
           {{-- Party Reports --}}
 @can('party_report_access')
 <div x-data="{ partyOpen: {{ request()->is('admin/party-statements*') || request()->is('admin/party-wise-profit-losses*') || request()->is('admin/all-parties*') || request()->is('admin/party-report-by-items*') || request()->is('admin/sale-purchase-by-parties*') ? 'true' : 'false' }} }" class="rounded-xl overflow-hidden">
-    
+
     <!-- Dropdown Button -->
     <button @click="partyOpen = !partyOpen"
         class="flex items-center justify-between w-full px-4 py-2.5 rounded-lg hover:bg-primary-50 transition-all duration-200 font-medium
@@ -999,7 +1056,7 @@
     <div x-show="partyOpen" x-collapse.duration.300ms class="ml-7 mt-2 space-y-2">
         @can('party_statement_access')
             <a href="{{ route('admin.party-statements.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/party-statements*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-file-alt w-4 mr-3 {{ request()->is('admin/party-statements*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1009,7 +1066,7 @@
 
         @can('party_wise_profit_loss_access')
             <a href="{{ route('admin.party-wise-profit-losses.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/party-wise-profit-losses*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-chart-line w-4 mr-3 {{ request()->is('admin/party-wise-profit-losses*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1019,7 +1076,7 @@
 
         @can('all_party_access')
             <a href="{{ route('admin.all-parties.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/all-parties*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-users w-4 mr-3 {{ request()->is('admin/all-parties*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1029,7 +1086,7 @@
 
         @can('party_report_by_item_access')
             <a href="{{ route('admin.party-report-by-items.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/party-report-by-items*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-boxes w-4 mr-3 {{ request()->is('admin/party-report-by-items*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1039,7 +1096,7 @@
 
         @can('sale_purchase_by_party_access')
             <a href="{{ route('admin.sale-purchase-by-parties.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/sale-purchase-by-parties*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-random w-4 mr-3 {{ request()->is('admin/sale-purchase-by-parties*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1060,7 +1117,7 @@
         class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200
                hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                {{ request()->is('admin/stocks-summaries*') || request()->is('admin/item-report-by-parties*') || request()->is('admin/item-wise-profit-and-loasses*') || request()->is('admin/low-stock-summaries*') || request()->is('admin/stock-details*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
-        
+
         <span class="flex items-center">
             <i class="fas fa-box w-4 mr-3"></i>
             <span>{{ trans('cruds.stockReport.title') }}</span>
@@ -1074,7 +1131,7 @@
     <div x-show="stockOpen" x-collapse.duration.300ms class="ml-7 mt-2 space-y-2">
         @can('stocks_summary_access')
             <a href="{{ route('admin.stocks-summaries.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/stocks-summaries*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-chart-pie w-4 mr-3 {{ request()->is('admin/stocks-summaries*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1084,7 +1141,7 @@
 
         @can('item_report_by_party_access')
             <a href="{{ route('admin.item-report-by-parties.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/item-report-by-parties*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-users w-4 mr-3 {{ request()->is('admin/item-report-by-parties*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1094,7 +1151,7 @@
 
         @can('item_wise_profit_and_loass_access')
             <a href="{{ route('admin.item-wise-profit-and-loasses.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/item-wise-profit-and-loasses*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-dollar-sign w-4 mr-3 {{ request()->is('admin/item-wise-profit-and-loasses*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1104,7 +1161,7 @@
 
         @can('low_stock_summary_access')
             <a href="{{ route('admin.low-stock-summaries.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/low-stock-summaries*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-exclamation-triangle w-4 mr-3 {{ request()->is('admin/low-stock-summaries*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1114,7 +1171,7 @@
 
         @can('stock_detail_access')
             <a href="{{ route('admin.stock-details.index') }}"
-               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 
+               class="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
                       hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                       {{ request()->is('admin/stock-details*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
                 <i class="fas fa-clipboard-list w-4 mr-3 {{ request()->is('admin/stock-details*') ? 'text-primary-600' : 'text-primary-500' }}"></i>
@@ -1134,7 +1191,7 @@
         class="flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200
                hover:bg-primary-50 hover:shadow-xs hover:pl-4 font-medium
                {{ request()->is('admin/expense-report-lists*') || request()->is('admin/expense-category-reports*') || request()->is('admin/expense-item-reports*') ? 'bg-primary-100 text-primary-700 shadow-sm' : 'text-gray-600' }}">
-        
+
         <span class="flex items-center">
             <i class="fas fa-wallet w-4 mr-3"></i>
             <span>{{ trans('cruds.expenseReport.title') }}</span>
@@ -1190,7 +1247,7 @@
 
 
 
-          
+
     </aside>
 
 <!-- Alpine.js for toggle -->

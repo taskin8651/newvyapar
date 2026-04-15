@@ -99,4 +99,12 @@ class CurrentStock extends Model
     {
         return $this->addItems()->where('item_type', 'product');
     }
+    public function created_by()
+{
+    return $this->belongsTo(\App\Models\User::class, 'created_by_id');
+}
+public function rawMaterial()
+{
+    return $this->belongsTo(\App\Models\RawMaterial::class, 'item_id');
+}
 }

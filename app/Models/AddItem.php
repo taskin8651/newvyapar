@@ -123,7 +123,16 @@ public function rawMaterials()
         'finished_goods_raw_material',
         'item_id',
         'select_raw_material_id'
-    )->withPivot(['qty', 'item_name', 'item_hsn', 'json_data'])->withTimestamps();
+    )->withPivot([
+        'qty',
+        'item_name',
+        'item_hsn',
+        'json_data',
+        'purchase_price_at_time',
+        'sale_price_at_time',
+        'total_purchase_value',
+        'total_sale_value',
+    ])->withTimestamps();
 }
 public function currentStocksMain()
 {

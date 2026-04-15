@@ -327,28 +327,25 @@ public function getCustomerDetails($id)
     // -----------------------------
     // Create (unchanged logic you shared)
     // -----------------------------
-    public function create()
+ public function create()
 {
     abort_if(Gate::denies('sale_invoice_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-    $user = Auth::user();
-    $userId = $user->id;
-    $userRole = $user->roles->pluck('title')->first();
-
-    $company = $user->select_companies()->first();
+    $user      = Auth::user();
+    $userId    = $user->id;
+    $userRole  = $user->roles->pluck('title')->first();
+    $company   = $user->select_companies()->first();
     $companyId = $company?->id;
 
-    $allowedUserIds = collect([$userId]); // Start with logged-in user
+    $allowedUserIds = collect([$userId]);
 
-    if ($companyId) 
+    if ($companyId)
     {
-        // All users under this company (admin + branches)
         $companyUserIds = DB::table('add_business_user')
             ->where('add_business_id', $companyId)
             ->pluck('user_id')
             ->toArray();
 
-        // Find company Admin ID
         $companyAdminId = \App\Models\User::whereIn('id', $companyUserIds)
             ->whereHas('roles', fn($q) => $q->where('title', 'Admin'))
             ->value('id');
@@ -357,14 +354,16 @@ public function getCustomerDetails($id)
             $allowedUserIds->push($companyAdminId);
         }
 
-        // Parent-Admin Logic for Branch User
         $parentId = $user->created_by_id;
+
         if ($parentId) {
             $allowedUserIds->push($parentId);
 
             $parent = \App\Models\User::find($parentId);
+
             if ($parent) {
                 $parentCompanyId = $parent->select_companies()->first()?->id;
+
                 if ($parentCompanyId) {
                     $parentCompanyUsers = DB::table('add_business_user')
                         ->where('add_business_id', $parentCompanyId)
@@ -382,16 +381,18 @@ public function getCustomerDetails($id)
             }
         }
 
-        // ✅ FIX APPLIED HERE
         if ($userRole === 'Admin') {
-            // Admin + All users of that company
             $allowedUserIds = collect($companyUserIds)->push($userId);
         }
     }
 
     $allowedUserIds = $allowedUserIds->unique()->toArray();
 
-    // ✅ Customers dropdown
+    /*
+    |--------------------------------------------------------------------------
+    | Customers Dropdown
+    |--------------------------------------------------------------------------
+    */
     if ($userRole === 'Super Admin') {
         $select_customers = \App\Models\PartyDetail::withoutGlobalScopes()->get();
     } elseif ($companyId) {
@@ -412,51 +413,105 @@ public function getCustomerDetails($id)
         return [$customer->id => "{$customer->party_name} ({$display})"];
     });
 
-    // ✅ Items with stock
+    /*
+    |--------------------------------------------------------------------------
+    | PRODUCTS (AddItem)
+    |--------------------------------------------------------------------------
+    */
     if ($userRole === 'Super Admin') {
-        $items = \App\Models\AddItem::withoutGlobalScopes()
+
+        $products = \App\Models\AddItem::withoutGlobalScopes()
             ->whereIn('item_type', ['product', 'service'])
             ->with('select_unit')
             ->get();
+
+        $finishedGoods = \App\Models\FinishedGood::withoutGlobalScopes()->get();
+
     } elseif ($companyId) {
-        $items = \App\Models\AddItem::whereIn('created_by_id', $allowedUserIds)
+
+        $products = \App\Models\AddItem::whereIn('created_by_id', $allowedUserIds)
             ->whereIn('item_type', ['product', 'service'])
             ->with('select_unit')
             ->get();
+
+        $finishedGoods = \App\Models\FinishedGood::whereIn('created_by_id', $allowedUserIds)->get();
+
     } else {
-        $items = \App\Models\AddItem::where('created_by_id', $userId)
+
+        $products = \App\Models\AddItem::where('created_by_id', $userId)
             ->whereIn('item_type', ['product', 'service'])
             ->with('select_unit')
             ->get();
+
+        $finishedGoods = \App\Models\FinishedGood::where('created_by_id', $userId)->get();
     }
 
-    $items->map(function ($item) use ($userRole, $companyId, $allowedUserIds, $userId) {
+    /*
+    |--------------------------------------------------------------------------
+    | Stock Calculation for AddItem Products
+    |--------------------------------------------------------------------------
+    */
+    $products->map(function ($item) use ($allowedUserIds) {
+
         if ($item->item_type === 'product') {
-            if ($userRole === 'Super Admin') {
-                $item->stock_qty = \App\Models\CurrentStock::where('item_id', $item->id)->sum('qty');
-            } elseif ($companyId) {
-                $item->stock_qty = \App\Models\CurrentStock::whereIn('created_by_id', $allowedUserIds)
-                    ->where('item_id', $item->id)->sum('qty');
-            } else {
-                $item->stock_qty = \App\Models\CurrentStock::where('created_by_id', $userId)
-                    ->where('item_id', $item->id)->sum('qty');
-            }
+            $item->stock_qty = \App\Models\CurrentStock::where('product_type', 'add_item')
+                ->where('item_id', $item->id)
+                ->whereIn('created_by_id', $allowedUserIds)
+                ->sum('qty');
         } else {
             $item->stock_qty = null;
         }
+
+        $item->source_type = 'add_item';
+        $item->display_name = $item->item_name ?? $item->title;
+
         return $item;
     });
 
-    // ✅ Cost Center & Sub Cost Center (Works Perfect Now)
+    /*
+    |--------------------------------------------------------------------------
+    | Stock Calculation for Finished Goods
+    |--------------------------------------------------------------------------
+    */
+    $finishedGoods->map(function ($fg) use ($allowedUserIds) {
+
+        $fg->stock_qty = \App\Models\CurrentStock::where('product_type', 'finished_goods')
+            ->where('item_id', $fg->id)
+            ->whereIn('created_by_id', $allowedUserIds)
+            ->sum('qty');
+
+        $fg->source_type  = 'finished_goods';
+        $fg->display_name = $fg->title;
+
+        return $fg;
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Merge Both
+    |--------------------------------------------------------------------------
+    */
+    $items = $products->concat($finishedGoods);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cost Centers
+    |--------------------------------------------------------------------------
+    */
     $cost = \App\Models\MainCostCenter::whereIn('created_by_id', $allowedUserIds)
         ->pluck('cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
-    
+
     $sub_cost = \App\Models\SubCostCenter::whereIn('created_by_id', $allowedUserIds)
         ->pluck('sub_cost_center_name', 'id')
         ->prepend(trans('global.pleaseSelect'), '');
 
-    return view('admin.saleInvoices.create', compact('items', 'select_customers', 'cost', 'sub_cost'));
+    return view('admin.saleInvoices.create', compact(
+        'items',
+        'select_customers',
+        'cost',
+        'sub_cost'
+    ));
 }
 
 
@@ -537,7 +592,6 @@ public function store(Request $request)
         $customer->current_balance_type = $closingType;
         $customer->save();
 
-        // 🔴 ONLY SAFE ADDITION
         $invoice->items()->detach();
 
         $invoice_total_purchase_cost = 0;
@@ -547,7 +601,6 @@ public function store(Request $request)
 
             $item = \App\Models\AddItem::findOrFail($itemData['add_item_id']);
 
-            // 🔴 ONLY REAL FIX (timestamps)
             $invoice->items()->attach($item->id, [
                 'description'   => $itemData['description'] ?? null,
                 'qty'           => $itemData['qty'],
@@ -565,12 +618,73 @@ public function store(Request $request)
                 'updated_at'    => now(),
             ]);
 
-            /** ================= PRODUCT ================= */
+            /*
+            ==========================================================
+            🔵 NEW BLOCK: FINISHED GOODS SUPPORT (ADDED ONLY)
+            ==========================================================
+            */
+
+            $finishedGood = \App\Models\FinishedGood::find($itemData['add_item_id']);
+
+            if ($finishedGood) {
+
+                $soldQty = (float)$itemData['qty'];
+
+                // Minus from FinishedGoods table
+                $finishedGood->quantity = max(0, $finishedGood->quantity - $soldQty);
+                $finishedGood->save();
+
+                // Minus from CurrentStock (finished_goods type)
+                $fgStock = \App\Models\CurrentStock::where('item_id', $finishedGood->id)
+                    ->where('product_type', 'finished_goods')
+                    ->first();
+
+                if ($fgStock) {
+
+                    $previousQty = $fgStock->qty;
+                    $fgStock->qty = max(0, $fgStock->qty - $soldQty);
+                    $fgStock->save();
+
+                    \App\Models\SaleLog::create([
+                        'sale_invoice_id' => $invoice->id,
+                        'item_id'         => $finishedGood->id,
+                        'item_type'       => 'finished_goods',
+                        'stock_id'        => $fgStock->id,
+                        'previous_qty'    => $previousQty,
+                        'sold_qty'        => $soldQty,
+                        'sold_amount'     => $itemData['amount'] ?? 0,
+                        'price'           => $itemData['price'] ?? 0,
+                        'sold_to_user_id' => $request->select_customer_id,
+                        'created_by_id'   => auth()->id(),
+                        'json_data_add_item_sale_invoice' => json_encode($itemData),
+                        'json_data_current_stock'         => json_encode($fgStock),
+                        'json_data_sale_invoice'          => json_encode($invoice),
+                    ]);
+                }
+
+                // Minus from Production
+                $production = \App\Models\Production::where('finished_good_id', $finishedGood->id)
+                    ->latest()
+                    ->first();
+
+                if ($production) {
+                    $production->finished_qty = max(0, $production->finished_qty - $soldQty);
+                    $production->save();
+                }
+            }
+
+            /*
+            ==========================================================
+            🔵 EXISTING PRODUCT + SERVICE LOGIC BELOW (UNCHANGED)
+            ==========================================================
+            */
+
             if ($item->item_type === 'product') {
 
                 $compositionRows = $this->fetchCompositionRowsForItem($item->id);
 
                 foreach ($compositionRows as $c) {
+
                     $qtyPerFinished        = (float)$c->qty;
                     $salePriceAtTime       = (float)($c->sale_price_at_time ?? 0);
                     $purchasePriceAtTime   = (float)($c->purchase_price_at_time ?? 0);
@@ -606,19 +720,6 @@ public function store(Request $request)
                             'json_data_sale_invoice'          => json_encode($invoice),
                         ]);
                     }
-
-                    $composition_master[] = [
-                        'finished_item_id'        => $item->id,
-                        'finished_item_name'      => $item->item_name,
-                        'raw_material_id'         => $c->select_raw_material_id,
-                        'raw_material_name'       => $c->item_name ?? 'Unnamed',
-                        'qty_used_per_finished'   => $qtyPerFinished,
-                        'used_total_qty'          => $usedTotalQty,
-                        'sale_price_at_time'      => $salePriceAtTime,
-                        'purchase_price_at_time'  => $purchasePriceAtTime,
-                        'total_sale_value'        => $lineSaleValue,
-                        'total_purchase_value'    => $linePurchaseValue,
-                    ];
                 }
 
                 $stock = \App\Models\CurrentStock::where('item_id', $item->id)->first();
@@ -644,27 +745,12 @@ public function store(Request $request)
                     ]);
                 }
 
-            } 
-            /** ================= SERVICE ================= */
-            else {
+            } else {
 
                 $qty       = (float)$itemData['qty'];
                 $sale      = ((float)($itemData['price'] ?? 0)) * $qty;
                 $purchase  = ((float)($item->purchase_price ?? 0)) * $qty;
                 $invoice_total_purchase_cost += $purchase;
-
-                $composition_master[] = [
-                    'finished_item_id'        => $item->id,
-                    'finished_item_name'      => $item->item_name,
-                    'raw_material_id'         => null,
-                    'raw_material_name'       => $item->item_name,
-                    'qty_used_per_finished'   => 1,
-                    'used_total_qty'          => $qty,
-                    'sale_price_at_time'      => (float)($itemData['price'] ?? 0),
-                    'purchase_price_at_time'  => (float)($item->purchase_price ?? 0),
-                    'total_sale_value'        => $sale,
-                    'total_purchase_value'    => $purchase,
-                ];
 
                 \App\Models\SaleLog::create([
                     'sale_invoice_id' => $invoice->id,
@@ -680,7 +766,6 @@ public function store(Request $request)
             }
         }
 
-        // Profit/Loss
         $profit_loss_amount = floatval($invoice->total) - floatval($invoice_total_purchase_cost);
         $is_profit = $profit_loss_amount >= 0;
 
@@ -1294,7 +1379,7 @@ public function pdf(SaleInvoice $saleInvoice)
 
     // ✅ Terms also based on main admin only
     $terms = TermAndCondition::where('status', 'active')
-        
+
         ->get();
 
     return view('admin.saleInvoices.pdf', compact('saleInvoice', 'bankDetails', 'terms', 'company', 'logoUrl'));

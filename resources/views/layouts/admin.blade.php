@@ -103,7 +103,7 @@
             border-radius: 0 4px 4px 0;
         }
 
-        
+
     /* Select2 ko Tailwind look dena */
     .select2-container .select2-selection--single {
         height: 42px !important;
@@ -181,7 +181,60 @@
     <img src="{{ $logoUrl }}" alt="Company Logo" class="h-12 w-100   inline-block">
     <button class="md:hidden text-gray-600"><i class="fas fa-bars"></i></button>
 </div>
+<a href="{{ route('admin.raw-materials.index') }}"
+   class="group relative inline-flex items-center justify-center">
 
+    <!-- Outer Glow -->
+    <span class="absolute -inset-1 rounded-xl
+                 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
+                 opacity-20 blur-lg
+                 group-hover:opacity-40
+                 transition duration-500">
+    </span>
+
+    <!-- Animated Border -->
+    <span class="absolute inset-0 rounded-xl p-[1px]
+                 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
+                 opacity-70
+                 group-hover:opacity-100
+                 transition duration-500">
+    </span>
+
+    <!-- Main Button -->
+    <span class="relative flex items-center justify-center px-7 py-3.5
+                 rounded-xl
+                 bg-gray-900/90
+                 backdrop-blur-xl
+                 border border-white/10
+                 text-white font-semibold tracking-wide
+                 shadow-lg
+                 overflow-hidden
+                 transition-all duration-300
+                 group-hover:-translate-y-0.5
+                 group-hover:shadow-purple-500/30">
+
+        <!-- Shine Sweep Effect -->
+        <span class="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-700">
+            <span class="absolute inset-0
+                         bg-gradient-to-r from-transparent via-white/20 to-transparent
+                         translate-x-[-100%]
+                         group-hover:translate-x-[100%]
+                         transition-transform duration-1000 ease-out">
+            </span>
+        </span>
+
+        <!-- Icon -->
+        <i class="fas fa-rocket mr-2 text-indigo-400
+                  transform transition duration-300
+                  group-hover:rotate-12 group-hover:scale-110">
+        </i>
+
+        <!-- Text -->
+        <span class="relative z-10">
+            Launch CRM
+        </span>
+    </span>
+</a>
 
     {{-- 🔹 USER DROPDOWN MENU --}}
     <div class="relative" x-data="{ open: false }">
@@ -216,13 +269,13 @@
             </div>
 
             <div class="divide-y divide-gray-100">
-                <a href="{{ route('profile.password.edit') }}" 
+                <a href="{{ route('profile.password.edit') }}"
                    class="flex items-center px-4 py-2 hover:bg-gray-50 text-gray-700">
                     <i class="fas fa-user-cog mr-2 text-indigo-600"></i> Profile
                 </a>
                 <form id="logoutform" action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
-                    <button type="submit" 
+                    <button type="submit"
                             class="w-full flex items-center px-4 py-2 hover:bg-gray-50 text-red-600">
                         <i class="fas fa-sign-out-alt mr-2"></i> Sign out
                     </button>
@@ -364,7 +417,7 @@
 
     @yield('scripts')
 
-    
+
 <script>
     $(document).ready(function() {
         $('.select2').select2({

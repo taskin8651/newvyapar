@@ -2,7 +2,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto py-6">
     <div class="bg-white shadow-lg rounded-2xl p-6">
-        
+
         <!-- Header -->
         <div class="flex justify-between items-center mb-6 border-b pb-4">
             <h2 class="text-xl font-bold text-indigo-700 flex items-center gap-2">
@@ -12,18 +12,18 @@
             <div class="flex gap-2">
                 <div x-data="{ openCsvModal: false }" class="flex gap-2">
                 @can('purchase_bill_create')
-                    <a href="{{ route('admin.purchase-bills.create') }}" 
+                    <a href="{{ route('admin.purchase-bills.create') }}"
                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow">
                         <i class="fas fa-plus mr-1"></i> {{ trans('global.add') }} {{ trans('cruds.purchaseBill.title_singular') }}
                     </a>
 
-                      <button 
+                      <button
                             @click="openCsvModal = true"
                             class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg shadow">
                             <i class="fas fa-file-csv mr-1"></i> {{ trans('global.app_csvImport') }}
                         </button>
                     @include('csvImport.modal', [
-                        'model' => 'PurchaseBill', 
+                        'model' => 'PurchaseBill',
                         'route' => 'admin.purchase-bills.parseCsvImport'
                     ])
                 @endcan
@@ -65,7 +65,7 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->id ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->purchase_invoice_number ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->select_customer->party_name ?? '' }}</td>
-                            
+
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->total ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->e_way_bill_no ?? '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $purchaseBill->po_no ?? '' }}</td>
@@ -89,7 +89,7 @@
                                 @endforeach
                             </td>
 
-                            
+
                             <!-- Actions -->
                             <td class="px-4 py-3 text-center relative"
                                 x-data="{ open: false }"

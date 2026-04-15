@@ -134,7 +134,7 @@
                     <div class="grid grid-cols-2 gap-4 mt-2">
                         <div class="flex flex-col">
                             <label for="po_date" class="mb-1 font-semibold">Billing Date</label>
-                            <input type="date" id="po_date" name="po_date" 
+                            <input type="date" id="po_date" name="po_date"
                             class="w-full rounded-md border px-3 py-2"
                             value="{{ date('Y-m-d') }}">
                         </div>
@@ -175,29 +175,45 @@
                         <tbody>
                             <tr class="item-row">
                                 <td class="px-1 py-1">
-                                    <select name="items[0][add_item_id]" class="form-select item-select select2">
+                                    <select name="items[0][add_item_id]"
+                                            class="form-select item-select select2">
+
                                         <option value="">-- Select Item --</option>
+
                                         @foreach($items as $item)
-                                            <option 
+
+                                            <option
                                                 value="{{ $item->id }}"
+
+                                                data-source-type="{{ $item->source_type ?? 'add_item' }}"
+
                                                 data-sale-price="{{ $item->sale_price ?? $item->purchase_price ?? 0 }}"
                                                 data-purchase-price="{{ $item->purchase_price ?? 0 }}"
-                                                data-unit="{{ $item->select_unit->unit_name ?? '' }}"
+
+                                                data-unit="{{ $item->select_unit->unit_name ?? ($item->unit ?? '') }}"
                                                 data-hsn="{{ $item->item_hsn ?? '' }}"
                                                 data-code="{{ $item->item_code ?? '' }}"
+
                                                 data-item-type="{{ $item->item_type ?? 'product' }}"
-                                                @if($item->item_type === 'product')
-                                                    data-stock="{{ $item->stock_qty ?? 0 }}"
-                                                @else
-                                                    data-stock="0"
-                                                @endif
+
+                                                data-stock="{{ $item->stock_qty ?? 0 }}"
                                             >
-                                                {{ $item->item_name }} ({{ ucfirst($item->item_type ?? 'Product') }})
-                                                @if($item->item_type === 'product' && $item->stock_qty !== null)
+
+                                                {{-- Display Name --}}
+                                                {{ $item->display_name ?? $item->item_name ?? $item->title }}
+
+                                                {{-- Type Badge --}}
+                                                ({{ ucfirst($item->source_type ?? 'product') }})
+
+                                                {{-- Stock Show Only If Available --}}
+                                                @if(isset($item->stock_qty))
                                                     - Stock: {{ $item->stock_qty }}
                                                 @endif
+
                                             </option>
+
                                         @endforeach
+
                                     </select>
                                 </td>
                                 <td class="px-1 py-1 description"></td>
@@ -246,7 +262,7 @@
                 <div class="space-y-4">
                     <textarea name="notes" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Notes"></textarea>
                     <textarea name="terms" rows="3" class="w-full rounded-md border px-3 py-2" placeholder="Terms & Conditions"></textarea>
-                    
+
                     <!-- COMPOSITION SUMMARY (real-time) -->
                     <div class="bg-white p-4 rounded-lg border mb-4">
                         <h3 class="font-semibold mb-2">Selected Product Composition</h3>
@@ -605,7 +621,7 @@ $(document).ready(function() {
 
         const overallDiscount = parseFloat($('#overall_discount').val()) || 0;
 
-        // Apply overall discount on base (pre-tax), then recompute tax? 
+        // Apply overall discount on base (pre-tax), then recompute tax?
         // Simpler: subtract overall discount directly from gross total.
         // If you want to treat it as pre-tax, uncomment the alternative block below.
 
@@ -712,6 +728,6 @@ $(document).ready(function() {
     calculateRow($('#itemsTable tbody tr.item-row').first());
     calculateTotals();
 });
-</script> 
+</script>
 
 @endsection

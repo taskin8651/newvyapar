@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TermAndConditionController;
 use App\Http\Controllers\Admin\PaymentInController;
 use App\Http\Controllers\Admin\StockHistoryController;
 use App\Http\Controllers\Admin\LedgerController;
+use App\Http\Controllers\Admin\ProductionController;
 use App\Http\Controllers\Admin\ProformaInvoiceController;
 use App\Http\Controllers\Admin\SaleInvoiceController;
 
@@ -112,18 +113,18 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('sale-invoices/{sale_invoice}/pdf', [App\Http\Controllers\Admin\SaleInvoiceController::class, 'pdf'])->name('sale-invoices.pdf');
 
     // Estimate Quotation
-    Route::get('estimate-quotations/{estimateQuotation}/invoice', 
+    Route::get('estimate-quotations/{estimateQuotation}/invoice',
     [EstimateQuotationController::class, 'pdf'])
     ->name('estimate-quotations.invoice');
-    Route::post('estimate-quotations/{estimate}/convert', 
+    Route::post('estimate-quotations/{estimate}/convert',
     [EstimateQuotationController::class, 'convert'])
     ->name('estimate-quotations.convert');
 
-    Route::put('estimate-quotations/{estimate}/cancel', 
+    Route::put('estimate-quotations/{estimate}/cancel',
         [EstimateQuotationController::class, 'cancel'])
         ->name('estimate-quotations.cancel');
 
-    Route::put('estimate-quotations/{estimate}/update-date', 
+    Route::put('estimate-quotations/{estimate}/update-date',
         [EstimateQuotationController::class, 'updateDate'])
         ->name('estimate-quotations.update-date');
 
@@ -144,7 +145,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('proforma-invoices/process-csv-import', 'ProformaInvoiceController@processCsvImport')->name('proforma-invoices.processCsvImport');
     Route::resource('proforma-invoices', 'ProformaInvoiceController');
         // 🔹 Convert Proforma/Challan -> Sale Invoice
-    Route::post('proforma-invoices/{proformaInvoice}/convert-to-sale', 
+    Route::post('proforma-invoices/{proformaInvoice}/convert-to-sale',
         [ProformaInvoiceController::class, 'convertToSale']
     )->name('proforma-invoices.convertToSale');
     Route::post('proforma-invoices/{id}/reverse-effects', [ProformaInvoiceController::class, 'reverseEffects'])
@@ -357,7 +358,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
 
     // custom rote by rock
-   
+
 
     // Main Cost Center
     Route::delete('main-cost-centers/destroy', 'MainCostCenterController@massDestroy')->name('main-cost-centers.massDestroy');
@@ -391,7 +392,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
          // PaymentIn CRUD
     Route::resource('payment-ins', PaymentInController::class);
-    
+
     // Optional: mass delete (if needed)
     Route::post('payment-ins/massDestroy', [PaymentInController::class, 'massDestroy'])->name('payment-ins.massDestroy');
 
@@ -412,6 +413,14 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     // report section
     Route::get('gst-1', [\App\Http\Controllers\Admin\Gst1Controller::class, 'index'])
         ->name('gst-1.index');
+// crm
+
+    Route::resource('raw-materials', \App\Http\Controllers\Admin\RawMaterialController::class);
+
+    Route::resource('productions', \App\Http\Controllers\Admin\ProductionController::class);
+    // Stock Check API (AJAX endpoint for create form)
+    Route::get('productions/create/check-stock', [ProductionController::class, 'checkStock'])
+        ->name('productions.checkStock');
 
 
 });
