@@ -80,9 +80,9 @@ class UsersController extends Controller
 
         // Allowed roles
         if ($loggedRole === 'Super Admin') {
-            $allowedRoles = ['Admin', 'Branch', 'User'];
+            $allowedRoles = ['Admin', 'Branch', 'User','CRM MANAGER'];
         } elseif ($loggedRole === 'Admin') {
-            $allowedRoles = ['Branch', 'User'];
+            $allowedRoles = ['Branch', 'User','CRM MANAGER'];
         } else {
             abort(Response::HTTP_FORBIDDEN, 'You do not have permission to create users.');
         }
