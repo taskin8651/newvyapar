@@ -45,11 +45,11 @@ class UsersController extends Controller
 
         // ----- ROLE BASED CREATION -----
         if ($loggedRole === 'Super Admin') {
-            $roles = Role::whereIn('title', ['Admin', 'Branch', 'User', 'Company'])->pluck('title', 'id');
+            $roles = Role::whereIn('title', ['Admin', 'Branch', 'User', 'Company','CRM MANAGER'])->pluck('title', 'id');
         } elseif ($loggedRole === 'Admin') {
-            $roles = Role::whereIn('title', ['Branch', 'User'])->pluck('title', 'id');
+            $roles = Role::whereIn('title', ['Branch', 'User','CRM MANAGER'])->pluck('title', 'id');
         } elseif ($loggedRole === 'Company') {
-            $roles = Role::whereIn('title', ['User'])->pluck('title', 'id');
+            $roles = Role::whereIn('title', ['User','CRM MANAGER'])->pluck('title', 'id');
         } else {
             abort(Response::HTTP_FORBIDDEN, 'You do not have permission to create users.');
         }
